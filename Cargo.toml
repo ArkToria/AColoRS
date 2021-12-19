@@ -11,6 +11,7 @@ edition = "2018"
 
 [[bin]]
 name = "acorus"
+path = "crates/core/main.rs"
 
 [workspace]
 members = []

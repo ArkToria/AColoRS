@@ -14,7 +14,15 @@ name = "acorus"
 path = "crates/core/main.rs"
 
 [workspace]
-members = []
+members = [
+    "crates/kernel_manager",
+    "crates/latency_test",
+    "crates/profile_manager",
+    "crates/server",
+    "crates/storage",
+    "crates/plugin",
+    "crates/cli",
+]
 
 [dependencies]
 lazy_static = "1.4.0"

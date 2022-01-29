@@ -1,16 +1,13 @@
-use std::ffi::OsStr;
-use std::{env, ffi::OsString, io, path::PathBuf, process, sync::Arc};
 use std::io::Write;
+use std::{env, ffi::OsString, io, process, sync::Arc};
 
-use pretty_env_logger::env_logger::Logger;
+use clap::ArgMatches;
 
-use crate::Result;
 use crate::app;
+use crate::Result;
 
 pub enum Command {
     Serve,
-    Profile,
-    Plugin,
 }
 
 #[derive(Clone, Debug)]
@@ -23,76 +20,42 @@ struct ArgsImp {
 
 impl Args {
     pub fn parse() -> Result<Args> {
-        let matches = ArgMatches::new(clap_matches(env::args_os())?);
+        let matches = clap_matches(env::args_os())?;
 
         pretty_env_logger::init();
 
-
-        matches.to_args()
+        Ok(Args(Arc::new(ArgsImp { matches })))
     }
 }
-
-#[derive(Clone, Debug)]
-struct ArgMatches(clap::ArgMatches<'static>);
 
 impl Args {
     pub fn command(&self) -> Result<Command> {
-        // TODO: need to be implement
-        panic!("No command implementation");
+        let subcommand_option = self.matches().subcommand();
+        if let Some(subcommand) = subcommand_option {
+            match subcommand {
+                ("serve", _) => {
+                    return Ok(Command::Serve);
+                }
+                (command, _) => {
+                    panic!("No \"{}\" implementation", command);
+                }
+            };
+        };
+        unreachable!()
+    }
+}
+impl Args {
+    fn matches(&self) -> &ArgMatches {
+        &self.0.matches
     }
 }
 
-impl ArgMatches {
-    fn new(clap_matches: clap::ArgMatches<'static>) -> ArgMatches {
-        ArgMatches(clap_matches)
-    }
-
-    fn to_args(self) -> Result<Args> {
-        Ok(Args(Arc::new(ArgsImp { 
-            matches: self,
-        })))
-    }
-
-}
-
-impl ArgMatches {
-    fn is_present(&self, name:&str) -> bool {
-        self.0.is_present(name)
-    }
-
-    fn occurrences_of(&self, name: &str) -> u64 {
-        self.0.occurrences_of(name)
-    }
-
-    fn value_of_lossy(&self, name:&str) -> Option<String> {
-        self.0.value_of_lossy(name).map(|s| s.into_owned())
-    }
-
-    fn values_of_lossy(&self, name:&str) -> Option<Vec<String>> {
-        self.0.values_of_lossy(name)
-    }
-
-    fn value_of_os(&self, name:&str) -> Option<&OsStr> {
-        self.0.value_of_os(name)
-    }
-
-    fn values_of_os(&self, name: &str) -> Option<clap::OsValues<'_>> {
-        self.0.values_of_os(name)
-    }
-}
-
-/// Returns a clap matches object if the given arguments parse successfully.
-///
-/// Otherwise, if an error occurred, then it is returned unless the error
-/// corresponds to a `--help` or `--version` request. In which case, the
-/// corresponding output is printed and the current process is exited
-/// successfully.
-fn clap_matches<I, T>(args: I) -> Result<clap::ArgMatches<'static>>
+fn clap_matches<I, T>(args: I) -> Result<clap::ArgMatches>
 where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
 {
-    let err = match app::app().get_matches_from_safe(args) {
+    let err = match app::app().try_get_matches_from(args) {
         Ok(matches) => return Ok(matches),
         Err(err) => err,
     };

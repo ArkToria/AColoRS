@@ -1,11 +1,24 @@
-use clap::{crate_authors, crate_description, crate_version, App};
+use clap::{crate_authors, crate_description, crate_version, App, Arg};
 
-pub fn app() -> App<'static, 'static> {
-    let app = App::new("ACoRus")
+pub fn app() -> App<'static> {
+    let app = App::new("across")
         .author(crate_authors!())
         .version(crate_version!())
         .about(crate_description!())
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
-        .help_message("Try '--help' for more information");
+        .subcommands(vec![App::new("serve")
+            .about("Serve on the specified port and address")
+            .args(&[
+                Arg::new("interface")
+                    .short('i')
+                    .long("interface")
+                    .takes_value(true)
+                    .help("Interface to bind on (default: 127.0.0.1"),
+                Arg::new("port")
+                    .short('p')
+                    .long("port")
+                    .takes_value(true)
+                    .help("Which port to use (default: 19198)"),
+            ])]);
     app
 }

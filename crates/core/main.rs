@@ -18,8 +18,6 @@ fn try_main(args: Args) -> Result<()> {
 
     let matched = match args.command()? {
         Serve => serve(&args),
-        Profile => manage_profiles(&args),
-        Plugin => manage_plugins(&args),
     }?;
     if matched {
         process::exit(0)
@@ -28,11 +26,6 @@ fn try_main(args: Args) -> Result<()> {
     }
 }
 fn serve(args: &Args) -> Result<bool> {
-    Ok(true)
-}
-fn manage_profiles(args: &Args) -> Result<bool> {
-    Ok(true)
-}
-fn manage_plugins(args: &Args) -> Result<bool> {
+    println!("Serve {:?}", args);
     Ok(true)
 }

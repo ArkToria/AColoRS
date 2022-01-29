@@ -1,12 +1,15 @@
 use std::{error, process};
 
 use args::Args;
+use log::debug;
 
 mod app;
 mod args;
 
 type Result<T> = ::std::result::Result<T, Box<dyn error::Error>>;
 fn main() {
+    pretty_env_logger::init();
+
     if let Err(err) = Args::parse().and_then(try_main) {
         eprintln!("{}", err);
         process::exit(2);
@@ -26,6 +29,6 @@ fn try_main(args: Args) -> Result<()> {
     }
 }
 fn serve(args: &Args) -> Result<bool> {
-    println!("Serve {:?}", args);
+    debug!("Serve with args: {:?}", args);
     Ok(true)
 }

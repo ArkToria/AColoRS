@@ -22,8 +22,6 @@ impl Args {
     pub fn parse() -> Result<Args> {
         let matches = clap_matches(env::args_os())?;
 
-        pretty_env_logger::init();
-
         Ok(Args(Arc::new(ArgsImp { matches })))
     }
 }

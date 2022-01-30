@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.arktoria.acolors";
+option java_outer_classname = "AColoRSProto";
+
+package acolors;
+
+service Greeter {
+    rpc Ping (PingRequest) returns (PingReply) {}
+}
+  
+message PingRequest {
+    string name = 1;
+}
+
+message PingReply {
+    string message = 1;
+}

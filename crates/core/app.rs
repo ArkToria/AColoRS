@@ -1,7 +1,7 @@
 use clap::{crate_authors, crate_description, crate_version, App, Arg};
 
 pub fn app() -> App<'static> {
-    let app = App::new("across")
+    let app = App::new("acolors")
         .author(crate_authors!())
         .version(crate_version!())
         .about(crate_description!())

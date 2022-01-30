@@ -1,16 +1,16 @@
 [package]
-name = "across"
+name = "acolors"
 version = "0.1.0"
 authors = ["khonoka <kagiyamahonoka@pm.me>"]
 description = "A tool for managing proxy outbounds."
 license = "AGPLv3"
-edition = "2018"
+edition = "2021"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "across"
+name = "acolors"
 path = "crates/core/main.rs"
 
 [workspace]

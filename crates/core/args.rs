@@ -19,7 +19,7 @@ impl Args {
         Ok(Args(Arc::new(matches)))
     }
 
-    fn matches(&self) -> &ArgMatches {
+    pub fn matches(&self) -> &ArgMatches {
         &self.0
     }
 }

@@ -30,11 +30,13 @@ mod tests {
     fn create_test_table(conn: &Connection) -> Result<()> {
         create_group_table(conn)?;
         add_sample_groups(conn)?;
+        // TODO: add nodes and more
 
         Ok(())
     }
 
     fn add_sample_groups(conn: &Connection) -> Result<()> {
+        // TODO: insert some groups
         Ok(())
     }
 

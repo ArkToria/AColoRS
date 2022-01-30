@@ -1,9 +1,9 @@
-use std::net::{SocketAddr, SocketAddrV4, TcpListener};
+use std::net::{SocketAddr, TcpListener};
 use std::thread;
 
 use anyhow::Result;
 use anyhow::{anyhow, Context};
-use log::{debug, error, info};
+use log::{error, info};
 use tonic::transport::Server;
 
 use crate::greeter::acolors_proto::greeter_server::GreeterServer;
@@ -11,17 +11,11 @@ use crate::greeter::AColoRSGreeter;
 
 mod greeter;
 
-pub fn serve(interface: &str, interface_port: u16) -> Result<()> {
-    debug!(
-        "AColoRS Server is starting at {}:{}",
-        interface, interface_port
-    );
-    let address = format!("{}:{}", interface, interface_port);
-    let address = address_from_string(&address)?;
-    check_tcp_bind(&address)?;
+pub fn serve(address: SocketAddr) -> Result<()> {
+    check_tcp_bind(address)?;
 
     let t = thread::spawn(move || {
-        let addr: SocketAddr = std::net::SocketAddr::V4(address);
+        let addr: SocketAddr = address;
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -55,15 +49,7 @@ async fn start_server(addr: SocketAddr) -> Result<()> {
     Ok(())
 }
 
-fn address_from_string(address: &String) -> Result<SocketAddrV4> {
-    let result: SocketAddrV4 = match address.parse() {
-        Ok(a) => a,
-        Err(_) => return Err(anyhow!("Invalid address: {}.", address)),
-    };
-    Ok(result)
-}
-
-fn check_tcp_bind(bind_address: &SocketAddrV4) -> Result<()> {
+fn check_tcp_bind(bind_address: SocketAddr) -> Result<()> {
     if (TcpListener::bind(&bind_address)).is_err() {
         return Err(anyhow!("Cannot start server on address {}.", bind_address));
     }

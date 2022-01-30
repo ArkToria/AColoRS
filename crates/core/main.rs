@@ -1,6 +1,5 @@
 use std::process;
 
-use anyhow::Context;
 use anyhow::Result;
 use args::Args;
 

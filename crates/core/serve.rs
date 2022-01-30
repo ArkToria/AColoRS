@@ -1,8 +1,10 @@
+use anyhow::anyhow;
 use clap::ArgMatches;
 use log::debug;
 use log::error;
 use utils::net::{tcp_get_available_port, tcp_port_is_available};
 
+use std::net::SocketAddr;
 use std::process;
 
 use crate::args::Args;
@@ -14,18 +16,28 @@ pub fn serve(args: &Args) -> Result<bool> {
     debug!("Serve with args: {:?}", args);
 
     let matches = get_serve_matches(args);
-    let interface = matches.value_of("interface").unwrap_or("127.0.0.1");
+    let interface = matches.value_of("interface").unwrap_or("[::1]");
     let mut port = get_port_from(matches);
 
     test_and_set_port(&mut port);
 
-    match server::serve(interface, port) {
+    let address = format!("{}:{}", interface, port);
+    let address = address_from_string(&address)?;
+    match server::serve(address) {
         Ok(()) => Ok(true),
         Err(e) => {
             error!("unravel error: {:?}", &e);
             process::exit(1);
         }
     }
+}
+
+fn address_from_string(address: &String) -> Result<SocketAddr> {
+    let result: SocketAddr = match address.parse() {
+        Ok(a) => a,
+        Err(_) => return Err(anyhow!("Invalid address: {}.", address)),
+    };
+    Ok(result)
 }
 
 fn get_serve_matches(args: &Args) -> &ArgMatches {

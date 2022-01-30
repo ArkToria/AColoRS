@@ -1,9 +1,9 @@
 use std::{env, ffi::OsString, sync::Arc};
 
+use anyhow::anyhow;
 use clap::ArgMatches;
 
 use crate::app;
-use crate::Context;
 use crate::Result;
 
 pub enum Command {
@@ -30,9 +30,11 @@ where
     I: IntoIterator<Item = T>,
     T: Into<OsString> + Clone,
 {
-    app::app()
-        .try_get_matches_from(args)
-        .context("Failed to get clap matches")
+    let err = match app::app().try_get_matches_from(args) {
+        Ok(matches) => return Ok(matches),
+        Err(err) => err,
+    };
+    Err(anyhow!("{}", err))
 }
 
 impl Args {

@@ -32,7 +32,7 @@ fn try_main(args: Args) -> Result<()> {
 }
 fn serve(args: &Args) -> Result<bool> {
     debug!("Serve with args: {:?}", args);
-    let matches = args.matches();
+    let matches = args.matches().subcommand_matches("serve").unwrap();
     let interface = matches.value_of("interface").unwrap_or("[::1]");
     let mut port: u16 = match matches.value_of("port").unwrap_or("19198").parse() {
         Ok(x) => x,

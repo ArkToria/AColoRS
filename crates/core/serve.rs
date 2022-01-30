@@ -14,7 +14,7 @@ pub fn serve(args: &Args) -> Result<bool> {
     let interface = matches.value_of("interface").unwrap_or("[::1]");
     let mut port = get_port_from(matches);
 
-    check_port_availability_or_set_available_port(&mut port);
+    test_and_set_port(&mut port);
 
     match server::serve(interface, port) {
         Ok(()) => Ok(true),
@@ -44,7 +44,7 @@ fn get_port_from(matches: &ArgMatches) -> u16 {
     }
 }
 
-fn check_port_availability_or_set_available_port(port: &mut u16) {
+fn test_and_set_port(port: &mut u16) {
     if *port != 19198 && !tcp_port_is_available(*port) {
         error!("The port is not available");
         process::exit(1);

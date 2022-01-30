@@ -8,8 +8,6 @@ mod args;
 mod serve;
 
 fn main() {
-    pretty_env_logger::init();
-
     if let Err(err) = Args::parse().and_then(try_main) {
         eprintln!("{}", err);
         process::exit(2);

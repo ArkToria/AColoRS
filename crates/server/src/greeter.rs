@@ -1,4 +1,4 @@
-use log::info;
+use spdlog::info;
 use tonic::{Request, Response, Status};
 
 use acolors_proto::greeter_server::Greeter;

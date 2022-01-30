@@ -3,7 +3,7 @@ use std::thread;
 
 use anyhow::Result;
 use anyhow::{anyhow, Context};
-use log::{error, info};
+use spdlog::{error, info};
 use tonic::transport::Server;
 
 use crate::greeter::acolors_proto::greeter_server::GreeterServer;

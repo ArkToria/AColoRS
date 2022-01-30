@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use clap::ArgMatches;
-use log::debug;
-use log::error;
+use spdlog::{debug, error};
 use utils::net::{tcp_get_available_port, tcp_port_is_available};
 
 use std::net::SocketAddr;
@@ -57,7 +56,7 @@ fn get_port_from(matches: &ArgMatches) -> u16 {
     match result {
         Ok(x) => x,
         Err(_) => {
-            error!("The port needs to be an integer");
+            error!("The port needs to be an integer between 1-65535");
             process::exit(1);
         }
     }

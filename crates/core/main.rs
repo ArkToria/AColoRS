@@ -1,12 +1,13 @@
-use std::{error, process};
+use std::process;
 
+use anyhow::Context;
+use anyhow::Result;
 use args::Args;
 
 mod app;
 mod args;
 mod serve;
 
-type Result<T> = ::std::result::Result<T, Box<dyn error::Error>>;
 fn main() {
     pretty_env_logger::init();
 

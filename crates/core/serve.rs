@@ -12,6 +12,7 @@ const DEFAULT_PORT: u16 = 19198;
 
 pub fn serve(args: &Args) -> Result<bool> {
     debug!("Serve with args: {:?}", args);
+
     let matches = get_serve_matches(args);
     let interface = matches.value_of("interface").unwrap_or("127.0.0.1");
     let mut port = get_port_from(matches);
@@ -39,7 +40,7 @@ fn get_serve_matches(args: &Args) -> &ArgMatches {
 fn get_port_from(matches: &ArgMatches) -> u16 {
     let result = matches
         .value_of("port")
-        .map(|p| p.parse::<u16>())
+        .map(|p| p.parse())
         .unwrap_or(Ok(DEFAULT_PORT));
     match result {
         Ok(x) => x,

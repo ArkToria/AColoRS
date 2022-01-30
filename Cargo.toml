@@ -23,7 +23,6 @@ members = [
     "crates/plugin",
     "crates/cli",
     "components/utils",
-    "components/errors",
 ]
 
 [dependencies]

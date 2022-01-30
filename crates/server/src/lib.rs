@@ -1,4 +1,4 @@
-use errors::Result;
+use anyhow::Result;
 use log::debug;
 pub fn serve(interface: &str, interface_port: u16) -> Result<()> {
     debug!(

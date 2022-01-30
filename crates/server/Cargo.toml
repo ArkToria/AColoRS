@@ -11,5 +11,4 @@ log = "0.4.14"
 tokio = { version = "1.15.0", features = ["rt-multi-thread", "macros"] }
 tokio-stream = "0.1.8"
 tonic = "0.6.2"
-
-errors = { path = "../../components/errors" }
+anyhow = "1.0.53"

@@ -4,7 +4,7 @@ mod tests {
 
     use profile_manager::{
         data_type::group::Group,
-        dbtools::{create_group_table, create_node_table},
+        dbtools::{test_and_create_group_table, test_and_create_node_table},
     };
     use rusqlite::Connection;
 
@@ -14,7 +14,7 @@ mod tests {
     fn it_works() -> Result<()> {
         let conn = Connection::open_in_memory()?;
 
-        create_group_table(&conn)?;
+        test_and_create_group_table(&conn)?;
         let group = Group {
             id: 0,
             name: "test group".to_string(),
@@ -30,8 +30,8 @@ mod tests {
     }
 
     fn create_test_table(conn: &Connection) -> Result<()> {
-        create_group_table(conn)?;
-        create_node_table(conn)?;
+        test_and_create_group_table(conn)?;
+        test_and_create_node_table(conn)?;
         add_sample_groups(conn)?;
         // TODO: add nodes and more
 

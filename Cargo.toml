@@ -19,7 +19,6 @@ members = [
     "crates/latency_test",
     "crates/profile_manager",
     "crates/server",
-    "crates/storage",
     "crates/plugin",
     "crates/cli",
     "components/utils",

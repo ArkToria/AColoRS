@@ -2,9 +2,9 @@
 mod tests {
     use std::error::Error;
 
-    use profile_manager::data_type::{
-        group::{create_group_table, Group},
-        node::create_node_table,
+    use profile_manager::{
+        data_type::group::Group,
+        dbtools::{create_group_table, create_node_table},
     };
     use rusqlite::Connection;
 

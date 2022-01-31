@@ -1,5 +1,6 @@
 use anyhow::Result;
 use rusqlite::Connection;
+
 const NODE_SCHEMA: &str = "CREATE TABLE nodes(
                     ID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Name TEXT NOT NULL,
@@ -30,6 +31,13 @@ const GROUP_SCHEMA: &str = "CREATE TABLE groups(
                     CreatedAt INT64 NOT NULL,
                     ModifiedAt INT64 NOT NULL
                     )";
+
+const RUNTIME_SCHEMA: &str = "CREATE TABLE runtime(
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT UNIQUE NOT NULL,
+                    Type INTEGER NOT NULL,
+                    Value TEXT
+                    )";
 pub fn create_node_table(conn: &Connection) -> Result<()> {
     conn.execute(NODE_SCHEMA, [])?;
     Ok(())
@@ -37,5 +45,10 @@ pub fn create_node_table(conn: &Connection) -> Result<()> {
 
 pub fn create_group_table(conn: &Connection) -> Result<()> {
     conn.execute(GROUP_SCHEMA, [])?;
+    Ok(())
+}
+
+pub fn create_runtime_table(conn: &Connection) -> Result<()> {
+    conn.execute(RUNTIME_SCHEMA, [])?;
     Ok(())
 }

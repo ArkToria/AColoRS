@@ -31,7 +31,7 @@ pub fn serve(args: &Args) -> Result<bool> {
     }
 }
 
-fn address_from_string(address: &String) -> Result<SocketAddr> {
+fn address_from_string(address: &str) -> Result<SocketAddr> {
     let result: SocketAddr = match address.parse() {
         Ok(a) => a,
         Err(_) => return Err(anyhow!("Invalid address: {}.", address)),

@@ -45,8 +45,8 @@ impl Args {
                 ("serve", _) => {
                     return Ok(Command::Serve);
                 }
-                (command, _) => {
-                    panic!("No \"{}\" implementation", command);
+                (_, _) => {
+                    unimplemented!();
                 }
             };
         };

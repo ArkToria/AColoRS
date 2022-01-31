@@ -1,5 +1,4 @@
 use std::net::{SocketAddr, TcpListener};
-use std::thread;
 
 use anyhow::Result;
 use anyhow::{anyhow, Context};
@@ -14,24 +13,20 @@ mod greeter;
 pub fn serve(address: SocketAddr) -> Result<()> {
     check_tcp_bind(address)?;
 
-    let t = thread::spawn(move || {
-        let addr: SocketAddr = address;
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("Could not build tokio runtime");
+    let addr: SocketAddr = address;
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("Could not build tokio runtime");
 
-        match rt.block_on(start_server(addr)) {
-            Ok(()) => {
-                info!("gRPC Server stopped normally.");
-            }
-            Err(e) => {
-                error!("gRPC Server error: {}", e);
-            }
-        };
-    });
-
-    t.join().unwrap();
+    match rt.block_on(start_server(addr)) {
+        Ok(()) => {
+            info!("gRPC Server stopped normally.");
+        }
+        Err(e) => {
+            error!("gRPC Server error: {}", e);
+        }
+    };
 
     Ok(())
 }

@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::Group;
     use std::error::Error;
 
+    use profile_manager::data_type::{
+        group::{create_group_table, Group},
+        node::create_node_table,
+    };
     use rusqlite::Connection;
 
     type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
@@ -23,12 +26,12 @@ mod tests {
             modified_at: 1637666614,
         };
 
-        assert_eq!(2 + 2, 4);
         Ok(())
     }
 
     fn create_test_table(conn: &Connection) -> Result<()> {
         create_group_table(conn)?;
+        create_node_table(conn)?;
         add_sample_groups(conn)?;
         // TODO: add nodes and more
 
@@ -37,23 +40,6 @@ mod tests {
 
     fn add_sample_groups(conn: &Connection) -> Result<()> {
         // TODO: insert some groups
-        Ok(())
-    }
-
-    fn create_group_table(conn: &Connection) -> Result<()> {
-        conn.execute(
-            "CREATE TABLE groups(
-                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT UNIQUE NOT NULL,
-                    IsSubscription BOOLEAN NOT NULL,
-                    Type INTEGER NOT NULL,
-                    Url TEXT,
-                    CycleTime INTEGER,
-                    CreatedAt INT64 NOT NULL,
-                    ModifiedAt INT64 NOT NULL
-                    )",
-            [],
-        )?;
         Ok(())
     }
 }

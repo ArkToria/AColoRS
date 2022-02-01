@@ -54,7 +54,8 @@ where
 {
     let field_names = T::field_names();
     format!(
-        "INSERT INTO nodes({}) VALUES({})",
+        "INSERT INTO {}({}) VALUES({})",
+        T::attached_to_table_name(),
         format_with_comma(field_names),
         generate_question_marks_with_comma(field_names.len())
     )

@@ -4,7 +4,10 @@ use rusqlite::Connection;
 
 use crate::data_type::group::Group;
 
-use super::{listmodel::AColoRSListModel, withconnection::WithConnection};
+use super::{
+    listmodel::AColoRSListModel,
+    withconnection::{AttachedToTable, WithConnection},
+};
 
 const GROUP_LIST_TABLE_NAME: &'static str = "groups";
 #[derive(Debug)]
@@ -18,10 +21,13 @@ impl GroupList {
     }
 }
 
-impl WithConnection for GroupList {
+impl AttachedToTable for GroupList {
     fn table_name() -> String {
         GROUP_LIST_TABLE_NAME.to_string()
     }
+}
+
+impl WithConnection for GroupList {
     fn connection(&self) -> Rc<Connection> {
         self.connection.clone()
     }

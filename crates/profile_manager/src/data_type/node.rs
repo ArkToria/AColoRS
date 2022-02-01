@@ -3,7 +3,7 @@ use std::rc::Rc;
 use rusqlite::Connection;
 use utils::time::get_current_time;
 
-use super::withconnection::WithConnection;
+use super::withconnection::{AttachedToTable, WithConnection};
 
 const NODE_TABLE_NAME: &'static str = "nodes";
 #[derive(Debug, Clone)]
@@ -18,11 +18,12 @@ impl Node {
         &self.data
     }
 }
-
-impl WithConnection for Node {
+impl AttachedToTable for Node {
     fn table_name() -> String {
         NODE_TABLE_NAME.to_string()
     }
+}
+impl WithConnection for Node {
     fn connection(&self) -> Rc<Connection> {
         self.connection.clone()
     }

@@ -3,7 +3,11 @@ use std::rc::Rc;
 use rusqlite::Connection;
 use utils::time::get_current_time;
 
-use super::{listmodel::AColoRSListModel, node::Node, withconnection::WithConnection};
+use super::{
+    listmodel::AColoRSListModel,
+    node::Node,
+    withconnection::{AttachedToTable, WithConnection},
+};
 
 const GROUP_TABLE_NAME: &'static str = "nodes";
 #[derive(Debug, Clone)]
@@ -40,10 +44,13 @@ impl GroupData {
     }
 }
 
-impl WithConnection for Group {
+impl AttachedToTable for Group {
     fn table_name() -> String {
         GROUP_TABLE_NAME.to_string()
     }
+}
+
+impl WithConnection for Group {
     fn connection(&self) -> Rc<Connection> {
         self.connection.clone()
     }

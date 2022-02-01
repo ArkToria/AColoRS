@@ -2,9 +2,9 @@ use anyhow::Result;
 
 use crate::tools::dbtools::count_table;
 
-use super::withconnection::WithConnection;
+use super::withconnection::{AttachedToTable, WithConnection};
 
-pub trait AColoRSListModel<T: Clone>: WithConnection {
+pub trait AColoRSListModel<T: Clone>: AttachedToTable {
     fn size(&self) -> Result<usize> {
         count_table(&self.connection(), &Self::table_name())
     }

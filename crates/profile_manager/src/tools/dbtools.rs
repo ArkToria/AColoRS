@@ -37,3 +37,29 @@ pub fn count_table(connection: &Connection, name: &str) -> Result<usize> {
     }
     Ok(size)
 }
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use rusqlite::{params, Connection};
+
+    use crate::tools::dbtools::count_table;
+    #[test]
+    fn test_count_table() -> Result<()> {
+        let conn = Connection::open_in_memory()?;
+        conn.execute(
+            "CREATE TABLE testtable (
+                  id              INTEGER PRIMARY KEY,
+                  name            TEXT NOT NULL
+                  )",
+            [],
+        )?;
+        assert_eq!(0, count_table(&conn, "testtable")?);
+        for i in 1..15 {
+            println!("{}!", i);
+            let name = format!("test name {}", i);
+            conn.execute("INSERT INTO testtable (name) VALUES (?1)", params![name])?;
+            assert_eq!(i, count_table(&conn, "testtable")?);
+        }
+        Ok(())
+    }
+}

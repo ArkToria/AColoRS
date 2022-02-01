@@ -1,4 +1,4 @@
-pub const NODE_SCHEMA: &'static str = "CREATE TABLE IF NOT EXISTS nodes(
+pub const NODE_SCHEMA: &str = "CREATE TABLE IF NOT EXISTS nodes(
                     ID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Name TEXT NOT NULL,
                     GroupID INTEGER NOT NULL,
@@ -18,7 +18,7 @@ pub const NODE_SCHEMA: &'static str = "CREATE TABLE IF NOT EXISTS nodes(
                     ModifiedAt INT64 NOT NULL
                     )";
 
-pub const GROUP_SCHEMA: &'static str = "CREATE TABLE IF NOT EXISTS groups(
+pub const GROUP_SCHEMA: &str = "CREATE TABLE IF NOT EXISTS groups(
                     ID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Name TEXT UNIQUE NOT NULL,
                     IsSubscription BOOLEAN NOT NULL,
@@ -29,7 +29,7 @@ pub const GROUP_SCHEMA: &'static str = "CREATE TABLE IF NOT EXISTS groups(
                     ModifiedAt INT64 NOT NULL
                     )";
 
-pub const RUNTIME_SCHEMA: &'static str = "CREATE TABLE IF NOT EXISTS runtime(
+pub const RUNTIME_SCHEMA: &str = "CREATE TABLE IF NOT EXISTS runtime(
                     ID INTEGER PRIMARY KEY AUTOINCREMENT,
                     Name TEXT UNIQUE NOT NULL,
                     Type INTEGER NOT NULL,

@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::tools::dbtools::count_table;
 
-use super::withconnection::{AttachedToTable, WithConnection};
+use super::withconnection::AttachedToTable;
 
 pub trait AColoRSListModel<T: Clone>: AttachedToTable {
     fn size(&self) -> Result<usize> {

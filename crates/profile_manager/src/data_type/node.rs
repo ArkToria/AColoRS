@@ -5,7 +5,7 @@ use utils::time::get_current_time;
 
 use super::withconnection::{AttachedToTable, WithConnection};
 
-const NODE_TABLE_NAME: &'static str = "nodes";
+const NODE_TABLE_NAME: &str = "nodes";
 #[derive(Debug, Clone)]
 pub struct Node {
     data: NodeData,

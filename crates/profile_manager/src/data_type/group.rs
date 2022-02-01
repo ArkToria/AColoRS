@@ -9,7 +9,7 @@ use super::{
     withconnection::{AttachedToTable, WithConnection},
 };
 
-const GROUP_TABLE_NAME: &'static str = "nodes";
+const GROUP_TABLE_NAME: &str = "nodes";
 #[derive(Debug, Clone)]
 pub struct Group {
     data: GroupData,

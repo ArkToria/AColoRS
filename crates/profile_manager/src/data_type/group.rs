@@ -4,9 +4,8 @@ use rusqlite::Connection;
 use utils::time::get_current_time;
 
 use super::{
-    listmodel::AColoRSListModel,
     node::Node,
-    withconnection::{AttachedToTable, WithConnection},
+    traits::{AColoRSListModel, AttachedToTable, WithConnection},
 };
 
 const GROUP_TABLE_NAME: &str = "nodes";

@@ -4,10 +4,7 @@ use rusqlite::Connection;
 
 use crate::data_type::group::Group;
 
-use super::{
-    listmodel::AColoRSListModel,
-    withconnection::{AttachedToTable, WithConnection},
-};
+use super::traits::{AColoRSListModel, AttachedToTable, WithConnection};
 
 const GROUP_LIST_TABLE_NAME: &str = "groups";
 #[derive(Debug)]

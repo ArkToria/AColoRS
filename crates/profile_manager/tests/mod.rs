@@ -3,7 +3,7 @@ mod tests {
     use std::error::Error;
 
     use profile_manager::{
-        data_type::group::Group,
+        data_type::group::GroupData,
         tools::dbtools::{test_and_create_group_table, test_and_create_node_table},
     };
     use rusqlite::Connection;
@@ -15,7 +15,7 @@ mod tests {
         let conn = Connection::open_in_memory()?;
 
         test_and_create_group_table(&conn)?;
-        let group = Group {
+        let group = GroupData {
             id: 0,
             name: "test group".to_string(),
             is_subscription: false,

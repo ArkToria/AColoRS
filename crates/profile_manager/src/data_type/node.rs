@@ -1,7 +1,35 @@
+use std::rc::Rc;
+
+use rusqlite::Connection;
 use utils::time::get_current_time;
 
-#[derive(Debug)]
+use super::withconnection::WithConnection;
+
+const NODE_TABLE_NAME: &'static str = "nodes";
+#[derive(Debug, Clone)]
 pub struct Node {
+    data: NodeData,
+    connection: Rc<Connection>,
+}
+
+impl Node {
+    /// Get a reference to the node's data.
+    pub fn data(&self) -> &NodeData {
+        &self.data
+    }
+}
+
+impl WithConnection for Node {
+    fn table_name() -> String {
+        NODE_TABLE_NAME.to_string()
+    }
+    fn connection(&self) -> Rc<Connection> {
+        self.connection.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NodeData {
     pub id: i32,
     pub name: String,
     pub group_id: i32,
@@ -21,7 +49,7 @@ pub struct Node {
     pub modified_at: i64,
 }
 
-impl Node {
+impl NodeData {
     pub fn update_modified_at(&mut self) {
         self.modified_at = get_current_time() as i64;
     }

@@ -1,27 +1,12 @@
-use std::process;
-
 use anyhow::Result;
-use spdlog::error;
+
+use crate::tools::dbtools::count_table;
 
 use super::withconnection::WithConnection;
 
 pub trait AColoRSListModel<T: Clone>: WithConnection {
     fn size(&self) -> Result<usize> {
-        let sql = format!("SELECT COUNT(*) FROM {}", Self::table_name());
-        let connection = self.connection();
-        let mut statement = connection.prepare(&sql)?;
-        let mut rows = statement.query([])?;
-        let size;
-        match rows.next()? {
-            Some(row) => {
-                size = row.get(0)?;
-            }
-            None => {
-                error!("SQLite Count Error");
-                process::exit(1);
-            }
-        }
-        Ok(size)
+        count_table(&self.connection(), &Self::table_name())
     }
     fn append(&mut self, item: &T) -> Result<()> {
         todo!();

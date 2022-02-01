@@ -1,14 +1,13 @@
 use std::rc::Rc;
 
-use rusqlite::Connection;
+use rusqlite::{params, Connection};
 use utils::time::get_current_time;
 
 use super::{
     node::Node,
-    traits::{AColoRSListModel, AttachedToTable, WithConnection},
+    traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection},
 };
 
-const GROUP_TABLE_NAME: &str = "nodes";
 #[derive(Debug, Clone)]
 pub struct Group {
     data: GroupData,
@@ -32,6 +31,16 @@ pub struct GroupData {
     pub create_at: i64,
     pub modified_at: i64,
 }
+const GROUP_TABLE_NAME: &str = "groups";
+const GROUP_FIELD_NAMES: &[&str] = &[
+    "Name",
+    "IsSubscription",
+    "Type",
+    "Url",
+    "CycleTime",
+    "CreatedAt",
+    "ModifiedAt",
+];
 
 impl GroupData {
     pub fn update_modified_at(&mut self) {
@@ -43,9 +52,32 @@ impl GroupData {
     }
 }
 
+const NODE_TABLE_NAME: &str = "nodes";
+
 impl AttachedToTable for Group {
-    fn table_name() -> String {
-        GROUP_TABLE_NAME.to_string()
+    fn attached_to_table_name() -> &'static str {
+        GROUP_TABLE_NAME
+    }
+    fn field_names() -> &'static [&'static str] {
+        GROUP_FIELD_NAMES
+    }
+
+    fn execute_statement(&self, statement: &mut rusqlite::Statement) -> rusqlite::Result<usize> {
+        statement.execute(params![
+            self.data.id,
+            self.data.name,
+            self.data.is_subscription,
+            self.data.group_type,
+            self.data.url,
+            self.data.cycle_time,
+            self.data.create_at,
+            self.data.modified_at,
+        ])
+    }
+}
+impl HasTable for Group {
+    fn has_table_name() -> &'static str {
+        NODE_TABLE_NAME
     }
 }
 

@@ -1,11 +1,10 @@
 use std::rc::Rc;
 
-use rusqlite::Connection;
+use rusqlite::{params, Connection};
 use utils::time::get_current_time;
 
 use super::traits::{AttachedToTable, WithConnection};
 
-const NODE_TABLE_NAME: &str = "nodes";
 #[derive(Debug, Clone)]
 pub struct Node {
     data: NodeData,
@@ -18,9 +17,35 @@ impl Node {
         &self.data
     }
 }
+
 impl AttachedToTable for Node {
-    fn table_name() -> String {
-        NODE_TABLE_NAME.to_string()
+    fn attached_to_table_name() -> &'static str {
+        NODE_TABLE_NAME
+    }
+    fn field_names() -> &'static [&'static str] {
+        NODE_FIELD_NAMES
+    }
+
+    fn execute_statement(&self, statement: &mut rusqlite::Statement) -> rusqlite::Result<usize> {
+        statement.execute(params![
+            self.data.id,
+            self.data.name,
+            self.data.group_id,
+            self.data.group_name,
+            self.data.routing_id,
+            self.data.routing_name,
+            self.data.protocol,
+            self.data.address,
+            self.data.port,
+            self.data.password,
+            self.data.raw,
+            self.data.url,
+            self.data.latency,
+            self.data.upload,
+            self.data.download,
+            self.data.create_at,
+            self.data.modified_at,
+        ])
     }
 }
 impl WithConnection for Node {
@@ -49,6 +74,25 @@ pub struct NodeData {
     pub create_at: i64,
     pub modified_at: i64,
 }
+const NODE_TABLE_NAME: &str = "nodes";
+const NODE_FIELD_NAMES: &[&str] = &[
+    "Name",
+    "GroupID",
+    "GroupName",
+    "RoutingID",
+    "RoutingName",
+    "Protocol",
+    "Address",
+    "Port",
+    "Password",
+    "Raw",
+    "URL",
+    "Latency",
+    "Upload",
+    "Download",
+    "CreatedAt",
+    "ModifiedAt",
+];
 
 impl NodeData {
     pub fn update_modified_at(&mut self) {

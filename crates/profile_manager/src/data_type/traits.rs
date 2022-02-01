@@ -1,18 +1,17 @@
 use anyhow::Result;
 
-use crate::tools::dbtools::count_table;
+use crate::tools::dbtools::{count_table, insert_into_table};
 
 use std::rc::Rc;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, Statement};
 
-pub trait AColoRSListModel<T: Clone>: AttachedToTable {
+pub trait AColoRSListModel<T: Clone + AttachedToTable>: HasTable {
     fn size(&self) -> Result<usize> {
-        count_table(&self.connection(), &Self::table_name())
+        count_table(&self.connection(), Self::has_table_name())
     }
     fn append(&mut self, item: &T) -> Result<()> {
-        todo!();
-        //insert_into_table(&self.connection(), &Self::table_name(), item);
+        insert_into_table(&self.connection(), item)
     }
     fn set(&mut self, index: usize, item: &T) -> Result<()> {
         todo!();
@@ -30,5 +29,11 @@ pub trait WithConnection {
 }
 
 pub trait AttachedToTable: WithConnection {
-    fn table_name() -> String;
+    fn attached_to_table_name() -> &'static str;
+    fn field_names() -> &'static [&'static str];
+    fn execute_statement(&self, statement: &mut Statement) -> rusqlite::Result<usize>;
+}
+
+pub trait HasTable: WithConnection {
+    fn has_table_name() -> &'static str;
 }

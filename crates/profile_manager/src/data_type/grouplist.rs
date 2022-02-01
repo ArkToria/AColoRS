@@ -4,9 +4,8 @@ use rusqlite::Connection;
 
 use crate::data_type::group::Group;
 
-use super::traits::{AColoRSListModel, AttachedToTable, WithConnection};
+use super::traits::{AColoRSListModel, HasTable, WithConnection};
 
-const GROUP_LIST_TABLE_NAME: &str = "groups";
 #[derive(Debug)]
 pub struct GroupList {
     connection: Rc<Connection>,
@@ -18,9 +17,10 @@ impl GroupList {
     }
 }
 
-impl AttachedToTable for GroupList {
-    fn table_name() -> String {
-        GROUP_LIST_TABLE_NAME.to_string()
+const GROUP_TABLE_NAME: &str = "groups";
+impl HasTable for GroupList {
+    fn has_table_name() -> &'static str {
+        GROUP_TABLE_NAME
     }
 }
 

@@ -4,7 +4,7 @@ mod tests {
 
     use profile_manager::{
         data_type::group::Group,
-        dbtools::{test_and_create_group_table, test_and_create_node_table},
+        tools::dbtools::{test_and_create_group_table, test_and_create_node_table},
     };
     use rusqlite::Connection;
 

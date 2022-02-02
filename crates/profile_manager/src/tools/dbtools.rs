@@ -84,6 +84,16 @@ where
         format_name_question_mark_pair_with_comma(field_names)
     )
 }
+fn remove_from_table<T, D>(connection: &Connection, id: usize) -> Result<()>
+where
+    T: AttachedToTable<D>,
+    D: Clone,
+{
+    let sql = format!("DELETE FROM {} WHERE ID = ?", T::attached_to_table_name());
+    let mut statement = connection.prepare(&sql)?;
+    statement.execute(&[&id]);
+    Ok(())
+}
 fn format_name_question_mark_pair_with_comma(strings: &[&str]) -> String {
     let mut result = String::new();
     let mut comma_flag = false;

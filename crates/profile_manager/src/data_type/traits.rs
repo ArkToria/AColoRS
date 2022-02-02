@@ -20,12 +20,16 @@ where
     fn set(&mut self, id: usize, item: &D) -> Result<()> {
         update_table::<T, D>(&self.connection(), id, item)
     }
-    fn remove(&mut self, index: usize) -> Result<()> {
+    fn remove(&mut self, id: usize) -> Result<()> {
+        remove_from_table(&self.connection(), id)
+    }
+    fn get(&self, id: usize) -> T {
         todo!();
     }
-    fn get(&self) -> T {
-        todo!();
-    }
+}
+
+fn remove_from_table(connection: &Connection, id: usize) -> Result<(), anyhow::Error> {
+    todo!()
 }
 
 pub trait WithConnection {

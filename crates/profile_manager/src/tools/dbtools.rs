@@ -1,4 +1,4 @@
-use std::process;
+use std::{process, rc::Rc};
 
 use anyhow::Result;
 use rusqlite::Connection;
@@ -84,15 +84,30 @@ where
         format_name_question_mark_pair_with_comma(field_names)
     )
 }
-fn remove_from_table<T, D>(connection: &Connection, id: usize) -> Result<()>
+pub fn remove_from_table<T, D>(connection: &Connection, id: usize) -> Result<()>
 where
     T: AttachedToTable<D>,
     D: Clone,
 {
     let sql = format!("DELETE FROM {} WHERE ID = ?", T::attached_to_table_name());
     let mut statement = connection.prepare(&sql)?;
-    statement.execute(&[&id]);
+    statement.execute(&[&id])?;
     Ok(())
+}
+pub fn query_from_table<T, D>(connection: Rc<Connection>, id: usize) -> Result<T>
+where
+    T: AttachedToTable<D>,
+    D: Clone,
+{
+    let field_names = T::field_names();
+    let sql = format!(
+        "SELECT ID,{} FROM {} WHERE ID = ?",
+        format_with_comma(field_names),
+        T::attached_to_table_name()
+    );
+    let mut statement = connection.prepare(&sql)?;
+    let item_data = T::query_map(connection.clone(), &mut statement, id)?;
+    Ok(item_data)
 }
 fn format_name_question_mark_pair_with_comma(strings: &[&str]) -> String {
     let mut result = String::new();

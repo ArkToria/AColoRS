@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use anyhow::anyhow;
 use rusqlite::{params, Connection};
 use utils::time::get_current_time;
 
@@ -73,6 +74,45 @@ impl AttachedToTable<NodeData> for Node {
             item_data.modified_at,
             id,
         ])
+    }
+    fn query_map(
+        connection: Rc<Connection>,
+        statement: &mut rusqlite::Statement,
+        id: usize,
+    ) -> anyhow::Result<Node> {
+        let iter = statement.query_map(&[&id], |row| {
+            Ok(NodeData {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                group_id: row.get(2)?,
+                group_name: row.get(3)?,
+                routing_id: row.get(4)?,
+                routing_name: row.get(5)?,
+                protocol: row.get(6)?,
+                address: row.get(7)?,
+                port: row.get(8)?,
+                password: row.get(9)?,
+                raw: row.get(10)?,
+                url: row.get(11)?,
+                latency: row.get(12)?,
+                upload: row.get(13)?,
+                download: row.get(14)?,
+                create_at: row.get(15)?,
+                modified_at: row.get(16)?,
+            })
+        })?;
+        for data in iter {
+            match data {
+                Ok(d) => {
+                    return Ok(Node {
+                        data: d,
+                        connection,
+                    })
+                }
+                Err(e) => return Err(anyhow!("{}", e)),
+            }
+        }
+        Err(anyhow!("Group Not Found"))
     }
 }
 impl WithConnection for Node {

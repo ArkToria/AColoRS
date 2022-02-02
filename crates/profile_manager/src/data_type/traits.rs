@@ -1,6 +1,8 @@
 use anyhow::Result;
 
-use crate::tools::dbtools::{count_table, insert_into_table, update_table};
+use crate::tools::dbtools::{
+    count_table, insert_into_table, query_from_table, remove_from_table, update_table,
+};
 
 use std::rc::Rc;
 
@@ -21,15 +23,11 @@ where
         update_table::<T, D>(&self.connection(), id, item)
     }
     fn remove(&mut self, id: usize) -> Result<()> {
-        remove_from_table(&self.connection(), id)
+        remove_from_table::<T, D>(&self.connection(), id)
     }
-    fn get(&self, id: usize) -> T {
-        todo!();
+    fn query(&self, id: usize) -> Result<T> {
+        query_from_table::<T, D>(self.connection(), id)
     }
-}
-
-fn remove_from_table(connection: &Connection, id: usize) -> Result<(), anyhow::Error> {
-    todo!()
 }
 
 pub trait WithConnection {
@@ -48,6 +46,9 @@ where
         id: usize,
         statement: &mut Statement,
     ) -> rusqlite::Result<usize>;
+    fn query_map(connection: Rc<Connection>, statement: &mut Statement, id: usize) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 pub trait HasTable: WithConnection {

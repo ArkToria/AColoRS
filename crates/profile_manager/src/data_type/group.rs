@@ -42,6 +42,10 @@ const GROUP_FIELD_NAMES: &[&str] = &[
     "CreatedAt",
     "ModifiedAt",
 ];
+const GROUP_UPDATE_SQL: &str = "UPDATE groups SET Name = ?,IsSubscription = ?,Type = ?,Url = ?,CycleTime = ?,CreatedAt = ?,ModifiedAt = ? WHERE ID = ?;";
+const GROUP_INSERT_SQL: &str = "INSERT INTO groups(Name,IsSubscription,Type,Url,CycleTime,CreatedAt,ModifiedAt) VALUES(?,?,?,?,?,?,?)";
+const GROUP_REMOVE_SQL: &str = "DELETE FROM groups WHERE ID = ?";
+const GROUP_QUERY_SQL: &str = "SELECT ID,Name,IsSubscription,Type,Url,CycleTime,CreatedAt,ModifiedAt FROM groups WHERE ID = ?";
 
 impl GroupData {
     pub fn update_modified_at(&mut self) {
@@ -61,6 +65,19 @@ impl AttachedToTable<GroupData> for Group {
     }
     fn field_names() -> &'static [&'static str] {
         GROUP_FIELD_NAMES
+    }
+    fn get_update_sql() -> &'static str {
+        GROUP_UPDATE_SQL
+    }
+    fn get_insert_sql() -> &'static str {
+        GROUP_INSERT_SQL
+    }
+    fn get_remove_sql() -> &'static str {
+        GROUP_REMOVE_SQL
+    }
+
+    fn get_query_sql() -> &'static str {
+        GROUP_QUERY_SQL
     }
 
     fn execute_statement(

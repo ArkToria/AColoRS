@@ -27,6 +27,21 @@ impl AttachedToTable<NodeData> for Node {
         NODE_FIELD_NAMES
     }
 
+    fn get_update_sql() -> &'static str {
+        NODE_UPDATE_SQL
+    }
+    fn get_insert_sql() -> &'static str {
+        NODE_INSERT_SQL
+    }
+
+    fn get_remove_sql() -> &'static str {
+        NODE_REMOVE_SQL
+    }
+
+    fn get_query_sql() -> &'static str {
+        NODE_QUERY_SQL
+    }
+
     fn execute_statement(
         item_data: &NodeData,
         statement: &mut rusqlite::Statement,
@@ -160,6 +175,10 @@ const NODE_FIELD_NAMES: &[&str] = &[
     "CreatedAt",
     "ModifiedAt",
 ];
+const NODE_UPDATE_SQL: &str = "UPDATE nodes SET Name = ?,GroupID = ?,GroupName = ?,RoutingID = ?,RoutingName = ?,Protocol = ?,Address = ?,Port = ?,Password = ?,Raw = ?,URL = ?,Latency = ?,Upload = ?,Download = ?,CreatedAt = ?,ModifiedAt = ? WHERE ID = ?;";
+const NODE_INSERT_SQL: &str = "INSERT INTO nodes(Name,GroupID,GroupName,RoutingID,RoutingName,Protocol,Address,Port,Password,Raw,URL,Latency,Upload,Download,CreatedAt,ModifiedAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+const NODE_REMOVE_SQL: &str = "DELETE FROM nodes WHERE ID = ?";
+const NODE_QUERY_SQL: &str = "SELECT ID,Name,GroupID,GroupName,RoutingID,RoutingName,Protocol,Address,Port,Password,Raw,URL,Latency,Upload,Download,CreatedAt,ModifiedAt FROM nodes WHERE ID = ?";
 
 impl NodeData {
     pub fn update_modified_at(&mut self) {

@@ -40,6 +40,10 @@ where
 {
     fn attached_to_table_name() -> &'static str;
     fn field_names() -> &'static [&'static str];
+    fn get_update_sql() -> &'static str;
+    fn get_insert_sql() -> &'static str;
+    fn get_remove_sql() -> &'static str;
+    fn get_query_sql() -> &'static str;
     fn execute_statement(item_data: &D, statement: &mut Statement) -> rusqlite::Result<usize>;
     fn execute_statement_with_id(
         item_data: &D,

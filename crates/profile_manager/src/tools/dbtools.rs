@@ -44,52 +44,28 @@ where
     T: AttachedToTable<D>,
     D: Clone,
 {
-    let sql = get_insert_sql::<T, D>();
+    let sql = T::get_insert_sql();
+    println!("{}", &sql);
     let mut statement = connection.prepare(&sql)?;
     T::execute_statement(item, &mut statement)?;
     Ok(())
-}
-fn get_insert_sql<T, D>() -> String
-where
-    T: AttachedToTable<D>,
-    D: Clone,
-{
-    let field_names = T::field_names();
-    format!(
-        "INSERT INTO {}({}) VALUES({})",
-        T::attached_to_table_name(),
-        format_with_comma(field_names),
-        generate_question_marks_with_comma(field_names.len())
-    )
 }
 pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> Result<()>
 where
     T: AttachedToTable<D>,
     D: Clone,
 {
-    let sql = get_update_sql::<T, D>();
+    let sql = T::get_update_sql();
     let mut statement = connection.prepare(&sql)?;
     T::execute_statement_with_id(item, id, &mut statement)?;
     Ok(())
-}
-fn get_update_sql<T, D>() -> String
-where
-    T: AttachedToTable<D>,
-    D: Clone,
-{
-    let field_names = T::field_names();
-    format!(
-        "UPDATE {} SET {} WHERE ID = ?;",
-        T::attached_to_table_name(),
-        format_name_question_mark_pair_with_comma(field_names)
-    )
 }
 pub fn remove_from_table<T, D>(connection: &Connection, id: usize) -> Result<()>
 where
     T: AttachedToTable<D>,
     D: Clone,
 {
-    let sql = format!("DELETE FROM {} WHERE ID = ?", T::attached_to_table_name());
+    let sql = T::get_remove_sql();
     let mut statement = connection.prepare(&sql)?;
     statement.execute(&[&id])?;
     Ok(())
@@ -99,52 +75,12 @@ where
     T: AttachedToTable<D>,
     D: Clone,
 {
-    let field_names = T::field_names();
-    let sql = format!(
-        "SELECT ID,{} FROM {} WHERE ID = ?",
-        format_with_comma(field_names),
-        T::attached_to_table_name()
-    );
+    let sql = T::get_query_sql();
     let mut statement = connection.prepare(&sql)?;
     let item_data = T::query_map(connection.clone(), &mut statement, id)?;
     Ok(item_data)
 }
-fn format_name_question_mark_pair_with_comma(strings: &[&str]) -> String {
-    let mut result = String::new();
-    let mut comma_flag = false;
-    IntoIterator::into_iter(strings).for_each(|st| {
-        if comma_flag {
-            result += ",";
-        }
-        result += &format!("{} = ?", st);
-        comma_flag = true;
-    });
-    result
-}
-fn format_with_comma(strings: &[&str]) -> String {
-    let mut result = String::new();
-    let mut comma_flag = false;
-    IntoIterator::into_iter(strings).for_each(|st| {
-        if comma_flag {
-            result += ",";
-        }
-        result += st;
-        comma_flag = true;
-    });
-    result
-}
-fn generate_question_marks_with_comma(count: usize) -> String {
-    let mut result = String::new();
-    let mut comma_flag = false;
-    (0..count).for_each(|_| {
-        if comma_flag {
-            result += ",";
-        }
-        result += "?";
-        comma_flag = true;
-    });
-    result
-}
+
 #[cfg(test)]
 mod tests {
 

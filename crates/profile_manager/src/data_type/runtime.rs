@@ -19,7 +19,6 @@ impl WithConnection for RuntimeValue {
         self.connection.clone()
     }
 }
-const RUNTIME_TABLE_NAME: &str = "runtime";
 impl HasTable for RuntimeValue {
     fn has_table_name() -> &'static str {
         RUNTIME_TABLE_NAME
@@ -40,14 +39,19 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValueData {
     pub id: i32,
     pub name: String,
     pub value_type: i32,
     pub value: String,
 }
+const RUNTIME_TABLE_NAME: &str = "runtime";
 const RUNTIME_FIELD_NAMES: &[&str] = &["Name", "Type", "Value"];
+const RUNTIME_UPDATE_SQL: &str = "UPDATE runtime SET Name = ?, Type = ?, Value = ? WHERE ID = ?;";
+const RUNTIME_INSERT_SQL: &str = "INSERT INTO runtime(Name,Type,Value) VALUES(?,?,?)";
+const RUNTIME_REMOVE_SQL: &str = "DELETE FROM runtime WHERE ID = ?";
+const RUNTIME_QUERY_SQL: &str = "SELECT ID,Name,Type,Value FROM runtime WHERE ID = ?";
 
 impl WithConnection for Value {
     fn connection(&self) -> Rc<Connection> {
@@ -62,6 +66,22 @@ impl AttachedToTable<ValueData> for Value {
 
     fn field_names() -> &'static [&'static str] {
         RUNTIME_FIELD_NAMES
+    }
+
+    fn get_update_sql() -> &'static str {
+        RUNTIME_UPDATE_SQL
+    }
+
+    fn get_insert_sql() -> &'static str {
+        RUNTIME_INSERT_SQL
+    }
+
+    fn get_remove_sql() -> &'static str {
+        RUNTIME_REMOVE_SQL
+    }
+
+    fn get_query_sql() -> &'static str {
+        RUNTIME_QUERY_SQL
     }
 
     fn execute_statement(
@@ -115,6 +135,103 @@ impl AttachedToTable<ValueData> for Value {
                 Err(e) => return Err(anyhow!("{}", e)),
             }
         }
-        Err(anyhow!("Group Not Found"))
+        Err(anyhow!("RuntimeValue Not Found"))
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::tools::dbtools::test_and_create_runtime_table;
+    use anyhow::{anyhow, Result};
+
+    #[test]
+    fn test_insert_into_runtime_value_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_runtime_table(&conn)?;
+        let mut runtime_value = RuntimeValue::new(conn);
+        for i in 1..15 {
+            let runtime_value_data = generate_test_runtime_value(i);
+            runtime_value.append(&runtime_value_data)?;
+            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            println!("{:?}", fetch_runtime_value);
+            assert!(compare_runtime_value(
+                fetch_runtime_value.data(),
+                &runtime_value_data
+            ));
+        }
+        Ok(())
+    }
+    #[test]
+    fn test_update_runtime_value_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_runtime_table(&conn)?;
+        let mut runtime_value = RuntimeValue::new(conn);
+        for i in 1..15 {
+            let runtime_value_data = generate_test_runtime_value(i);
+            runtime_value.append(&runtime_value_data)?;
+            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            println!("Before: {:?}", fetch_runtime_value);
+            assert!(compare_runtime_value(
+                fetch_runtime_value.data(),
+                &runtime_value_data
+            ));
+
+            let new_runtime_value = generate_test_runtime_value(i + 200);
+            runtime_value.set(fetch_runtime_value.data().id as usize, &new_runtime_value)?;
+            let fetch_runtime_value = runtime_value.query(i as usize)?;
+
+            println!("After: {:?}", fetch_runtime_value);
+            assert!(compare_runtime_value(
+                fetch_runtime_value.data(),
+                &new_runtime_value
+            ));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_remove_runtime_value_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_runtime_table(&conn)?;
+        let mut runtime_value = RuntimeValue::new(conn);
+        for i in 1..15 {
+            let runtime_value_data = generate_test_runtime_value(i);
+            runtime_value.append(&runtime_value_data)?;
+            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            println!("Before: {:?}", fetch_runtime_value);
+            assert!(compare_runtime_value(
+                fetch_runtime_value.data(),
+                &runtime_value_data
+            ));
+
+            runtime_value.remove(fetch_runtime_value.data().id as usize)?;
+            let fetch_runtime_value = runtime_value.query(i as usize);
+            let error_expected = anyhow!("RuntimeValue Not Found");
+
+            if let Err(e) = fetch_runtime_value {
+                assert_eq!(error_expected.to_string(), e.to_string());
+            } else {
+                panic!("No Errors when runtime_value removed");
+            }
+        }
+        Ok(())
+    }
+    pub fn compare_runtime_value(a: &ValueData, b: &ValueData) -> bool {
+        let mut ac = a.clone();
+        let mut bc = b.clone();
+        ac.id = 0;
+        bc.id = 0;
+        ac == bc
+    }
+    pub fn generate_test_runtime_value(number: u16) -> ValueData {
+        let test_string = format!("test{}", number);
+        let result = ValueData {
+            id: number as i32,
+            name: format!("{} runtime_value", &test_string),
+            value_type: number as i32,
+            value: test_string,
+        };
+        result
     }
 }

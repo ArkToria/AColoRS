@@ -47,13 +47,14 @@ pub struct ValueData {
     pub value_type: i32,
     pub value: String,
 }
+const RUNTIME_FIELD_NAMES: &[&str] = &["Name", "Type", "Value"];
 
 impl WithConnection for Value {
     fn connection(&self) -> Rc<Connection> {
         self.connection.clone()
     }
 }
-const RUNTIME_FIELD_NAMES: &[&str] = &["Name", "Type", "Value"];
+
 impl AttachedToTable<ValueData> for Value {
     fn attached_to_table_name() -> &'static str {
         RUNTIME_TABLE_NAME

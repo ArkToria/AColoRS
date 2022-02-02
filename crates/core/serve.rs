@@ -15,7 +15,7 @@ pub fn serve(args: &Args) -> Result<bool> {
     debug!("Serve with args: {:?}", args);
 
     let matches = get_serve_matches(args);
-    let interface = matches.value_of("interface").unwrap_or("[::1]");
+    let interface = matches.value_of("interface").unwrap_or("127.0.0.1");
     let mut port = get_port_from(matches);
 
     test_and_set_port(&mut port);

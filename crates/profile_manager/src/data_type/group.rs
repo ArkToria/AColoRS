@@ -170,6 +170,32 @@ pub mod tests {
         }
         Ok(())
     }
+    #[test]
+    fn test_update_node_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_group_table(&conn)?;
+        test_and_create_node_table(&conn)?;
+        let mut group_list = GroupList::new(conn);
+        group_list.append(&generate_test_group(1))?;
+        group_list.append(&generate_test_group(2))?;
+        group_list.append(&generate_test_group(3))?;
+        let mut group = group_list.query(2)?;
+        for i in 1..15 {
+            let node_data = generate_test_node(i);
+            group.append(&node_data)?;
+            let fetch_node = group.query(i as usize)?;
+            assert!(compare_node(fetch_node.data(), &node_data));
+            println!("Before: {:?}", fetch_node);
+
+            let new_node = generate_test_node(i + 200);
+            group.set(fetch_node.data().id as usize, &new_node)?;
+            let fetch_node = group.query(i as usize)?;
+
+            println!("After: {:?}", fetch_node);
+            assert!(compare_node(fetch_node.data(), &new_node));
+        }
+        Ok(())
+    }
     pub fn compare_group(a: &GroupData, b: &GroupData) -> bool {
         let mut ac = a.clone();
         let mut bc = b.clone();

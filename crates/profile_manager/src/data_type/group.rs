@@ -21,7 +21,7 @@ impl Group {
         &self.data
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GroupData {
     pub id: i32,
     pub name: String,

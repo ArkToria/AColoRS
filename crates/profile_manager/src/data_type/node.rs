@@ -121,7 +121,7 @@ impl WithConnection for Node {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NodeData {
     pub id: i32,
     pub name: String,

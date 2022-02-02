@@ -12,20 +12,6 @@ mod tests {
 
     #[test]
     fn it_works() -> Result<()> {
-        let conn = Connection::open_in_memory()?;
-
-        test_and_create_group_table(&conn)?;
-        let group = GroupData {
-            id: 0,
-            name: "test group".to_string(),
-            is_subscription: false,
-            group_type: 0,
-            url: "".to_string(),
-            cycle_time: 0,
-            create_at: 1637666014,
-            modified_at: 1637666614,
-        };
-
         Ok(())
     }
 

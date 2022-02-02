@@ -41,7 +41,7 @@ pub mod tests {
         data_type::group::tests::{compare_group, generate_test_group},
         tools::dbtools::{test_and_create_group_table, test_and_create_node_table},
     };
-    use anyhow::Result;
+    use anyhow::{anyhow, Result};
 
     #[test]
     fn test_insert_into_group_and_query() -> Result<()> {
@@ -77,6 +77,32 @@ pub mod tests {
 
             println!("After: {:?}", fetch_group);
             assert!(compare_group(fetch_group.data(), &new_group));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_remove_group_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_group_table(&conn)?;
+        test_and_create_node_table(&conn)?;
+        let mut group_list = GroupList::new(conn);
+        for i in 1..15 {
+            let group_data = generate_test_group(i);
+            group_list.append(&group_data)?;
+            let fetch_group = group_list.query(i as usize)?;
+            println!("Before: {:?}", fetch_group);
+            assert!(compare_group(fetch_group.data(), &group_data));
+
+            group_list.remove(fetch_group.data().id as usize)?;
+            let fetch_group = group_list.query(i as usize);
+            let error_expected = anyhow!("Group Not Found");
+
+            if let Err(e) = fetch_group {
+                assert_eq!(error_expected.to_string(), e.to_string());
+            } else {
+                panic!("No Errors when group removed");
+            }
         }
         Ok(())
     }

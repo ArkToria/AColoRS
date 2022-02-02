@@ -196,6 +196,35 @@ pub mod tests {
         }
         Ok(())
     }
+    #[test]
+    fn test_remove_node_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_group_table(&conn)?;
+        test_and_create_node_table(&conn)?;
+        let mut group_list = GroupList::new(conn);
+        group_list.append(&generate_test_group(1))?;
+        group_list.append(&generate_test_group(2))?;
+        group_list.append(&generate_test_group(3))?;
+        let mut group = group_list.query(2)?;
+        for i in 1..15 {
+            let node_data = generate_test_node(i);
+            group.append(&node_data)?;
+            let fetch_node = group.query(i as usize)?;
+            assert!(compare_node(fetch_node.data(), &node_data));
+            println!("Before: {:?}", fetch_node);
+
+            group.remove(fetch_node.data().id as usize)?;
+            let fetch_node = group.query(i as usize);
+            let error_expected = anyhow!("Node Not Found");
+
+            if let Err(e) = fetch_node {
+                assert_eq!(error_expected.to_string(), e.to_string());
+            } else {
+                panic!("No Errors when group removed");
+            }
+        }
+        Ok(())
+    }
     pub fn compare_group(a: &GroupData, b: &GroupData) -> bool {
         let mut ac = a.clone();
         let mut bc = b.clone();

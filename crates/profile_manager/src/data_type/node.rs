@@ -112,7 +112,7 @@ impl AttachedToTable<NodeData> for Node {
                 Err(e) => return Err(anyhow!("{}", e)),
             }
         }
-        Err(anyhow!("Group Not Found"))
+        Err(anyhow!("Node Not Found"))
     }
 }
 impl WithConnection for Node {

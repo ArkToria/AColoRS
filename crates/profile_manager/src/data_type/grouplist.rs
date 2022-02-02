@@ -4,7 +4,10 @@ use rusqlite::Connection;
 
 use crate::data_type::group::Group;
 
-use super::traits::{AColoRSListModel, HasTable, WithConnection};
+use super::{
+    group::GroupData,
+    traits::{AColoRSListModel, HasTable, WithConnection},
+};
 
 #[derive(Debug)]
 pub struct GroupList {
@@ -29,4 +32,4 @@ impl WithConnection for GroupList {
         self.connection.clone()
     }
 }
-impl AColoRSListModel<Group> for GroupList {}
+impl AColoRSListModel<Group, GroupData> for GroupList {}

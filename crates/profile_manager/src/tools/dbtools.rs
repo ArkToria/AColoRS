@@ -39,18 +39,20 @@ pub fn count_table(connection: &Connection, name: &str) -> Result<usize> {
     }
     Ok(size)
 }
-pub fn insert_into_table<T>(connection: &Connection, item: &T) -> Result<()>
+pub fn insert_into_table<T, D>(connection: &Connection, item: &D) -> Result<()>
 where
-    T: AttachedToTable,
+    T: AttachedToTable<D>,
+    D: Clone,
 {
-    let sql = get_insert_sql::<T>();
+    let sql = get_insert_sql::<T, D>();
     let mut statement = connection.prepare(&sql)?;
-    item.execute_statement(&mut statement)?;
+    T::execute_statement(item, &mut statement)?;
     Ok(())
 }
-fn get_insert_sql<T>() -> String
+fn get_insert_sql<T, D>() -> String
 where
-    T: AttachedToTable,
+    T: AttachedToTable<D>,
+    D: Clone,
 {
     let field_names = T::field_names();
     format!(
@@ -60,7 +62,41 @@ where
         generate_question_marks_with_comma(field_names.len())
     )
 }
-fn format_with_comma(strings: &'static [&'static str]) -> String {
+pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> Result<()>
+where
+    T: AttachedToTable<D>,
+    D: Clone,
+{
+    let sql = get_update_sql::<T, D>();
+    let mut statement = connection.prepare(&sql)?;
+    T::execute_statement_with_id(item, id, &mut statement)?;
+    Ok(())
+}
+fn get_update_sql<T, D>() -> String
+where
+    T: AttachedToTable<D>,
+    D: Clone,
+{
+    let field_names = T::field_names();
+    format!(
+        "UPDATE {} SET {} WHERE ID = ?;",
+        T::attached_to_table_name(),
+        format_name_question_mark_pair_with_comma(field_names)
+    )
+}
+fn format_name_question_mark_pair_with_comma(strings: &[&str]) -> String {
+    let mut result = String::new();
+    let mut comma_flag = false;
+    IntoIterator::into_iter(strings).for_each(|st| {
+        result += &format!("{} = ?", st);
+        if comma_flag {
+            result += ",";
+        }
+        comma_flag = true;
+    });
+    result
+}
+fn format_with_comma(strings: &[&str]) -> String {
     let mut result = String::new();
     let mut comma_flag = false;
     IntoIterator::into_iter(strings).for_each(|st| {

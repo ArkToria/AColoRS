@@ -1,20 +1,24 @@
 use anyhow::Result;
 
-use crate::tools::dbtools::{count_table, insert_into_table};
+use crate::tools::dbtools::{count_table, insert_into_table, update_table};
 
 use std::rc::Rc;
 
 use rusqlite::{Connection, Statement};
 
-pub trait AColoRSListModel<T: Clone + AttachedToTable>: HasTable {
+pub trait AColoRSListModel<T, D>: HasTable
+where
+    T: Clone + AttachedToTable<D>,
+    D: Clone,
+{
     fn size(&self) -> Result<usize> {
         count_table(&self.connection(), Self::has_table_name())
     }
-    fn append(&mut self, item: &T) -> Result<()> {
-        insert_into_table(&self.connection(), item)
+    fn append(&mut self, item: &D) -> Result<()> {
+        insert_into_table::<T, D>(&self.connection(), item)
     }
-    fn set(&mut self, index: usize, item: &T) -> Result<()> {
-        todo!();
+    fn set(&mut self, id: usize, item: &D) -> Result<()> {
+        update_table::<T, D>(&self.connection(), id, item)
     }
     fn remove(&mut self, index: usize) -> Result<()> {
         todo!();
@@ -28,10 +32,18 @@ pub trait WithConnection {
     fn connection(&self) -> Rc<Connection>;
 }
 
-pub trait AttachedToTable: WithConnection {
+pub trait AttachedToTable<D>: WithConnection
+where
+    D: Clone,
+{
     fn attached_to_table_name() -> &'static str;
     fn field_names() -> &'static [&'static str];
-    fn execute_statement(&self, statement: &mut Statement) -> rusqlite::Result<usize>;
+    fn execute_statement(item_data: &D, statement: &mut Statement) -> rusqlite::Result<usize>;
+    fn execute_statement_with_id(
+        item_data: &D,
+        id: usize,
+        statement: &mut Statement,
+    ) -> rusqlite::Result<usize>;
 }
 
 pub trait HasTable: WithConnection {

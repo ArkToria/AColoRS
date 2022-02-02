@@ -18,7 +18,7 @@ impl Node {
     }
 }
 
-impl AttachedToTable for Node {
+impl AttachedToTable<NodeData> for Node {
     fn attached_to_table_name() -> &'static str {
         NODE_TABLE_NAME
     }
@@ -26,25 +26,52 @@ impl AttachedToTable for Node {
         NODE_FIELD_NAMES
     }
 
-    fn execute_statement(&self, statement: &mut rusqlite::Statement) -> rusqlite::Result<usize> {
+    fn execute_statement(
+        item_data: &NodeData,
+        statement: &mut rusqlite::Statement,
+    ) -> rusqlite::Result<usize> {
         statement.execute(params![
-            self.data.id,
-            self.data.name,
-            self.data.group_id,
-            self.data.group_name,
-            self.data.routing_id,
-            self.data.routing_name,
-            self.data.protocol,
-            self.data.address,
-            self.data.port,
-            self.data.password,
-            self.data.raw,
-            self.data.url,
-            self.data.latency,
-            self.data.upload,
-            self.data.download,
-            self.data.create_at,
-            self.data.modified_at,
+            item_data.name,
+            item_data.group_id,
+            item_data.group_name,
+            item_data.routing_id,
+            item_data.routing_name,
+            item_data.protocol,
+            item_data.address,
+            item_data.port,
+            item_data.password,
+            item_data.raw,
+            item_data.url,
+            item_data.latency,
+            item_data.upload,
+            item_data.download,
+            item_data.create_at,
+            item_data.modified_at,
+        ])
+    }
+    fn execute_statement_with_id(
+        item_data: &NodeData,
+        id: usize,
+        statement: &mut rusqlite::Statement,
+    ) -> rusqlite::Result<usize> {
+        statement.execute(params![
+            item_data.name,
+            item_data.group_id,
+            item_data.group_name,
+            item_data.routing_id,
+            item_data.routing_name,
+            item_data.protocol,
+            item_data.address,
+            item_data.port,
+            item_data.password,
+            item_data.raw,
+            item_data.url,
+            item_data.latency,
+            item_data.upload,
+            item_data.download,
+            item_data.create_at,
+            item_data.modified_at,
+            id,
         ])
     }
 }

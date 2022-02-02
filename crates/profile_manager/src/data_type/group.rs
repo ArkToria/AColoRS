@@ -4,7 +4,7 @@ use rusqlite::{params, Connection};
 use utils::time::get_current_time;
 
 use super::{
-    node::Node,
+    node::{Node, NodeData},
     traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection},
 };
 
@@ -54,7 +54,7 @@ impl GroupData {
 
 const NODE_TABLE_NAME: &str = "nodes";
 
-impl AttachedToTable for Group {
+impl AttachedToTable<GroupData> for Group {
     fn attached_to_table_name() -> &'static str {
         GROUP_TABLE_NAME
     }
@@ -62,16 +62,34 @@ impl AttachedToTable for Group {
         GROUP_FIELD_NAMES
     }
 
-    fn execute_statement(&self, statement: &mut rusqlite::Statement) -> rusqlite::Result<usize> {
+    fn execute_statement(
+        item_data: &GroupData,
+        statement: &mut rusqlite::Statement,
+    ) -> rusqlite::Result<usize> {
         statement.execute(params![
-            self.data.id,
-            self.data.name,
-            self.data.is_subscription,
-            self.data.group_type,
-            self.data.url,
-            self.data.cycle_time,
-            self.data.create_at,
-            self.data.modified_at,
+            item_data.name,
+            item_data.is_subscription,
+            item_data.group_type,
+            item_data.url,
+            item_data.cycle_time,
+            item_data.create_at,
+            item_data.modified_at,
+        ])
+    }
+    fn execute_statement_with_id(
+        item_data: &GroupData,
+        id: usize,
+        statement: &mut rusqlite::Statement,
+    ) -> rusqlite::Result<usize> {
+        statement.execute(params![
+            item_data.name,
+            item_data.is_subscription,
+            item_data.group_type,
+            item_data.url,
+            item_data.cycle_time,
+            item_data.create_at,
+            item_data.modified_at,
+            id,
         ])
     }
 }
@@ -87,4 +105,4 @@ impl WithConnection for Group {
     }
 }
 
-impl AColoRSListModel<Node> for Group {}
+impl AColoRSListModel<Node, NodeData> for Group {}

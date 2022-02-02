@@ -64,7 +64,7 @@ fn get_port_from(matches: &ArgMatches) -> u16 {
 
 fn test_and_set_port(port: &mut u16) {
     let port_not_available = !tcp_port_is_available(*port);
-    if *port != 19198 && port_not_available {
+    if *port != DEFAULT_PORT && port_not_available {
         error!("The port is not available");
         process::exit(1);
     }

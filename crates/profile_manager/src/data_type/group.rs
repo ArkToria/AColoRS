@@ -138,3 +138,59 @@ impl WithConnection for Group {
 }
 
 impl AColoRSListModel<Node, NodeData> for Group {}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::{
+        data_type::{
+            grouplist::GroupList,
+            node::tests::{compare_node, generate_test_node},
+        },
+        tools::dbtools::{test_and_create_group_table, test_and_create_node_table},
+    };
+
+    use super::*;
+    use anyhow::Result;
+    #[test]
+    fn test_insert_into_node_and_query() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_group_table(&conn)?;
+        test_and_create_node_table(&conn)?;
+        let mut group_list = GroupList::new(conn);
+        group_list.append(&generate_test_group(1))?;
+        group_list.append(&generate_test_group(2))?;
+        group_list.append(&generate_test_group(3))?;
+        let mut group = group_list.query(2)?;
+        for i in 1..15 {
+            let node_data = generate_test_node(i);
+            group.append(&node_data)?;
+            let fetch_node = group.query(i as usize)?;
+            println!("{:?}", fetch_node);
+            assert!(compare_node(fetch_node.data(), &node_data));
+        }
+        Ok(())
+    }
+    pub fn compare_group(a: &GroupData, b: &GroupData) -> bool {
+        let mut ac = a.clone();
+        let mut bc = b.clone();
+        ac.id = 0;
+        bc.id = 0;
+        ac == bc
+    }
+    pub fn generate_test_group(number: u16) -> GroupData {
+        let test_string = format!("test{}", number);
+        let mut result = GroupData {
+            id: number as i32,
+            name: format!("{} group", &test_string),
+            is_subscription: false,
+            group_type: 0,
+            url: format!("https://localhost:{}", number),
+            cycle_time: number as i32,
+            create_at: 0,
+            modified_at: 0,
+        };
+        result.update_create_at();
+        result.update_modified_at();
+        result
+    }
+}

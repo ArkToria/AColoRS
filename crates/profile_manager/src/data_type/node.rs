@@ -170,3 +170,41 @@ impl NodeData {
         self.create_at = get_current_time() as i64;
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    pub fn compare_node(a: &NodeData, b: &NodeData) -> bool {
+        let mut ac = a.clone();
+        let mut bc = b.clone();
+        ac.id = 0;
+        bc.id = 0;
+        ac == bc
+    }
+    pub fn generate_test_node(number: u16) -> NodeData {
+        let test_string = format!("test{}", number);
+        let test_address = format!("localhost:{}", number);
+        let mut result = NodeData {
+            id: number as i32,
+            name: format!("{} node", test_string),
+            group_id: number as i32,
+            group_name: format!("{} group", test_string),
+            routing_id: number as i32,
+            routing_name: format!("{} routing", test_string),
+            protocol: number as i32,
+            address: test_address.clone(),
+            port: number,
+            password: test_string.clone(),
+            raw: test_string.clone(),
+            url: format!("https://{}", test_address),
+            latency: 100 * number as i32,
+            upload: 200 * (number as i64),
+            download: 300 * (number as i64),
+            create_at: 0,
+            modified_at: 0,
+        };
+        result.update_create_at();
+        result.update_modified_at();
+        result
+    }
+}

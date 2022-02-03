@@ -45,9 +45,8 @@ where
     D: Clone,
 {
     let sql = T::get_insert_sql();
-    println!("{}", &sql);
     let mut statement = connection.prepare(&sql)?;
-    T::execute_statement(item, &mut statement)?;
+    T::execute_statement(&item, &mut statement)?;
     Ok(())
 }
 pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> Result<()>

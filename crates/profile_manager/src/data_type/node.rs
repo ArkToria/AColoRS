@@ -17,6 +17,10 @@ impl Node {
     pub fn data(&self) -> &NodeData {
         &self.data
     }
+
+    pub fn new(data: NodeData, connection: Rc<Connection>) -> Node {
+        Node { data, connection }
+    }
 }
 
 impl AttachedToTable<NodeData> for Node {
@@ -117,15 +121,10 @@ impl AttachedToTable<NodeData> for Node {
             })
         })?;
         for data in iter {
-            match data {
-                Ok(d) => {
-                    return Ok(Node {
-                        data: d,
-                        connection,
-                    })
-                }
-                Err(e) => return Err(anyhow!("{}", e)),
-            }
+            return Ok(Node {
+                data: data?,
+                connection,
+            });
         }
         Err(anyhow!("Node Not Found"))
     }
@@ -198,6 +197,8 @@ pub mod tests {
         let mut bc = b.clone();
         ac.id = 0;
         bc.id = 0;
+        ac.group_id = 0;
+        bc.group_id = 0;
         ac == bc
     }
     pub fn generate_test_node(number: u16) -> NodeData {

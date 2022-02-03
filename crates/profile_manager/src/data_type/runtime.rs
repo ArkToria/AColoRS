@@ -125,15 +125,10 @@ impl AttachedToTable<ValueData> for Value {
             })
         })?;
         for data in iter {
-            match data {
-                Ok(d) => {
-                    return Ok(Value {
-                        data: d,
-                        connection,
-                    })
-                }
-                Err(e) => return Err(anyhow!("{}", e)),
-            }
+            return Ok(Value {
+                data: data?,
+                connection,
+            });
         }
         Err(anyhow!("RuntimeValue Not Found"))
     }

@@ -4,6 +4,8 @@ use anyhow::anyhow;
 use rusqlite::{params, Connection};
 use utils::time::get_current_time;
 
+use crate::tools::dbtools::{insert_into_table, update_table};
+
 use super::{
     node::{Node, NodeData},
     traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection},
@@ -19,6 +21,41 @@ impl Group {
     /// Get a reference to the group's data.
     pub fn data(&self) -> &GroupData {
         &self.data
+    }
+
+    pub fn new(data: GroupData, connection: Rc<Connection>) -> Group {
+        Group { data, connection }
+    }
+
+    pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Node>> {
+        let group_id = self.data().id;
+        let sql = "SELECT * FROM nodes WHERE GroupID = ?";
+        let mut statement = self.connection.prepare(&sql)?;
+        let mut result: Vec<Node> = Vec::new();
+        let mut rows = statement.query(&[&group_id])?;
+        while let Some(row) = rows.next()? {
+            let node_data = NodeData {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                group_id: row.get(2)?,
+                group_name: row.get(3)?,
+                routing_id: row.get(4)?,
+                routing_name: row.get(5)?,
+                protocol: row.get(6)?,
+                address: row.get(7)?,
+                port: row.get(8)?,
+                password: row.get(9)?,
+                raw: row.get(10)?,
+                url: row.get(11)?,
+                latency: row.get(12)?,
+                upload: row.get(13)?,
+                download: row.get(14)?,
+                create_at: row.get(15)?,
+                modified_at: row.get(16)?,
+            };
+            result.push(Node::new(node_data, self.connection.clone()));
+        }
+        Ok(result)
     }
 }
 #[derive(Debug, Clone, PartialEq)]
@@ -129,15 +166,10 @@ impl AttachedToTable<GroupData> for Group {
             })
         })?;
         for data in iter {
-            match data {
-                Ok(d) => {
-                    return Ok(Group {
-                        data: d,
-                        connection,
-                    })
-                }
-                Err(e) => return Err(anyhow!("{}", e)),
-            }
+            return Ok(Group {
+                data: data?,
+                connection,
+            });
         }
         Err(anyhow!("Group Not Found"))
     }
@@ -154,7 +186,18 @@ impl WithConnection for Group {
     }
 }
 
-impl AColoRSListModel<Node, NodeData> for Group {}
+impl AColoRSListModel<Node, NodeData> for Group {
+    fn append(&mut self, item: &NodeData) -> anyhow::Result<()> {
+        let mut item = item.clone();
+        item.group_id = self.data().id;
+        insert_into_table::<Node, NodeData>(&self.connection(), &item)
+    }
+    fn set(&mut self, id: usize, item: &NodeData) -> anyhow::Result<()> {
+        let mut item = item.clone();
+        item.group_id = self.data().id;
+        update_table::<Node, NodeData>(&self.connection(), id, &item)
+    }
+}
 
 #[cfg(test)]
 pub mod tests {
@@ -239,6 +282,34 @@ pub mod tests {
             } else {
                 panic!("No Errors when group removed");
             }
+        }
+        Ok(())
+    }
+    #[test]
+    fn test_insert_into_node_and_list_all() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_group_table(&conn)?;
+        test_and_create_node_table(&conn)?;
+        let mut group_list = GroupList::new(conn);
+        group_list.append(&generate_test_group(1))?;
+        group_list.append(&generate_test_group(2))?;
+        group_list.append(&generate_test_group(3))?;
+        let mut group = group_list.query(2)?;
+        let mut node_list: Vec<Node> = Vec::new();
+        for i in 1..15 {
+            let node_data = generate_test_node(i);
+            group.append(&node_data)?;
+            let fetch_node = group.query(i as usize)?;
+            node_list.push(fetch_node.clone());
+            assert!(compare_node(fetch_node.data(), &node_data));
+        }
+        let nodes = group.list_all_nodes()?;
+        for i in 0..14 {
+            let q_node = node_list[i].data();
+            println!("{}: \n{:?}", i, q_node);
+            let s_node = nodes[i].data();
+            println!("{:?}\n", s_node);
+            assert!(compare_node(node_list[i].data(), nodes[i].data()));
         }
         Ok(())
     }

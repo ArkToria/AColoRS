@@ -18,6 +18,26 @@ impl GroupList {
     pub fn new(connection: Rc<Connection>) -> GroupList {
         GroupList { connection }
     }
+    pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Group>> {
+        let sql = "SELECT * FROM groups";
+        let mut statement = self.connection.prepare(&sql)?;
+        let mut result: Vec<Group> = Vec::new();
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            let group_data = GroupData {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                is_subscription: row.get(2)?,
+                group_type: row.get(3)?,
+                url: row.get(4)?,
+                cycle_time: row.get(5)?,
+                create_at: row.get(6)?,
+                modified_at: row.get(7)?,
+            };
+            result.push(Group::new(group_data, self.connection.clone()));
+        }
+        Ok(result)
+    }
 }
 
 const GROUP_TABLE_NAME: &str = "groups";
@@ -103,6 +123,31 @@ pub mod tests {
             } else {
                 panic!("No Errors when group removed");
             }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_insert_into_group_and_list_all() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        test_and_create_group_table(&conn)?;
+        test_and_create_node_table(&conn)?;
+        let mut group_list = GroupList::new(conn);
+        let mut group_vec: Vec<Group> = Vec::new();
+        for i in 1..15 {
+            let group_data = generate_test_group(i);
+            group_list.append(&group_data)?;
+            let fetch_group = group_list.query(i as usize)?;
+            group_vec.push(fetch_group.clone());
+            assert!(compare_group(fetch_group.data(), &group_data));
+        }
+        let nodes = group_list.list_all_nodes()?;
+        for i in 0..14 {
+            let q_group = group_vec[i].data();
+            println!("{}: \n{:?}", i, q_group);
+            let s_group = nodes[i].data();
+            println!("{:?}\n", s_group);
+            assert!(compare_group(group_vec[i].data(), nodes[i].data()));
         }
         Ok(())
     }

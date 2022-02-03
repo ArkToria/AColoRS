@@ -1,4 +1,4 @@
-use crate::data_type::{grouplist::GroupList, runtime::RuntimeValue};
+use crate::table_member::{grouplist::GroupList, runtime::RuntimeValue};
 
 pub struct Profile {
     pub group_list: GroupList,

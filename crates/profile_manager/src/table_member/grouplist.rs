@@ -2,12 +2,10 @@ use std::rc::Rc;
 
 use rusqlite::Connection;
 
-use crate::data_type::group::Group;
+use crate::data_type::group::*;
+use crate::table_member::group::Group;
 
-use super::{
-    group::GroupData,
-    traits::{AColoRSListModel, HasTable, WithConnection},
-};
+use super::traits::{AColoRSListModel, HasTable, WithConnection};
 
 #[derive(Debug)]
 pub struct GroupList {
@@ -58,7 +56,7 @@ impl AColoRSListModel<Group, GroupData> for GroupList {}
 pub mod tests {
     use super::*;
     use crate::{
-        data_type::group::tests::{compare_group, generate_test_group},
+        table_member::group::tests::{compare_group, generate_test_group},
         tools::dbtools::{test_and_create_group_table, test_and_create_node_table},
     };
     use anyhow::{anyhow, Result};

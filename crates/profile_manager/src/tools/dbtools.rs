@@ -4,7 +4,7 @@ use anyhow::Result;
 use rusqlite::Connection;
 use spdlog::error;
 
-use crate::data_type::traits::AttachedToTable;
+use crate::table_member::traits::AttachedToTable;
 
 use super::schema::{GROUP_SCHEMA, NODE_SCHEMA, RUNTIME_SCHEMA};
 

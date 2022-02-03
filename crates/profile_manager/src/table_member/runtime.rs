@@ -4,6 +4,7 @@ use std::rc::Rc;
 use rusqlite::{params, Connection};
 
 use super::traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection};
+use crate::data_type::runtimevalue::*;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeValue {
@@ -38,20 +39,6 @@ impl Value {
         &self.data
     }
 }
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ValueData {
-    pub id: i32,
-    pub name: String,
-    pub value_type: i32,
-    pub value: String,
-}
-const RUNTIME_TABLE_NAME: &str = "runtime";
-const RUNTIME_FIELD_NAMES: &[&str] = &["Name", "Type", "Value"];
-const RUNTIME_UPDATE_SQL: &str = "UPDATE runtime SET Name = ?, Type = ?, Value = ? WHERE ID = ?;";
-const RUNTIME_INSERT_SQL: &str = "INSERT INTO runtime(Name,Type,Value) VALUES(?,?,?)";
-const RUNTIME_REMOVE_SQL: &str = "DELETE FROM runtime WHERE ID = ?";
-const RUNTIME_QUERY_SQL: &str = "SELECT ID,Name,Type,Value FROM runtime WHERE ID = ?";
 
 impl WithConnection for Value {
     fn connection(&self) -> Rc<Connection> {

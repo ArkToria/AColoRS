@@ -6,14 +6,56 @@ option java_outer_classname = "AColoRSProto";
 
 package acolors;
 
-service Greeter {
-    rpc Ping (PingRequest) returns (PingReply) {}
-}
-  
-message PingRequest {
-    string name = 1;
+service ProfileManager {
+    rpc CountGroups(CountGroupsRequest) returns(CountGroupsReply) {}
+    //rpc ListAllGroup() returns (GroupList) {}
 }
 
-message PingReply {
-    string message = 1;
+message CountGroupsRequest {
+
+}
+message CountGroupsReply {
+    uint64 count = 1;
+}
+/*
+message GroupList {
+    uint64 size = 1;
+    repeated GroupData datas = 2;
+}
+*/
+
+message NodeData {
+    int32 id = 1;
+    string name = 2;
+    int32 group_id = 3;
+    string group_name = 4;
+    int32 routing_id = 5;
+    string routing_name = 6;
+    int32 protocol = 7;
+    string address = 8;
+    int32 port = 9;
+    string password = 10;
+    string raw = 11;
+    string url = 12;
+    int32 latency = 13;
+    int64 upload = 14;
+    int64 download = 15;
+    int64 create_at = 16;
+    int64 modified_at = 17;
+}
+
+enum SubscriptionType {
+    BASE64 = 0;
+    SIP008 = 1;
+    JSONRAW = 2;
+}
+message GroupData {
+    int32 id = 1;
+    string name = 2;
+    bool is_subscription = 3;
+    SubscriptionType group_type = 4;
+    string url = 5;
+    int32 cycle_time = 6;
+    int64 create_at = 7;
+    int64 modified_at = 8;
 }

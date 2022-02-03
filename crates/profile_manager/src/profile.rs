@@ -11,7 +11,8 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn new(connection: Rc<Connection>) -> Profile {
+    pub fn new(connection: Connection) -> Profile {
+        let connection = Rc::new(connection);
         Profile {
             group_list: GroupList::new(connection.clone()),
             runtime_value: RuntimeValue::new(connection.clone()),

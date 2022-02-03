@@ -5,10 +5,11 @@ use anyhow::{anyhow, Context};
 use spdlog::{error, info};
 use tonic::transport::Server;
 
-use crate::greeter::acolors_proto::greeter_server::GreeterServer;
-use crate::greeter::AColoRSGreeter;
+use crate::profile::AColoRSProfile;
+use crate::protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
-mod greeter;
+mod profile;
+mod protobuf;
 
 pub fn serve(address: SocketAddr) -> Result<()> {
     check_tcp_bind(address)?;
@@ -32,12 +33,12 @@ pub fn serve(address: SocketAddr) -> Result<()> {
 }
 
 async fn start_server(addr: SocketAddr) -> Result<()> {
-    let greeter = AColoRSGreeter::default();
+    let acolors_profile = AColoRSProfile::default();
 
     info!("gRPC server is available at http://{}\n", addr);
 
     Server::builder()
-        .add_service(GreeterServer::new(greeter))
+        .add_service(ProfileManagerServer::new(acolors_profile))
         .serve(addr)
         .await
         .context("Failed to start gRPC server.")?;

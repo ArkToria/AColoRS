@@ -13,7 +13,12 @@ pub fn app() -> App<'static> {
                     .short('i')
                     .long("interface")
                     .takes_value(true)
-                    .help("Interface to bind on (default: 127.0.0.1"),
+                    .help("Interface to bind on (default: 127.0.0.1)"),
+                Arg::new("dbpath")
+                    .short('d')
+                    .long("dbpath")
+                    .takes_value(true)
+                    .help("Database path (default: across.db)"),
                 Arg::new("port")
                     .short('p')
                     .long("port")

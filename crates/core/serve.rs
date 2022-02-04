@@ -17,12 +17,13 @@ pub fn serve(args: &Args) -> Result<bool> {
     let matches = get_serve_matches(args);
     let interface = matches.value_of("interface").unwrap_or("127.0.0.1");
     let mut port = get_port_from(matches);
+    let database_path = matches.value_of("dbpath").unwrap_or("").to_string();
 
     test_and_set_port(&mut port);
 
     let address = format!("{}:{}", interface, port);
     let address = address_from_string(&address)?;
-    match server::serve(address) {
+    match server::serve(address, database_path) {
         Ok(()) => Ok(true),
         Err(e) => {
             error!("unravel error: {:?}", &e);

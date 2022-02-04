@@ -1,4 +1,5 @@
 pub mod data_type;
+mod manager;
 pub mod profile;
 pub mod table_member;
 pub mod tools;
@@ -13,3 +14,5 @@ pub use table_member::node::Node;
 pub use table_member::runtime::RuntimeValue;
 
 pub use profile::Profile;
+
+pub use manager::profile_manager::ProfileManager;

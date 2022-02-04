@@ -9,6 +9,10 @@ edition = "2018"
 [dependencies]
 rusqlite = "0.26.3"
 anyhow = "1.0.53"
-spdlog-rs = "0.1.1"
+spdlog-rs = { version = "0.2.1", features = [
+    "level-debug",
+    "release-level-info",
+] }
+tokio = { version = "1.15.0", features = ["rt-multi-thread", "macros"] }
 
 utils = { path = "../../components/utils" }

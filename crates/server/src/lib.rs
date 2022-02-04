@@ -11,7 +11,7 @@ use crate::protobuf::acolors_proto::profile_manager_server::ProfileManagerServer
 mod profile;
 mod protobuf;
 
-pub fn serve(address: SocketAddr) -> Result<()> {
+pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
     check_tcp_bind(address)?;
 
     let addr: SocketAddr = address;
@@ -20,7 +20,7 @@ pub fn serve(address: SocketAddr) -> Result<()> {
         .build()
         .expect("Could not build tokio runtime");
 
-    match rt.block_on(start_server(addr)) {
+    match rt.block_on(start_server(addr, database_path)) {
         Ok(()) => {
             info!("gRPC Server stopped normally.");
         }
@@ -32,8 +32,8 @@ pub fn serve(address: SocketAddr) -> Result<()> {
     Ok(())
 }
 
-async fn start_server(addr: SocketAddr) -> Result<()> {
-    let acolors_profile = AColoRSProfile::default();
+async fn start_server(addr: SocketAddr, database_path: String) -> Result<()> {
+    let acolors_profile = AColoRSProfile::new(database_path).await?;
 
     info!("gRPC server is available at http://{}\n", addr);
 

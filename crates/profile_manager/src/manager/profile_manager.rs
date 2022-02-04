@@ -1,7 +1,4 @@
-use std::{
-    ops::ControlFlow,
-    sync::mpsc::{self, Receiver},
-};
+use std::sync::mpsc::{self, Receiver};
 
 use anyhow::{anyhow, Result};
 use rusqlite::Connection;
@@ -40,6 +37,8 @@ impl ProfileManager {
         match receiver.await? {
             ProfileReply::CountGroups(c) => Ok(c),
             ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            #[allow(unreachable_patterns)]
             _ => unreachable!(),
         }
     }
@@ -50,29 +49,26 @@ struct Request {
     pub sender: oneshot::Sender<ProfileReply>,
     pub content: ProfileRequest,
 }
+
 async fn create_producer(rx: Receiver<Request>, path: String) {
     let receiver = rx;
     task::spawn_blocking(move || -> Result<()> {
         let connection = create_connection(path)?;
         let profile = Profile::new(connection);
         while let Ok(request) = receiver.recv() {
-            if let ControlFlow::Break(_) = try_reply(request, &profile) {
-                break;
-            }
+            try_reply(request, &profile);
         }
         Ok(())
     });
 }
 
-fn try_reply(request: Request, profile: &Profile) -> ControlFlow<()> {
+fn try_reply(request: Request, profile: &Profile) {
     debug!("Got = {:?}", request);
     let (sender, request) = (request.sender, request.content);
     debug!("{:?}/{:?}", sender, request);
     match request {
         ProfileRequest::CountGroups => count_group_reply(profile, sender),
-        ProfileRequest::Exit => return ControlFlow::Break(()),
     }
-    ControlFlow::Continue(())
 }
 
 fn count_group_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>) {

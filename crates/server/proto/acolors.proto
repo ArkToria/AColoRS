@@ -11,9 +11,8 @@ service ProfileManager {
     //rpc ListAllGroup() returns (GroupList) {}
 }
 
-message CountGroupsRequest {
+message CountGroupsRequest {}
 
-}
 message CountGroupsReply {
     uint64 count = 1;
 }

@@ -1,11 +1,5 @@
 #[derive(Debug)]
 pub enum ProfileReply {
-    Error(ReplyError),
+    Error(String),
     CountGroups(usize),
-}
-
-#[derive(Debug)]
-pub enum ReplyError {
-    ChannelOpenFailed,
-    NoImplementation,
 }

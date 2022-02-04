@@ -1,4 +1,7 @@
-use std::sync::mpsc::{self, Receiver};
+use std::{
+    ops::ControlFlow,
+    sync::mpsc::{self, Receiver},
+};
 
 use anyhow::{anyhow, Result};
 use rusqlite::Connection;
@@ -27,13 +30,16 @@ impl ProfileManager {
     }
     pub async fn count_groups(&self) -> Result<usize> {
         let (sender, receiver) = oneshot::channel();
+
         let request = Request {
             sender,
             content: ProfileRequest::CountGroups,
         };
         self.sender.send(request)?;
+
         match receiver.await? {
             ProfileReply::CountGroups(c) => Ok(c),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
             _ => unreachable!(),
         }
     }
@@ -50,31 +56,46 @@ async fn create_producer(rx: Receiver<Request>, path: String) {
         let connection = create_connection(path)?;
         let profile = Profile::new(connection);
         while let Ok(request) = receiver.recv() {
-            debug!("Got = {:?}", request);
-            let (sender, request) = (request.sender, request.content);
-            debug!("{:?}/{:?}", sender, request);
-            match request {
-                ProfileRequest::CountGroups => {
-                    let count = count_groups(&profile);
-                    debug!("Group count:{}", count);
-                    if let Err(p) = sender.send(ProfileReply::CountGroups(count)) {
-                        info!("Reply failed: \"{:?}\"", p);
-                    }
-                }
-                ProfileRequest::Exit => break,
+            if let ControlFlow::Break(_) = try_reply(request, &profile) {
+                break;
             }
         }
         Ok(())
     });
 }
-fn count_groups(profile: &Profile) -> usize {
-    match profile.group_list.size() {
-        Ok(c) => c,
+
+fn try_reply(request: Request, profile: &Profile) -> ControlFlow<()> {
+    debug!("Got = {:?}", request);
+    let (sender, request) = (request.sender, request.content);
+    debug!("{:?}/{:?}", sender, request);
+    match request {
+        ProfileRequest::CountGroups => count_group_reply(profile, sender),
+        ProfileRequest::Exit => return ControlFlow::Break(()),
+    }
+    ControlFlow::Continue(())
+}
+
+fn count_group_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>) {
+    let count = count_groups(profile);
+    match count {
+        Ok(c) => {
+            debug!("Group count:{}", c);
+            try_send(sender, ProfileReply::CountGroups(c));
+        }
         Err(e) => {
-            error!("{}", e);
-            0
+            debug!("Group count Error : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
         }
     }
+}
+
+fn try_send(sender: oneshot::Sender<ProfileReply>, reply: ProfileReply) {
+    if let Err(p) = sender.send(reply) {
+        info!("Reply failed: \"{:?}\"", p);
+    }
+}
+fn count_groups(profile: &Profile) -> Result<usize> {
+    profile.group_list.size()
 }
 fn create_connection(path: String) -> Result<Connection> {
     match Connection::open(path) {

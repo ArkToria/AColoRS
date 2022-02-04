@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 rusqlite = "0.26.3"
 anyhow = "1.0.53"
-spdlog-rs = { version = "0.2.1", features = [
+spdlog-rs = { version = "0.2.2", features = [
     "level-debug",
     "release-level-info",
 ] }

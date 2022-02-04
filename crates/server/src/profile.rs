@@ -4,9 +4,9 @@ use spdlog::info;
 use tonic::{Code, Request, Response, Status};
 
 use crate::protobuf::acolors_proto::{
-    profile_manager_server, CountGroupsReply, CountGroupsRequest,
+    profile_manager_server, CountGroupsReply, CountGroupsRequest, GroupList, ListAllGroupsRequest,
 };
-use profile_manager;
+use profile_manager::{self};
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
@@ -39,6 +39,31 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
 
         let reply = CountGroupsReply {
             count: count as u64,
+        };
+        Ok(Response::new(reply))
+    }
+
+    async fn list_all_groups(
+        &self,
+        request: Request<ListAllGroupsRequest>,
+    ) -> Result<Response<GroupList>, Status> {
+        info!("Request list all groups from {:?}", request.remote_addr());
+
+        let group_list: Vec<crate::protobuf::acolors_proto::GroupData> =
+            match self.manager.list_all_groups().await {
+                Ok(c) => c.into_iter().map(|group| group.into()).collect(),
+                Err(e) => {
+                    return Err(Status::new(
+                        Code::Unavailable,
+                        format!("Count unavailable: \"{}\"", e),
+                    ))
+                }
+            };
+
+        let length = group_list.len();
+        let reply = GroupList {
+            length: length as u64,
+            datas: group_list,
         };
         Ok(Response::new(reply))
     }

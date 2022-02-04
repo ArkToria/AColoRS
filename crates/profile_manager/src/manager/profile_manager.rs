@@ -8,7 +8,7 @@ use tokio::{
     task,
 };
 
-use crate::{table_member::traits::AColoRSListModel, Profile};
+use crate::{table_member::traits::AColoRSListModel, GroupData, Profile};
 
 use super::{reply::ProfileReply, request::ProfileRequest};
 
@@ -17,6 +17,7 @@ const BUFFER_SIZE: usize = 512;
 pub struct ProfileManager {
     sender: mpsc::SyncSender<Request>,
 }
+
 impl ProfileManager {
     pub async fn new(path: String) -> Result<ProfileManager> {
         let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
@@ -26,21 +27,34 @@ impl ProfileManager {
         Ok(ProfileManager { sender })
     }
     pub async fn count_groups(&self) -> Result<usize> {
-        let (sender, receiver) = oneshot::channel();
-
-        let request = Request {
-            sender,
-            content: ProfileRequest::CountGroups,
-        };
-        self.sender.send(request)?;
+        let content = ProfileRequest::CountGroups;
+        let receiver = self.send_request(content)?;
 
         match receiver.await? {
             ProfileReply::CountGroups(c) => Ok(c),
             ProfileReply::Error(e) => Err(anyhow!("{}", e)),
 
-            #[allow(unreachable_patterns)]
             _ => unreachable!(),
         }
+    }
+
+    pub async fn list_all_groups(&self) -> Result<Vec<GroupData>> {
+        let content = ProfileRequest::ListAllGroups;
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::ListAllGroups(group_list) => Ok(group_list),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+
+    fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
+        let (sender, receiver) = oneshot::channel();
+        let request = Request { sender, content };
+        self.sender.send(request)?;
+        Ok(receiver)
     }
 }
 
@@ -51,10 +65,11 @@ struct Request {
 }
 
 async fn create_producer(rx: Receiver<Request>, path: String) {
-    let receiver = rx;
     task::spawn_blocking(move || -> Result<()> {
+        let receiver = rx;
         let connection = create_connection(path)?;
         let profile = Profile::new(connection);
+
         while let Ok(request) = receiver.recv() {
             try_reply(request, &profile);
         }
@@ -66,13 +81,31 @@ fn try_reply(request: Request, profile: &Profile) {
     debug!("Got = {:?}", request);
     let (sender, request) = (request.sender, request.content);
     debug!("{:?}/{:?}", sender, request);
+
     match request {
         ProfileRequest::CountGroups => count_group_reply(profile, sender),
+        ProfileRequest::ListAllGroups => list_all_group_reply(profile, sender),
+    }
+}
+
+fn list_all_group_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>) {
+    let groups = profile.group_list.list_all_nodes();
+
+    match groups {
+        Ok(g) => {
+            debug!("List all groups");
+            let group_list = g.into_iter().map(|group| group.to_data()).collect();
+            try_send(sender, ProfileReply::ListAllGroups(group_list));
+        }
+        Err(e) => {
+            debug!("List all groups Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
     }
 }
 
 fn count_group_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>) {
-    let count = count_groups(profile);
+    let count = profile.group_list.size();
     match count {
         Ok(c) => {
             debug!("Group count:{}", c);
@@ -89,9 +122,6 @@ fn try_send(sender: oneshot::Sender<ProfileReply>, reply: ProfileReply) {
     if let Err(p) = sender.send(reply) {
         info!("Reply failed: \"{:?}\"", p);
     }
-}
-fn count_groups(profile: &Profile) -> Result<usize> {
-    profile.group_list.size()
 }
 fn create_connection(path: String) -> Result<Connection> {
     match Connection::open(path) {

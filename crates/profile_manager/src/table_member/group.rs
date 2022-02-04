@@ -25,10 +25,6 @@ impl Group {
         &self.data
     }
 
-    pub fn new(data: GroupData, connection: Rc<Connection>) -> Group {
-        Group { data, connection }
-    }
-
     pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Node>> {
         let group_id = self.data().id;
         let sql = "SELECT * FROM nodes WHERE GroupID = ?";
@@ -58,6 +54,14 @@ impl Group {
             result.push(Node::new(node_data, self.connection.clone()));
         }
         Ok(result)
+    }
+
+    pub fn new(data: GroupData, connection: Rc<Connection>) -> Group {
+        Group { data, connection }
+    }
+
+    pub fn to_data(self) -> GroupData {
+        self.data
     }
 }
 

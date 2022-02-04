@@ -19,6 +19,10 @@ impl Node {
         &self.data
     }
 
+    pub fn to_data(self) -> NodeData {
+        self.data
+    }
+
     pub fn new(data: NodeData, connection: Rc<Connection>) -> Node {
         Node { data, connection }
     }

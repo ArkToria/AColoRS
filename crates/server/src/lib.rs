@@ -8,6 +8,7 @@ use tonic::transport::Server;
 use crate::profile::AColoRSProfile;
 use crate::protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
+mod converts;
 mod profile;
 mod protobuf;
 

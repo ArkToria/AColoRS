@@ -4,7 +4,7 @@ use std::rc::Rc;
 use rusqlite::{params, Connection};
 
 use super::traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection};
-use crate::data_type::runtimevalue::*;
+use crate::{data_type::runtimevalue::*, tools::dbtools::test_and_create_runtime_table};
 
 #[derive(Debug, Clone)]
 pub struct RuntimeValue {
@@ -12,6 +12,7 @@ pub struct RuntimeValue {
 }
 impl RuntimeValue {
     pub fn new(connection: Rc<Connection>) -> Self {
+        test_and_create_runtime_table(&connection).unwrap();
         RuntimeValue { connection }
     }
 }

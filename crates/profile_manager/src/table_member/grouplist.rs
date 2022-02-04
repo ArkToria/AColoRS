@@ -2,8 +2,9 @@ use std::rc::Rc;
 
 use rusqlite::Connection;
 
-use crate::data_type::group::*;
 use crate::table_member::group::Group;
+use crate::tools::dbtools::test_and_create_node_table;
+use crate::{data_type::group::*, tools::dbtools::test_and_create_group_table};
 
 use super::traits::{AColoRSListModel, HasTable, WithConnection};
 
@@ -14,6 +15,8 @@ pub struct GroupList {
 
 impl GroupList {
     pub fn new(connection: Rc<Connection>) -> GroupList {
+        test_and_create_group_table(&connection).unwrap();
+        test_and_create_node_table(&connection).unwrap();
         GroupList { connection }
     }
     pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Group>> {

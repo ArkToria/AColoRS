@@ -2,7 +2,7 @@ use std::sync::mpsc::{self, Receiver};
 
 use anyhow::{anyhow, Result};
 use rusqlite::Connection;
-use spdlog::{error, info};
+use spdlog::{debug, error, info};
 use tokio::{
     sync::oneshot::{self},
     task,
@@ -21,7 +21,7 @@ impl ProfileManager {
     pub async fn new(path: String) -> Result<ProfileManager> {
         let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
 
-        tokio::spawn(producer(rx, path));
+        create_producer(rx, path).await;
 
         Ok(ProfileManager { sender })
     }
@@ -33,11 +33,9 @@ impl ProfileManager {
         };
         self.sender.send(request)?;
         match receiver.await? {
-            ProfileReply::CountGroups(c) => return Ok(c),
-            _ => {
-                unreachable!()
-            }
-        };
+            ProfileReply::CountGroups(c) => Ok(c),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -46,33 +44,37 @@ struct Request {
     pub sender: oneshot::Sender<ProfileReply>,
     pub content: ProfileRequest,
 }
-async fn producer(rx: Receiver<Request>, path: String) -> Result<()> {
+async fn create_producer(rx: Receiver<Request>, path: String) {
     let receiver = rx;
     task::spawn_blocking(move || -> Result<()> {
         let connection = create_connection(path)?;
         let profile = Profile::new(connection);
         while let Ok(request) = receiver.recv() {
-            info!("Got = {:?}", request);
-            let sender = request.sender;
-            let request = request.content;
+            debug!("Got = {:?}", request);
+            let (sender, request) = (request.sender, request.content);
+            debug!("{:?}/{:?}", sender, request);
             match request {
                 ProfileRequest::CountGroups => {
-                    let count = count_groups(&profile)?;
+                    let count = count_groups(&profile);
+                    debug!("Group count:{}", count);
                     if let Err(p) = sender.send(ProfileReply::CountGroups(count)) {
                         info!("Reply failed: \"{:?}\"", p);
                     }
                 }
-                ProfileRequest::Exit => {
-                    break;
-                }
+                ProfileRequest::Exit => break,
             }
         }
         Ok(())
-    })
-    .await?
+    });
 }
-fn count_groups(profile: &Profile) -> Result<usize> {
-    profile.group_list.size()
+fn count_groups(profile: &Profile) -> usize {
+    match profile.group_list.size() {
+        Ok(c) => c,
+        Err(e) => {
+            error!("{}", e);
+            0
+        }
+    }
 }
 fn create_connection(path: String) -> Result<Connection> {
     match Connection::open(path) {

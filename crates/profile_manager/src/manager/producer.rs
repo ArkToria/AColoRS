@@ -3,10 +3,7 @@ use std::sync::mpsc::Receiver;
 use anyhow::{anyhow, Result};
 use rusqlite::Connection;
 use spdlog::{debug, error, info};
-use tokio::{
-    sync::oneshot::{self},
-    task,
-};
+use tokio::{sync::oneshot, task};
 
 use crate::{table_member::traits::AColoRSListModel, GroupData, NodeData, Profile};
 

@@ -13,6 +13,6 @@ spdlog-rs = { version = "0.2.2", features = [
     "level-debug",
     "release-level-info",
 ] }
-tokio = { version = "1.15.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.16.1", features = ["rt-multi-thread", "macros", "sync"] }
 
 utils = { path = "../../components/utils" }

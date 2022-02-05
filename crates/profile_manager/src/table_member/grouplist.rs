@@ -5,7 +5,6 @@ use rusqlite::Connection;
 use crate::table_member::group::Group;
 use crate::tools::dbtools::test_and_create_node_table;
 use crate::{data_type::group::*, tools::dbtools::test_and_create_group_table};
-use crate::{Node, NodeData};
 
 use super::traits::{AColoRSListModel, HasTable, WithConnection};
 
@@ -64,13 +63,8 @@ impl WithConnection for GroupList {
 impl AColoRSListModel<Group, GroupData> for GroupList {
     fn remove(&mut self, id: usize) -> anyhow::Result<()> {
         let group = self.query(id)?;
-        let node_list = group.list_all_nodes()?;
-        for node in node_list {
-            crate::tools::dbtools::remove_from_table::<Node, NodeData>(
-                &self.connection(),
-                node.data().id as usize,
-            )?
-        }
+
+        group.remove_all_nodes()?;
         crate::tools::dbtools::remove_from_table::<Group, GroupData>(&self.connection(), id)
     }
 }

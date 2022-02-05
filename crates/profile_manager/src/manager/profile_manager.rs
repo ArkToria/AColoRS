@@ -1,8 +1,7 @@
 use std::sync::mpsc::{self};
 
 use anyhow::{anyhow, Result};
-
-use tokio::sync::oneshot::{self};
+use tokio::sync::oneshot;
 
 use crate::{GroupData, NodeData};
 

@@ -20,9 +20,28 @@ pub struct Group {
 }
 
 impl Group {
+    pub fn new(data: GroupData, connection: Rc<Connection>) -> Group {
+        Group { data, connection }
+    }
+
     /// Get a reference to the group's data.
     pub fn data(&self) -> &GroupData {
         &self.data
+    }
+
+    pub fn to_data(self) -> GroupData {
+        self.data
+    }
+
+    pub fn remove_all_nodes(&self) -> anyhow::Result<()> {
+        let node_list = self.list_all_nodes()?;
+        for node in node_list {
+            crate::tools::dbtools::remove_from_table::<Node, NodeData>(
+                &self.connection(),
+                node.data().id as usize,
+            )?
+        }
+        Ok(())
     }
 
     pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Node>> {
@@ -54,14 +73,6 @@ impl Group {
             result.push(Node::new(node_data, self.connection.clone()));
         }
         Ok(result)
-    }
-
-    pub fn new(data: GroupData, connection: Rc<Connection>) -> Group {
-        Group { data, connection }
-    }
-
-    pub fn to_data(self) -> GroupData {
-        self.data
     }
 }
 

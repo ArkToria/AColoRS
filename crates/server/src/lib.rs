@@ -8,9 +8,10 @@ use tonic::transport::Server;
 use crate::profile::AColoRSProfile;
 use crate::protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
-mod converts;
+mod convert;
 mod profile;
 mod protobuf;
+mod utils;
 
 pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
     check_tcp_bind(address)?;

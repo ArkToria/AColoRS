@@ -1,6 +1,8 @@
 pub mod data_type;
 mod manager;
 pub mod profile;
+pub mod protobuf;
+pub mod serialize;
 pub mod table_member;
 pub mod tools;
 

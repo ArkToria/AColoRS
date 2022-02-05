@@ -7,4 +7,5 @@ pub enum ProfileReply {
     ListAllGroups(Vec<GroupData>),
     CountNodes(usize),
     ListAllNodes(Vec<NodeData>),
+    GetGroupById(GroupData),
 }

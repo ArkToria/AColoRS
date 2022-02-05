@@ -19,7 +19,7 @@ impl GroupList {
         test_and_create_node_table(&connection).unwrap();
         GroupList { connection }
     }
-    pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Group>> {
+    pub fn list_all_groups(&self) -> anyhow::Result<Vec<Group>> {
         let sql = "SELECT * FROM groups";
         let mut statement = self.connection.prepare(&sql)?;
         let mut result: Vec<Group> = Vec::new();
@@ -38,6 +38,12 @@ impl GroupList {
             result.push(Group::new(group_data, self.connection.clone()));
         }
         Ok(result)
+    }
+
+    /// For node query
+    pub fn default_group(&self) -> Group {
+        let data = GroupData::default();
+        Group::new(data, self.connection.clone())
     }
 }
 
@@ -142,7 +148,7 @@ pub mod tests {
             group_vec.push(fetch_group.clone());
             assert!(compare_group(fetch_group.data(), &group_data));
         }
-        let nodes = group_list.list_all_nodes()?;
+        let nodes = group_list.list_all_groups()?;
         for i in 0..14 {
             let q_group = group_vec[i].data();
             println!("{}: \n{:?}", i, q_group);

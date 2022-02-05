@@ -1,6 +1,6 @@
 use utils::time::get_current_time;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct NodeData {
     pub id: i32,
     pub name: String,

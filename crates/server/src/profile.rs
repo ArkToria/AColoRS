@@ -3,10 +3,7 @@ use spdlog::info;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::protobuf::acolors_proto::{
-    profile_manager_server, CountGroupsReply, CountGroupsRequest, CountNodesReply,
-    CountNodesRequest, GroupList, ListAllGroupsRequest, ListAllNodesRequest, NodeList,
-};
+use crate::protobuf::acolors_proto::*;
 use profile_manager::{self};
 
 #[derive(Debug)]
@@ -117,6 +114,30 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
             length: length as u64,
             entries: group_list,
         };
+        Ok(Response::new(reply))
+    }
+
+    async fn get_group_by_id(
+        &self,
+        request: Request<GetGroupByIdRequest>,
+    ) -> Result<Response<GroupData>, Status> {
+        info!("Request get group by Id from {:?}", request.remote_addr());
+
+        let group_id = request.into_inner().group_id;
+
+        let group_data: crate::protobuf::acolors_proto::GroupData =
+            match self.manager.get_group_by_id(group_id).await {
+                Ok(c) => c.into(),
+                Err(e) => {
+                    return Err(Status::new(
+                        Code::Unavailable,
+                        format!("Group unavailable: \"{}\"", e),
+                    ))
+                }
+            };
+
+        let reply = group_data;
+
         Ok(Response::new(reply))
     }
 }

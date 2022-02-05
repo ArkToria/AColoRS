@@ -4,4 +4,5 @@ pub enum ProfileRequest {
     ListAllGroups,
     CountNodes(i32),
     ListAllNodes(i32),
+    GetGroupById(i32),
 }

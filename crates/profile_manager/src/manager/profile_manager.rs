@@ -73,6 +73,17 @@ impl ProfileManager {
             _ => unreachable!(),
         }
     }
+    pub async fn get_group_by_id(&self, group_id: i32) -> Result<GroupData> {
+        let content = ProfileRequest::GetGroupById(group_id);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::GetGroupById(group_data) => Ok(group_data),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
 
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
         let (sender, receiver) = oneshot::channel();
@@ -111,11 +122,28 @@ fn try_reply(request: Request, profile: &Profile) {
         ProfileRequest::ListAllGroups => list_all_group_reply(profile, sender),
         ProfileRequest::CountNodes(group_id) => count_node_reply(profile, sender, group_id),
         ProfileRequest::ListAllNodes(group_id) => list_all_node_reply(profile, sender, group_id),
+        ProfileRequest::GetGroupById(group_id) => get_group_by_id_reply(profile, sender, group_id),
+    }
+}
+
+fn get_group_by_id_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>, group_id: i32) {
+    let groups = profile.group_list.query(group_id as usize);
+
+    match groups {
+        Ok(g) => {
+            debug!("List all groups");
+            let group = g.to_data();
+            try_send(sender, ProfileReply::GetGroupById(group));
+        }
+        Err(e) => {
+            debug!("List all groups Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
     }
 }
 
 fn list_all_group_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>) {
-    let groups = profile.group_list.list_all_nodes();
+    let groups = profile.group_list.list_all_groups();
 
     match groups {
         Ok(g) => {

@@ -112,7 +112,7 @@ fn vmess_base64_decode(url_str: String) -> Result<URLMetaObject> {
     let mut stream = StreamSettingsObject::default();
 
     if (!root["add"].is_null()) && (!root["port"].is_null()) {
-        server.address = root["add"].to_string();
+        server.address = root["add"].as_str().unwrap_or("default").to_string();
 
         match &root["port"] {
             Value::Number(n) => server.port = n.as_u64().unwrap_or(0) as u32,
@@ -256,7 +256,7 @@ mod tests {
                 return Ok(());
             }
         };
-        println!("{:#?}", data);
+        println!("{}", data.raw);
         Ok(())
     }
     #[test]

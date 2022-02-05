@@ -15,8 +15,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_and_decode() -> anyhow::Result<()> {
-        let content =
-            get_http_content("https://hk.khonoka.com/subnode/getproxyyuruiboom/proxy").await?;
+        let content = get_http_content("").await?;
         let decoded_content = base64::decode(content).unwrap_or(Vec::new());
         let res = String::from_utf8(decoded_content)?;
         println!("{}", res);

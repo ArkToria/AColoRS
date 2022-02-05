@@ -22,6 +22,14 @@ impl ProfileManager {
 
         Ok(ProfileManager { sender })
     }
+
+    fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
+        let (sender, receiver) = oneshot::channel();
+        let request = Request { sender, content };
+        self.sender.send(request)?;
+        Ok(receiver)
+    }
+
     pub async fn count_groups(&self) -> Result<usize> {
         let content = ProfileRequest::CountGroups;
         let receiver = self.send_request(content)?;
@@ -113,11 +121,49 @@ impl ProfileManager {
             _ => unreachable!(),
         }
     }
-    fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
-        let (sender, receiver) = oneshot::channel();
-        let request = Request { sender, content };
-        self.sender.send(request)?;
-        Ok(receiver)
+    pub async fn append_group(&self, group_data: GroupData) -> Result<()> {
+        let content = ProfileRequest::AppendGroup(group_data);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::AppendGroup => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+    pub async fn append_node(&self, node_id: i32, node_data: NodeData) -> Result<()> {
+        let content = ProfileRequest::AppendNode(node_id, node_data);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::AppendNode => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+    pub async fn remove_group_by_id(&self, group_id: i32) -> Result<()> {
+        let content = ProfileRequest::RemoveGroupById(group_id);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::RemoveGroupById => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+    pub async fn remove_node_by_id(&self, node_id: i32) -> Result<()> {
+        let content = ProfileRequest::RemoveNodeById(node_id);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::RemoveNodeById => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
     }
 }
 

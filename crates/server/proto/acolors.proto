@@ -15,14 +15,25 @@ service ProfileManager {
     
     rpc GetGroupByID(GetGroupByIDRequest) returns (GroupData) {}
     rpc GetNodeByID(GetNodeByIDRequest) returns (NodeData) {}
+
     rpc SetGroupByID(SetGroupByIDRequest) returns (SetGroupByIDReply) {}
     rpc SetNodeByID(SetNodeByIDRequest) returns (SetNodeByIDReply) {}
+
+    rpc RemoveGroupByID(RemoveGroupByIDRequest) returns (RemoveGroupByIDReply) {}
+    rpc RemoveNodeByID(RemoveNodeByIDRequest) returns (RemoveNodeByIDReply) {}
+
+    rpc AppendGroup(AppendGroupRequest) returns (AppendGroupReply) {}
+    rpc AppendNode(AppendNodeRequest) returns (AppendNodeReply) {}
 }
 
 message CountGroupsRequest {}
 message ListAllGroupsRequest {}
 message SetGroupByIDReply {}
 message SetNodeByIDReply {}
+message RemoveGroupByIDReply {}
+message RemoveNodeByIDReply {}
+message AppendGroupReply {}
+message AppendNodeReply {}
 
 message CountNodesRequest {
     int32 group_id = 1;
@@ -44,6 +55,19 @@ message SetGroupByIDRequest {
 }
 message SetNodeByIDRequest {
     int32 node_id = 1;
+    NodeData data = 2;
+}
+message RemoveGroupByIDRequest {
+    int32 group_id = 1;
+}
+message RemoveNodeByIDRequest {
+    int32 node_id = 1;
+}
+message AppendGroupRequest {
+    GroupData data = 1;
+}
+message AppendNodeRequest {
+    int32 group_id = 1;
     NodeData data = 2;
 }
 

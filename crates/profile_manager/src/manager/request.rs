@@ -8,6 +8,10 @@ pub enum ProfileRequest {
     ListAllNodes(i32),
     GetGroupById(i32),
     GetNodeById(i32),
+    RemoveGroupById(i32),
+    RemoveNodeById(i32),
     SetGroupById(i32, GroupData),
     SetNodeById(i32, NodeData),
+    AppendGroup(GroupData),
+    AppendNode(i32, NodeData),
 }

@@ -37,15 +37,109 @@ fn try_reply(request: Request, profile: &mut Profile) {
         ProfileRequest::ListAllNodes(group_id) => list_all_node_reply(profile, sender, group_id),
         ProfileRequest::GetGroupById(group_id) => get_group_by_id_reply(profile, sender, group_id),
         ProfileRequest::GetNodeById(node_id) => get_node_by_id_reply(profile, sender, node_id),
+        ProfileRequest::RemoveGroupById(group_id) => {
+            remove_group_by_id_reply(profile, sender, group_id)
+        }
+        ProfileRequest::RemoveNodeById(node_id) => {
+            remove_node_by_id_reply(profile, sender, node_id)
+        }
         ProfileRequest::SetGroupById(group_id, group_data) => {
             set_group_by_id_reply(profile, sender, group_id, group_data)
         }
         ProfileRequest::SetNodeById(node_id, node_data) => {
             set_node_by_id_reply(profile, sender, node_id, node_data)
         }
+        ProfileRequest::AppendGroup(group_data) => append_group_reply(profile, sender, group_data),
+        ProfileRequest::AppendNode(group_id, node_data) => {
+            append_node_reply(profile, sender, group_id, node_data)
+        }
+    }
+}
+fn remove_group_by_id_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    group_id: i32,
+) {
+    let result = profile.group_list.remove(group_id as usize);
+
+    match result {
+        Ok(_) => {
+            debug!("Remove group By ID : {}", group_id);
+            try_send(sender, ProfileReply::RemoveGroupById);
+        }
+        Err(e) => {
+            debug!("Remove group By ID Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+fn remove_node_by_id_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    node_id: i32,
+) {
+    let mut group = profile.group_list.default_group();
+
+    let result = group.remove(node_id as usize);
+
+    match result {
+        Ok(_) => {
+            debug!("Remove node By ID : {}", node_id);
+            try_send(sender, ProfileReply::RemoveNodeById);
+        }
+        Err(e) => {
+            debug!("Remove node By ID Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
     }
 }
 
+fn append_group_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    group_data: GroupData,
+) {
+    let group = profile.group_list.append(&group_data);
+
+    match group {
+        Ok(_) => {
+            debug!("Append group");
+            try_send(sender, ProfileReply::AppendGroup);
+        }
+        Err(e) => {
+            debug!("Append group Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+fn append_node_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    group_id: i32,
+    node_data: NodeData,
+) {
+    let mut group = match profile.group_list.query(group_id as usize) {
+        Ok(g) => g,
+        Err(e) => {
+            debug!("Append node Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    };
+
+    let node = group.append(&node_data);
+
+    match node {
+        Ok(_) => {
+            debug!("Append node");
+            try_send(sender, ProfileReply::AppendNode);
+        }
+        Err(e) => {
+            debug!("Append node Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
 fn set_group_by_id_reply(
     profile: &mut Profile,
     sender: oneshot::Sender<ProfileReply>,

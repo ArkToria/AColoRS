@@ -212,4 +212,97 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
 
         Ok(Response::new(reply))
     }
+
+    async fn append_group(
+        &self,
+        request: Request<AppendGroupRequest>,
+    ) -> Result<Response<AppendGroupReply>, Status> {
+        info!(
+            "Request append group by Id from {:?}",
+            request.remote_addr()
+        );
+
+        let inner = request.into_inner();
+        let data: GroupData = match inner.data {
+            Some(d) => d,
+            None => return Err(Status::invalid_argument("No group data")),
+        };
+
+        if let Err(e) = self.manager.append_group(data.into()).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Group unavailable: \"{}\"", e),
+            ));
+        }
+
+        let reply = AppendGroupReply {};
+
+        Ok(Response::new(reply))
+    }
+    async fn append_node(
+        &self,
+        request: Request<AppendNodeRequest>,
+    ) -> Result<Response<AppendNodeReply>, Status> {
+        info!("Request append node by Id from {:?}", request.remote_addr());
+
+        let inner = request.into_inner();
+        let group_id = inner.group_id;
+        let data: NodeData = match inner.data {
+            Some(d) => d,
+            None => return Err(Status::invalid_argument("No node data")),
+        };
+
+        if let Err(e) = self.manager.append_node(group_id, data.into()).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Node unavailable: \"{}\"", e),
+            ));
+        }
+
+        let reply = AppendNodeReply {};
+
+        Ok(Response::new(reply))
+    }
+
+    async fn remove_group_by_id(
+        &self,
+        request: Request<RemoveGroupByIdRequest>,
+    ) -> Result<Response<RemoveGroupByIdReply>, Status> {
+        info!(
+            "Request remove group by Id from {:?}",
+            request.remote_addr()
+        );
+
+        let group_id = request.into_inner().group_id;
+
+        if let Err(e) = self.manager.remove_group_by_id(group_id).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Group unavailable: \"{}\"", e),
+            ));
+        };
+
+        let reply = RemoveGroupByIdReply {};
+
+        Ok(Response::new(reply))
+    }
+    async fn remove_node_by_id(
+        &self,
+        request: Request<RemoveNodeByIdRequest>,
+    ) -> Result<Response<RemoveNodeByIdReply>, Status> {
+        info!("Request remove node by Id from {:?}", request.remote_addr());
+
+        let node_id = request.into_inner().node_id;
+
+        if let Err(e) = self.manager.remove_node_by_id(node_id).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Node unavailable: \"{}\"", e),
+            ));
+        };
+
+        let reply = RemoveNodeByIdReply {};
+
+        Ok(Response::new(reply))
+    }
 }

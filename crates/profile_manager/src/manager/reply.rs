@@ -11,4 +11,8 @@ pub enum ProfileReply {
     GetNodeById(NodeData),
     SetGroupById,
     SetNodeById,
+    RemoveGroupById,
+    RemoveNodeById,
+    AppendGroup,
+    AppendNode,
 }

@@ -14,6 +14,7 @@ service ProfileManager {
     rpc ListAllNodes(ListAllNodesRequest) returns(NodeList) {}
     
     rpc GetGroupByID(GetGroupByIDRequest) returns (GroupData) {}
+    rpc GetNodeByID(GetNodeByIDRequest) returns (NodeData) {}
 }
 
 message CountGroupsRequest {}
@@ -29,6 +30,9 @@ message ListAllNodesRequest {
 
 message GetGroupByIDRequest {
     int32 group_id = 1;
+}
+message GetNodeByIDRequest {
+    int32 node_id = 1;
 }
 
 message CountNodesReply {

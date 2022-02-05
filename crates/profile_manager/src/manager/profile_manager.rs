@@ -84,7 +84,17 @@ impl ProfileManager {
             _ => unreachable!(),
         }
     }
+    pub async fn get_node_by_id(&self, node_id: i32) -> Result<NodeData> {
+        let content = ProfileRequest::GetNodeById(node_id);
+        let receiver = self.send_request(content)?;
 
+        match receiver.await? {
+            ProfileReply::GetNodeById(node_data) => Ok(node_data),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
         let (sender, receiver) = oneshot::channel();
         let request = Request { sender, content };
@@ -123,20 +133,38 @@ fn try_reply(request: Request, profile: &Profile) {
         ProfileRequest::CountNodes(group_id) => count_node_reply(profile, sender, group_id),
         ProfileRequest::ListAllNodes(group_id) => list_all_node_reply(profile, sender, group_id),
         ProfileRequest::GetGroupById(group_id) => get_group_by_id_reply(profile, sender, group_id),
+        ProfileRequest::GetNodeById(node_id) => get_node_by_id_reply(profile, sender, node_id),
     }
 }
 
 fn get_group_by_id_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>, group_id: i32) {
-    let groups = profile.group_list.query(group_id as usize);
+    let group = profile.group_list.query(group_id as usize);
 
-    match groups {
+    match group {
         Ok(g) => {
-            debug!("List all groups");
+            debug!("Query group By ID : {}", group_id);
             let group = g.to_data();
             try_send(sender, ProfileReply::GetGroupById(group));
         }
         Err(e) => {
-            debug!("List all groups Failed : {}", e);
+            debug!("Query group By ID Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+fn get_node_by_id_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>, node_id: i32) {
+    let group = profile.group_list.default_group();
+
+    let node = group.query(node_id as usize);
+
+    match node {
+        Ok(g) => {
+            debug!("Query node By ID : {}", node_id);
+            let node = g.to_data();
+            try_send(sender, ProfileReply::GetNodeById(node));
+        }
+        Err(e) => {
+            debug!("Query node By ID Failed : {}", e);
             try_send(sender, ProfileReply::Error(e.to_string()));
         }
     }

@@ -140,4 +140,27 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
 
         Ok(Response::new(reply))
     }
+    async fn get_node_by_id(
+        &self,
+        request: Request<GetNodeByIdRequest>,
+    ) -> Result<Response<NodeData>, Status> {
+        info!("Request get node by Id from {:?}", request.remote_addr());
+
+        let node_id = request.into_inner().node_id;
+
+        let node_data: crate::protobuf::acolors_proto::NodeData =
+            match self.manager.get_node_by_id(node_id).await {
+                Ok(c) => c.into(),
+                Err(e) => {
+                    return Err(Status::new(
+                        Code::Unavailable,
+                        format!("Node unavailable: \"{}\"", e),
+                    ))
+                }
+            };
+
+        let reply = node_data;
+
+        Ok(Response::new(reply))
+    }
 }

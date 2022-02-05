@@ -20,7 +20,7 @@ message CountGroupsReply {
 
 message GroupList {
     uint64 length = 1;
-    repeated GroupData datas = 2;
+    repeated GroupData entries = 2;
 }
 
 message NodeData {

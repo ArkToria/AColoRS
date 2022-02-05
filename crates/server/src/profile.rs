@@ -55,7 +55,7 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
                 Err(e) => {
                     return Err(Status::new(
                         Code::Unavailable,
-                        format!("Count unavailable: \"{}\"", e),
+                        format!("Group unavailable: \"{}\"", e),
                     ))
                 }
             };
@@ -63,7 +63,7 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
         let length = group_list.len();
         let reply = GroupList {
             length: length as u64,
-            datas: group_list,
+            entries: group_list,
         };
         Ok(Response::new(reply))
     }

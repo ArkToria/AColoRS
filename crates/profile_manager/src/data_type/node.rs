@@ -10,7 +10,7 @@ pub struct NodeData {
     pub routing_name: String,
     pub protocol: i32,
     pub address: String,
-    pub port: u16,
+    pub port: i32,
     pub password: String,
     pub raw: String,
     pub url: String,

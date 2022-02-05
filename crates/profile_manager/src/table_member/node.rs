@@ -152,23 +152,23 @@ pub mod tests {
         bc.group_id = 0;
         ac == bc
     }
-    pub fn generate_test_node(number: u16) -> NodeData {
+    pub fn generate_test_node(number: i32) -> NodeData {
         let test_string = format!("test{}", number);
         let test_address = format!("localhost:{}", number);
         let mut result = NodeData {
-            id: number as i32,
+            id: number,
             name: format!("{} node", test_string),
-            group_id: number as i32,
+            group_id: number,
             group_name: format!("{} group", test_string),
-            routing_id: number as i32,
+            routing_id: number,
             routing_name: format!("{} routing", test_string),
-            protocol: number as i32,
+            protocol: number,
             address: test_address.clone(),
             port: number,
             password: test_string.clone(),
             raw: test_string.clone(),
             url: format!("https://{}", test_address),
-            latency: 100 * number as i32,
+            latency: 100 * number,
             upload: 200 * (number as i64),
             download: 300 * (number as i64),
             create_at: 0,

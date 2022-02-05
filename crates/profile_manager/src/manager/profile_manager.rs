@@ -8,7 +8,7 @@ use tokio::{
     task,
 };
 
-use crate::{table_member::traits::AColoRSListModel, GroupData, Profile};
+use crate::{table_member::traits::AColoRSListModel, GroupData, NodeData, Profile};
 
 use super::{reply::ProfileReply, request::ProfileRequest};
 
@@ -50,6 +50,30 @@ impl ProfileManager {
         }
     }
 
+    pub async fn count_nodes(&self, group_id: i32) -> Result<usize> {
+        let content = ProfileRequest::CountNodes(group_id);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::CountNodes(c) => Ok(c),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub async fn list_all_nodes(&self, group_id: i32) -> Result<Vec<NodeData>> {
+        let content = ProfileRequest::ListAllNodes(group_id);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::ListAllNodes(node_list) => Ok(node_list),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
         let (sender, receiver) = oneshot::channel();
         let request = Request { sender, content };
@@ -85,6 +109,8 @@ fn try_reply(request: Request, profile: &Profile) {
     match request {
         ProfileRequest::CountGroups => count_group_reply(profile, sender),
         ProfileRequest::ListAllGroups => list_all_group_reply(profile, sender),
+        ProfileRequest::CountNodes(group_id) => count_node_reply(profile, sender, group_id),
+        ProfileRequest::ListAllNodes(group_id) => list_all_node_reply(profile, sender, group_id),
     }
 }
 
@@ -113,6 +139,54 @@ fn count_group_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>) {
         }
         Err(e) => {
             debug!("Group count Error : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+
+fn list_all_node_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>, group_id: i32) {
+    let group = match profile.group_list.query(group_id as usize) {
+        Ok(group) => group,
+        Err(e) => {
+            debug!("List all nodes Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    };
+
+    let nodes = group.list_all_nodes();
+
+    match nodes {
+        Ok(g) => {
+            debug!("List all nodes");
+            let node_list = g.into_iter().map(|node| node.to_data()).collect();
+            try_send(sender, ProfileReply::ListAllNodes(node_list));
+        }
+        Err(e) => {
+            debug!("List all nodes Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+
+fn count_node_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>, group_id: i32) {
+    let group = match profile.group_list.query(group_id as usize) {
+        Ok(group) => group,
+        Err(e) => {
+            debug!("List all nodes Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    };
+
+    let count = group.size();
+    match count {
+        Ok(c) => {
+            debug!("Node count:{}", c);
+            try_send(sender, ProfileReply::CountNodes(c));
+        }
+        Err(e) => {
+            debug!("Node count Error : {}", e);
             try_send(sender, ProfileReply::Error(e.to_string()));
         }
     }

@@ -9,10 +9,25 @@ package acolors;
 service ProfileManager {
     rpc CountGroups(CountGroupsRequest) returns(CountGroupsReply) {}
     rpc ListAllGroups(ListAllGroupsRequest) returns (GroupList) {}
+
+    rpc CountNodes(CountNodesRequest) returns(CountNodesReply) {}
+    rpc ListAllNodes(ListAllNodesRequest) returns(NodeList) {}
 }
 
 message CountGroupsRequest {}
 message ListAllGroupsRequest {}
+
+message CountNodesRequest {
+    int32 group_id = 1;
+}
+
+message ListAllNodesRequest {
+    int32 group_id = 1;
+}
+
+message CountNodesReply {
+    uint64 count = 1;
+}
 
 message CountGroupsReply {
     uint64 count = 1;
@@ -21,6 +36,10 @@ message CountGroupsReply {
 message GroupList {
     uint64 length = 1;
     repeated GroupData entries = 2;
+}
+message NodeList {
+    uint64 length = 1;
+    repeated NodeData entries = 2;
 }
 
 message NodeData {

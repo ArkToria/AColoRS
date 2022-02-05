@@ -4,7 +4,8 @@ use spdlog::info;
 use tonic::{Code, Request, Response, Status};
 
 use crate::protobuf::acolors_proto::{
-    profile_manager_server, CountGroupsReply, CountGroupsRequest, GroupList, ListAllGroupsRequest,
+    profile_manager_server, CountGroupsReply, CountGroupsRequest, CountNodesReply,
+    CountNodesRequest, GroupList, ListAllGroupsRequest, ListAllNodesRequest, NodeList,
 };
 use profile_manager::{self};
 
@@ -62,6 +63,57 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
 
         let length = group_list.len();
         let reply = GroupList {
+            length: length as u64,
+            entries: group_list,
+        };
+        Ok(Response::new(reply))
+    }
+
+    async fn count_nodes(
+        &self,
+        request: Request<CountNodesRequest>,
+    ) -> Result<Response<CountNodesReply>, Status> {
+        info!("Request count nodes from {:?}", request.remote_addr());
+
+        let group_id = request.into_inner().group_id;
+
+        let count = match self.manager.count_nodes(group_id).await {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(Status::new(
+                    Code::Unavailable,
+                    format!("Count unavailable: \"{}\"", e),
+                ))
+            }
+        };
+
+        let reply = CountNodesReply {
+            count: count as u64,
+        };
+        Ok(Response::new(reply))
+    }
+
+    async fn list_all_nodes(
+        &self,
+        request: Request<ListAllNodesRequest>,
+    ) -> Result<Response<NodeList>, Status> {
+        info!("Request list all nodes from {:?}", request.remote_addr());
+
+        let group_id = request.into_inner().group_id;
+
+        let group_list: Vec<crate::protobuf::acolors_proto::NodeData> =
+            match self.manager.list_all_nodes(group_id).await {
+                Ok(c) => c.into_iter().map(|group| group.into()).collect(),
+                Err(e) => {
+                    return Err(Status::new(
+                        Code::Unavailable,
+                        format!("Node unavailable: \"{}\"", e),
+                    ))
+                }
+            };
+
+        let length = group_list.len();
+        let reply = NodeList {
             length: length as u64,
             entries: group_list,
         };

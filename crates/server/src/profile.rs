@@ -163,4 +163,53 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
 
         Ok(Response::new(reply))
     }
+
+    async fn set_group_by_id(
+        &self,
+        request: Request<SetGroupByIdRequest>,
+    ) -> Result<Response<SetGroupByIdReply>, Status> {
+        info!("Request set group by Id from {:?}", request.remote_addr());
+
+        let inner = request.into_inner();
+        let group_id = inner.group_id;
+        let data: GroupData = match inner.data {
+            Some(d) => d,
+            None => return Err(Status::invalid_argument("No group data")),
+        };
+
+        if let Err(e) = self.manager.set_group_by_id(group_id, data.into()).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Group unavailable: \"{}\"", e),
+            ));
+        }
+
+        let reply = SetGroupByIdReply {};
+
+        Ok(Response::new(reply))
+    }
+    async fn set_node_by_id(
+        &self,
+        request: Request<SetNodeByIdRequest>,
+    ) -> Result<Response<SetNodeByIdReply>, Status> {
+        info!("Request set node by Id from {:?}", request.remote_addr());
+
+        let inner = request.into_inner();
+        let node_id = inner.node_id;
+        let data: NodeData = match inner.data {
+            Some(d) => d,
+            None => return Err(Status::invalid_argument("No node data")),
+        };
+
+        if let Err(e) = self.manager.set_node_by_id(node_id, data.into()).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Node unavailable: \"{}\"", e),
+            ));
+        }
+
+        let reply = SetNodeByIdReply {};
+
+        Ok(Response::new(reply))
+    }
 }

@@ -15,10 +15,14 @@ service ProfileManager {
     
     rpc GetGroupByID(GetGroupByIDRequest) returns (GroupData) {}
     rpc GetNodeByID(GetNodeByIDRequest) returns (NodeData) {}
+    rpc SetGroupByID(SetGroupByIDRequest) returns (SetGroupByIDReply) {}
+    rpc SetNodeByID(SetNodeByIDRequest) returns (SetNodeByIDReply) {}
 }
 
 message CountGroupsRequest {}
 message ListAllGroupsRequest {}
+message SetGroupByIDReply {}
+message SetNodeByIDReply {}
 
 message CountNodesRequest {
     int32 group_id = 1;
@@ -33,6 +37,14 @@ message GetGroupByIDRequest {
 }
 message GetNodeByIDRequest {
     int32 node_id = 1;
+}
+message SetGroupByIDRequest {
+    int32 group_id = 1;
+    GroupData data = 2;
+}
+message SetNodeByIDRequest {
+    int32 node_id = 1;
+    NodeData data = 2;
 }
 
 message CountNodesReply {

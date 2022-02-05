@@ -9,4 +9,6 @@ pub enum ProfileReply {
     ListAllNodes(Vec<NodeData>),
     GetGroupById(GroupData),
     GetNodeById(NodeData),
+    SetGroupById,
+    SetNodeById,
 }

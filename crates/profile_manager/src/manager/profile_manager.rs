@@ -95,6 +95,28 @@ impl ProfileManager {
             _ => unreachable!(),
         }
     }
+    pub async fn set_group_by_id(&self, group_id: i32, group_data: GroupData) -> Result<()> {
+        let content = ProfileRequest::SetGroupById(group_id, group_data);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::SetGroupById => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
+    pub async fn set_node_by_id(&self, node_id: i32, node_data: NodeData) -> Result<()> {
+        let content = ProfileRequest::SetNodeById(node_id, node_data);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::SetNodeById => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
         let (sender, receiver) = oneshot::channel();
         let request = Request { sender, content };
@@ -113,16 +135,16 @@ async fn create_producer(rx: Receiver<Request>, path: String) {
     task::spawn_blocking(move || -> Result<()> {
         let receiver = rx;
         let connection = create_connection(path)?;
-        let profile = Profile::new(connection);
+        let mut profile = Profile::new(connection);
 
         while let Ok(request) = receiver.recv() {
-            try_reply(request, &profile);
+            try_reply(request, &mut profile);
         }
         Ok(())
     });
 }
 
-fn try_reply(request: Request, profile: &Profile) {
+fn try_reply(request: Request, profile: &mut Profile) {
     debug!("Got = {:?}", request);
     let (sender, request) = (request.sender, request.content);
     debug!("{:?}/{:?}", sender, request);
@@ -134,6 +156,53 @@ fn try_reply(request: Request, profile: &Profile) {
         ProfileRequest::ListAllNodes(group_id) => list_all_node_reply(profile, sender, group_id),
         ProfileRequest::GetGroupById(group_id) => get_group_by_id_reply(profile, sender, group_id),
         ProfileRequest::GetNodeById(node_id) => get_node_by_id_reply(profile, sender, node_id),
+        ProfileRequest::SetGroupById(group_id, group_data) => {
+            set_group_by_id_reply(profile, sender, group_id, group_data)
+        }
+        ProfileRequest::SetNodeById(node_id, node_data) => {
+            set_node_by_id_reply(profile, sender, node_id, node_data)
+        }
+    }
+}
+
+fn set_group_by_id_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    group_id: i32,
+    group_data: GroupData,
+) {
+    let group = profile.group_list.set(group_id as usize, &group_data);
+
+    match group {
+        Ok(_) => {
+            debug!("Set group By ID : {}", group_id);
+            try_send(sender, ProfileReply::SetGroupById);
+        }
+        Err(e) => {
+            debug!("Set group By ID Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+fn set_node_by_id_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    node_id: i32,
+    node_data: NodeData,
+) {
+    let mut group = profile.group_list.default_group();
+
+    let node = group.set(node_id as usize, &node_data);
+
+    match node {
+        Ok(_) => {
+            debug!("Set node By ID : {}", node_id);
+            try_send(sender, ProfileReply::SetNodeById);
+        }
+        Err(e) => {
+            debug!("Set node By ID Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
     }
 }
 

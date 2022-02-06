@@ -30,8 +30,10 @@ pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     let mut raw = serde_json::to_value(&outbound)?;
     check_is_default_and_delete(&mut raw);
 
+    let name = urlencoding::decode(&meta.name)?.to_string();
+
     node.protocol = EntryType::Vmess.into();
-    node.name = meta.name.clone();
+    node.name = name;
     node.address = server.address.clone();
     node.port = server.port as i32;
     node.password = user.id.clone();

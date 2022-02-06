@@ -5,7 +5,7 @@ use crate::protobuf::acolors_proto::*;
 use crate::protobuf::v2ray_proto::*;
 use crate::NodeData;
 
-use super::serializer::to_string_ignore_default;
+use super::serializer::check_is_default_and_delete;
 
 #[derive(Default)]
 struct URLMetaObject {
@@ -55,12 +55,15 @@ fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     let server = &vmess.vnext[0];
     let user = &server.users[0];
 
+    let mut raw = serde_json::to_value(&outbound)?;
+    check_is_default_and_delete(&mut raw);
+
     node.protocol = EntryType::Vmess.into();
     node.name = meta.name.clone();
     node.address = server.address.clone();
     node.port = server.port as i32;
     node.password = user.id.clone();
-    node.raw = to_string_ignore_default(&serde_json::to_value(&outbound)?)?;
+    node.raw = serde_json::to_string_pretty(&raw)?;
 
     Ok(node)
 }
@@ -261,38 +264,38 @@ mod tests {
         assert_eq!(
             data.raw,
             r#"{
- "protocol": "vmess",
- "sendThrough": "0.0.0.0",
- "settings": {
-  "vmess": {
-   "vnext": [
-    {
-     "address": "test2",
-     "port": 142,
-     "users": [
-      {
-       "alterId": 312,
-       "id": "test3",
-       "security": "chacha20-poly1305"
-      }
-     ]
+  "protocol": "vmess",
+  "sendThrough": "0.0.0.0",
+  "settings": {
+    "vmess": {
+      "vnext": [
+        {
+          "address": "test2",
+          "port": 142,
+          "users": [
+            {
+              "alterId": 312,
+              "id": "test3",
+              "security": "chacha20-poly1305"
+            }
+          ]
+        }
+      ]
     }
-   ]
-  }
- },
- "streamSettings": {
-  "network": "ws",
-  "security": "tls",
-  "tlsSettings": {
-   "serverName": "412"
   },
-  "wsSettings": {
-   "headers": {
-    "Host": "fd"
-   },
-   "path": "afd"
+  "streamSettings": {
+    "network": "ws",
+    "security": "tls",
+    "tlsSettings": {
+      "serverName": "412"
+    },
+    "wsSettings": {
+      "headers": {
+        "Host": "fd"
+      },
+      "path": "afd"
+    }
   }
- }
 }"#
         );
         Ok(())

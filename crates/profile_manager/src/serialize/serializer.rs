@@ -1,98 +1,95 @@
-use std::ops::ControlFlow;
-
-use anyhow::Result;
 use serde_json::Value;
 
-pub fn to_string_ignore_default(value: &Value) -> Result<String>
-where
-{
-    let value: &Value = &value;
-    let mut output = String::new();
-    match value {
-        Value::Object(mp) => {
-            output += "{\n";
-            let mut tmp = String::new();
-            let mut flag = false;
-            for pair in mp {
-                let (name, value) = pair;
-                if is_default(value) {
-                    continue;
-                }
-                if flag {
-                    tmp += ",\n"
-                }
-                flag = true;
-
-                tmp += &format!("\"{}\": {}", name, to_string_ignore_default(value)?);
-            }
-            output += &add_tab(tmp);
-            output += "}";
-        }
-        Value::Array(arr) => {
-            output += "[\n";
-            let mut tmp = String::new();
-            let mut flag = false;
-            for value in arr {
-                if flag {
-                    tmp += ",\n"
-                }
-                flag = true;
-
-                tmp += &to_string_ignore_default(value)?;
-            }
-            output += &add_tab(tmp);
-            output += "]";
-        }
-        v => return Ok(v.to_string()),
-    }
-    Ok(output)
-}
-
-fn add_tab(string: String) -> String {
-    string.lines().map(|s| format!("{}{}\n", " ", s)).collect()
-}
-
-fn is_default(value: &Value) -> bool {
+pub fn check_is_default_and_delete(value: &mut Value) -> bool {
     match value {
         Value::Null => true,
-        Value::Bool(b) => !b,
-        Value::Number(n) => n.as_f64().unwrap_or(0.0) == 0.0,
-        Value::Array(a) => a.is_empty(),
+        Value::Bool(b) => !*b,
+        Value::Number(n) => n.as_u64().unwrap_or(0) == 0,
         Value::String(s) => s.is_empty(),
-        Value::Object(object) => {
-            if object.is_empty() {
+        Value::Array(value_vec) => {
+            if value_vec.is_empty() {
+                true
+            } else {
+                value_vec.into_iter().for_each(|v| {
+                    if let Value::Object(_) = v {
+                        check_is_default_and_delete(v);
+                    }
+                });
+                false
+            }
+        }
+        Value::Object(map) => {
+            if map.is_empty() {
                 true
             } else {
                 let mut flag = true;
-                for pair in object {
-                    let (_, value) = pair;
-                    if !is_default(value) {
+                map.retain(|_, value| {
+                    if !check_is_default_and_delete(value) {
                         flag = false;
+                        return true;
                     }
-                }
+                    return false;
+                });
                 flag
             }
         }
     }
 }
 
-#[test]
-fn test_to_string() -> Result<()> {
-    let john = serde_json::json!({
-        "name": "John Doe",
-        "age": 43,
-        "phones": [
-            "+44 1234567",
-            "+44 2345678"
-        ],
-        "testnull": null,
-        "testnullarray": [],
-    });
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
 
-    println!("first phone number: {}", john["phones"][0]);
+    use crate::serialize::serializer::check_is_default_and_delete;
+    #[test]
+    fn test_to_string() -> Result<()> {
+        let john = serde_json::json!({
+            "name": "John Doe",
+            "age": 43,
+            "phones": [
+                "+44 1234567",
+                "+44 2345678"
+            ],
+            "testnull": null,
+            "testnullarray": [],
+            "testnulls": {
+                "testempty": {},
+                "testdefault": false,
+                "testzero": 0,
+            },
+            "testnotnulls": {
+                "testempty": {},
+                "testdefault": false,
+                "testzero": 0,
+                "testone": 1,
+            },
+            "nullarray": [],
+            "notnullarray": [
+                {}
+            ],
+        });
 
-    // Convert to a string of JSON and print it out
-    println!("{}", serde_json::to_string_pretty(&john)?);
-    println!("{}", to_string_ignore_default(&john)?);
-    Ok(())
+        let mut clon = john.clone();
+        check_is_default_and_delete(&mut clon);
+        println!("{}", serde_json::to_string_pretty(&clon)?);
+
+        assert_eq!(
+            r#"{
+  "age": 43,
+  "name": "John Doe",
+  "notnullarray": [
+    {}
+  ],
+  "phones": [
+    "+44 1234567",
+    "+44 2345678"
+  ],
+  "testnotnulls": {
+    "testone": 1
+  }
+}"#,
+            serde_json::to_string_pretty(&clon)?
+        );
+        Ok(())
+    }
 }

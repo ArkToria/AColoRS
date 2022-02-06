@@ -258,6 +258,43 @@ mod tests {
             }
         };
         println!("{}", data.raw);
+        assert_eq!(
+            data.raw,
+            r#"{
+ "protocol": "vmess",
+ "sendThrough": "0.0.0.0",
+ "settings": {
+  "vmess": {
+   "vnext": [
+    {
+     "address": "test2",
+     "port": 142,
+     "users": [
+      {
+       "alterId": 312,
+       "id": "test3",
+       "security": "chacha20-poly1305"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "streamSettings": {
+  "network": "ws",
+  "security": "tls",
+  "tlsSettings": {
+   "serverName": "412"
+  },
+  "wsSettings": {
+   "headers": {
+    "Host": "fd"
+   },
+   "path": "afd"
+  }
+ }
+}"#
+        );
         Ok(())
     }
     #[test]

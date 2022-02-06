@@ -28,10 +28,86 @@ pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {
 }
 
 fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
-    todo!()
+    let meta = sip002_decode(url_str)?;
+    let mut node = NodeData::default();
+
+    let outbound = meta.outbound;
+    let outbound_settings = match &outbound.settings {
+        Some(s) => s,
+        None => return Err(anyhow!("No OutboundSettings")),
+    };
+    let shadowsocks = match &outbound_settings.kind {
+        Some(s) => match s {
+            outbound_object::outbound_settings::Kind::Shadowsocks(ss) => ss,
+            _ => return Err(anyhow!("Protocol Error")),
+        },
+        None => return Err(anyhow!("No OutboundSettings Kind")),
+    };
+
+    let server = &shadowsocks.servers[0];
+
+    let mut raw = serde_json::to_value(&outbound)?;
+    check_is_default_and_delete(&mut raw);
+
+    node.protocol = EntryType::Vmess.into();
+    node.name = meta.name.clone();
+    node.address = server.address.clone();
+    node.port = server.port as i32;
+    node.password = server.password.clone();
+    node.raw = serde_json::to_string_pretty(&raw)?;
+
+    Ok(node)
+}
+
+fn sip002_decode(url_str: String) -> Result<URLMetaObject> {
+    // url scheme:
+    // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
+
+    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:#]*)#([^#]*)"#)?;
+    let caps = match re.captures(&url_str) {
+        Some(c) => c,
+        None => {
+            return Err(anyhow!("Failed to parse sip002 url"));
+        }
+    };
+
+    let mut meta = URLMetaObject::default();
+    meta.name = caps[5].to_string();
+
+    let mut outbound = &mut meta.outbound;
+    outbound.protocol = "shadowsocks".into();
+    outbound.send_through = "0.0.0.0".into();
+
+    let mut outbound_settings = outbound_object::OutboundSettings::default();
+    let mut shadowsocks = shadowsocks_object::OutboundConfigurationObject::default();
+    let mut server = shadowsocks_object::ServerObject::default();
+
+    let user_info = String::from_utf8(base64::decode(&caps[2])?)?;
+    if user_info.is_empty() {
+        return Err(anyhow!("Empty User Info"));
+    }
+
+    let mut user_info = user_info.split(":");
+
+    server.address = caps[3].to_string();
+    server.port = caps[4].parse()?;
+    server.password = user_info.clone().last().unwrap_or("").to_string();
+    server.method = user_info.next().unwrap_or("").to_string();
+
+    shadowsocks.servers.push(server);
+    outbound_settings.kind = Some(outbound_object::outbound_settings::Kind::Shadowsocks(
+        shadowsocks,
+    ));
+    outbound.settings = Some(outbound_settings);
+    Ok(meta)
 }
 
 fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
+    let meta = trojan_decode(url_str)?;
+    todo!()
+}
+
+fn trojan_decode(url_str: String) -> Result<URLMetaObject> {
     todo!()
 }
 
@@ -249,6 +325,7 @@ fn vmess_base64_decode(url_str: String) -> Result<URLMetaObject> {
 mod tests {
     use super::*;
     use anyhow::Result;
+    use regex::Regex;
 
     #[test]
     fn test_vmess() -> Result<()> {
@@ -312,10 +389,37 @@ mod tests {
     }
     #[test]
     fn test_ss() -> Result<()> {
-        println!(
-            "{:?}",
-            decode_outbound_from_url("ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1")?
+        let data = decode_outbound_from_url("ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1")?;
+        println!("{:?}", data);
+        println!("{}", data.raw);
+        assert_eq!(
+            r#"{
+  "protocol": "shadowsocks",
+  "sendThrough": "0.0.0.0",
+  "settings": {
+    "shadowsocks": {
+      "servers": [
+        {
+          "address": "test2",
+          "method": "aes-256-gcm",
+          "password": "test3",
+          "port": 123
+        }
+      ]
+    }
+  }
+}"#,
+            data.raw
         );
+        Ok(())
+    }
+    #[test]
+    fn test_regex() -> Result<()> {
+        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:#]*)#([^#]*)"#)?;
+        let ss = "ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1";
+        let list = re.captures(ss).unwrap();
+        println!("{:?}", list);
+
         Ok(())
     }
 }

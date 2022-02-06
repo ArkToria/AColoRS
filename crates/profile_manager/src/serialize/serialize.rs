@@ -5,6 +5,8 @@ use crate::protobuf::acolors_proto::*;
 use crate::protobuf::v2ray_proto::*;
 use crate::NodeData;
 
+use super::serializer::to_string_ignore_default;
+
 #[derive(Default)]
 struct URLMetaObject {
     pub name: String,
@@ -58,7 +60,7 @@ fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     node.address = server.address.clone();
     node.port = server.port as i32;
     node.password = user.id.clone();
-    node.raw = serde_json::to_string_pretty(&outbound)?;
+    node.raw = to_string_ignore_default(&serde_json::to_value(&outbound)?)?;
 
     Ok(node)
 }
@@ -88,7 +90,6 @@ fn vmess_base64_decode(url_str: String) -> Result<URLMetaObject> {
     if info.is_empty() {
         return Err(anyhow!("No Content"));
     };
-    println!("test1244 : {}\n\n\n\n\n\n", info);
 
     let decode_vec = base64::decode(info)?;
     let base64_str = String::from_utf8(decode_vec)?;
@@ -243,9 +244,9 @@ fn vmess_base64_decode(url_str: String) -> Result<URLMetaObject> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use anyhow::Result;
 
-    use crate::serialize::decode_outbound_from_url;
     #[test]
     fn test_vmess() -> Result<()> {
         let t=decode_outbound_from_url("vmess://eyJhZGQiOiJ0ZXN0MiIsImFpZCI6MzEyLCJob3N0IjoiZmQiLCJpZCI6InRlc3QzIiwibmV0Ijoid3MiLCJwYXRoIjoiYWZkIiwicG9ydCI6MTQyLCJwcyI6InRlc3QxIiwic2N5IjoiY2hhY2hhMjAtcG9seTEzMDUiLCJzbmkiOiI0MTIiLCJ0bHMiOiJ0bHMiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0=@");

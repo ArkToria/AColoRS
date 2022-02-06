@@ -6,11 +6,30 @@ use crate::NodeData;
 use super::protocol::shadowsocks::shadowsocks_outbound_from_url;
 use super::protocol::trojan::trojan_outbound_from_url;
 use super::protocol::vmess::vmess_outbound_from_base64;
+use spdlog::error;
 
 #[derive(Default)]
 pub struct URLMetaObject {
     pub name: String,
     pub outbound: OutboundObject,
+}
+
+pub fn get_nodes_from_base64(base64: &str) -> anyhow::Result<Vec<NodeData>> {
+    let mut nodes = Vec::new();
+    let url_str = String::from_utf8(base64::decode(base64)?)?;
+    let url_lines = url_str.lines();
+
+    url_lines.into_iter().for_each(|node_url| {
+        let node = decode_outbound_from_url(node_url);
+        match node {
+            Ok(n) => nodes.push(n),
+            Err(e) => {
+                error!("Node url parse error : {}", e);
+            }
+        }
+    });
+
+    Ok(nodes)
 }
 
 pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {

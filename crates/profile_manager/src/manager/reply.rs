@@ -15,4 +15,5 @@ pub enum ProfileReply {
     RemoveNodeById,
     AppendGroup,
     AppendNode,
+    UpdateGroup,
 }

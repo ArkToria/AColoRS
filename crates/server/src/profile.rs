@@ -3,8 +3,8 @@ use spdlog::info;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::protobuf::acolors_proto::*;
-use profile_manager::{self};
+use crate::{protobuf::acolors_proto::*, utils::get_http_content};
+use profile_manager::{self, serialize::serialize::get_nodes_from_base64};
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
@@ -217,10 +217,7 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
         &self,
         request: Request<AppendGroupRequest>,
     ) -> Result<Response<AppendGroupReply>, Status> {
-        info!(
-            "Request append group by Id from {:?}",
-            request.remote_addr()
-        );
+        info!("Request append group from {:?}", request.remote_addr());
 
         let inner = request.into_inner();
         let data: GroupData = match inner.data {
@@ -239,11 +236,15 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
 
         Ok(Response::new(reply))
     }
+
     async fn append_node(
         &self,
         request: Request<AppendNodeRequest>,
     ) -> Result<Response<AppendNodeReply>, Status> {
-        info!("Request append node by Id from {:?}", request.remote_addr());
+        info!(
+            "Request append node by group id from {:?}",
+            request.remote_addr()
+        );
 
         let inner = request.into_inner();
         let group_id = inner.group_id;
@@ -302,6 +303,60 @@ impl profile_manager_server::ProfileManager for AColoRSProfile {
         };
 
         let reply = RemoveNodeByIdReply {};
+
+        Ok(Response::new(reply))
+    }
+
+    async fn update_group_by_id(
+        &self,
+        request: Request<UpdateGroupByIdRequest>,
+    ) -> Result<Response<UpdateGroupByIdReply>, Status> {
+        info!(
+            "Request update group by Id from {:?}",
+            request.remote_addr()
+        );
+
+        let inner = request.into_inner();
+        let group_id = inner.group_id;
+
+        let group_data = match self.manager.get_group_by_id(group_id).await {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(Status::new(
+                    Code::Unavailable,
+                    format!("Group unavailable: \"{}\"", e),
+                ))
+            }
+        };
+
+        let base64: String = match get_http_content(group_data.url).await {
+            Ok(s) => s.lines().map(|line| line.trim()).collect(),
+            Err(e) => {
+                return Err(Status::new(
+                    Code::Unavailable,
+                    format!("Url unavailable: \"{}\"", e),
+                ))
+            }
+        };
+
+        let nodes = match get_nodes_from_base64(&base64) {
+            Ok(n) => n,
+            Err(e) => {
+                return Err(Status::new(
+                    Code::Unavailable,
+                    format!("Nodes url parsing error\"{}\"", e),
+                ))
+            }
+        };
+
+        if let Err(e) = self.manager.update_group_by_id(group_id, nodes).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Group unavailable: \"{}\"", e),
+            ));
+        }
+
+        let reply = UpdateGroupByIdReply {};
 
         Ok(Response::new(reply))
     }

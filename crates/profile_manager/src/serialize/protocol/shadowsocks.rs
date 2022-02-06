@@ -7,7 +7,7 @@ use crate::serialize::serializer::check_is_default_and_delete;
 use crate::NodeData;
 
 pub fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
-    let meta = sip002_decode(url_str)?;
+    let meta = sip002_decode(&url_str)?;
     let mut node = NodeData::default();
 
     let outbound = meta.outbound;
@@ -34,11 +34,12 @@ pub fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
     node.port = server.port as i32;
     node.password = server.password.clone();
     node.raw = serde_json::to_string_pretty(&raw)?;
+    node.url = url_str.clone();
 
     Ok(node)
 }
 
-fn sip002_decode(url_str: String) -> Result<URLMetaObject> {
+fn sip002_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
 

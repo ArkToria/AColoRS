@@ -164,6 +164,18 @@ impl ProfileManager {
             _ => unreachable!(),
         }
     }
+
+    pub async fn update_group_by_id(&self, group_id: i32, nodes: Vec<NodeData>) -> Result<()> {
+        let content = ProfileRequest::UpdateGroup(group_id, nodes);
+        let receiver = self.send_request(content)?;
+
+        match receiver.await? {
+            ProfileReply::UpdateGroup => Ok(()),
+            ProfileReply::Error(e) => Err(anyhow!("{}", e)),
+
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug)]

@@ -8,7 +8,7 @@ use crate::serialize::serializer::check_is_default_and_delete;
 use crate::NodeData;
 
 pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
-    let meta = vmess_base64_decode(url_str)?;
+    let meta = vmess_base64_decode(&url_str)?;
     let mut node = NodeData::default();
 
     let outbound = meta.outbound;
@@ -36,11 +36,12 @@ pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     node.port = server.port as i32;
     node.password = user.id.clone();
     node.raw = serde_json::to_string_pretty(&raw)?;
+    node.url = url_str.clone();
 
     Ok(node)
 }
 
-fn vmess_base64_decode(url_str: String) -> Result<URLMetaObject> {
+fn vmess_base64_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // vmess://<base64EncodeJson>
     // {

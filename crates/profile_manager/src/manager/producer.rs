@@ -50,7 +50,52 @@ fn try_reply(request: Request, profile: &mut Profile) {
         ProfileRequest::AppendNode(group_id, node_data) => {
             append_node_reply(profile, sender, group_id, node_data)
         }
+        ProfileRequest::UpdateGroup(group_id, nodes) => {
+            update_group_by_id_reply(profile, sender, group_id, nodes)
+        }
     }
+}
+
+fn update_group_by_id_reply(
+    profile: &mut Profile,
+    sender: oneshot::Sender<ProfileReply>,
+    group_id: i32,
+    nodes: Vec<NodeData>,
+) {
+    let mut group = match profile.group_list.query(group_id as usize) {
+        Ok(g) => g,
+        Err(e) => {
+            debug!("Append node Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    };
+
+    if let Err(e) = group.remove_all_nodes() {
+        debug!("Clear group Failed : {}", e);
+        try_send(sender, ProfileReply::Error(e.to_string()));
+        return;
+    }
+
+    debug!("Updating group");
+
+    let nodes = nodes;
+
+    for node_data in nodes {
+        let mut node_data = node_data.clone();
+        node_data.update_create_at();
+        node_data.update_modified_at();
+        node_data.group_id = group_id;
+
+        let result = group.append(&node_data);
+
+        if let Err(e) = result {
+            debug!("Update group Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    }
+    try_send(sender, ProfileReply::UpdateGroup);
 }
 fn remove_group_by_id_reply(
     profile: &mut Profile,

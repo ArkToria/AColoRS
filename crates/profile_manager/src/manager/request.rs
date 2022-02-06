@@ -14,4 +14,5 @@ pub enum ProfileRequest {
     SetNodeById(i32, NodeData),
     AppendGroup(GroupData),
     AppendNode(i32, NodeData),
+    UpdateGroup(i32, Vec<NodeData>),
 }

@@ -9,7 +9,7 @@ use crate::serialize::serializer::check_is_default_and_delete;
 use crate::NodeData;
 
 pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
-    let meta = trojan_decode(url_str)?;
+    let meta = trojan_decode(&url_str)?;
     let mut node = NodeData::default();
 
     let outbound = meta.outbound;
@@ -36,11 +36,12 @@ pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
     node.port = server.port as i32;
     node.password = server.password.clone();
     node.raw = serde_json::to_string_pretty(&raw)?;
+    node.url = url_str.clone();
 
     Ok(node)
 }
 
-fn trojan_decode(url_str: String) -> Result<URLMetaObject> {
+fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // trojan://<password>@<host>:<port>?sni=<server_name>&allowinsecure=<allow_insecure>&alpn=h2%0Ahttp/1.1#<name>
     let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:]*)\?([^%]*)%0A([^#]*)#([^#]*)"#)?;

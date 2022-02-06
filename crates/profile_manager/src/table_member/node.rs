@@ -150,6 +150,8 @@ pub mod tests {
         bc.id = 0;
         ac.group_id = 0;
         bc.group_id = 0;
+        ac.group_name = String::new();
+        bc.group_name = String::new();
         ac == bc
     }
     pub fn generate_test_node(number: i32) -> NodeData {

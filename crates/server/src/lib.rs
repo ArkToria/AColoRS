@@ -17,7 +17,7 @@ pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
     check_tcp_bind(address)?;
 
     let addr: SocketAddr = address;
-    let rt = tokio::runtime::Builder::new_current_thread()
+    let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("Could not build tokio runtime");

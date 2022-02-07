@@ -85,7 +85,6 @@ fn update_group_by_id_reply(
         let mut node_data = node_data.clone();
         node_data.update_create_at();
         node_data.update_modified_at();
-        node_data.group_id = group_id;
 
         let result = group.append(&node_data);
 

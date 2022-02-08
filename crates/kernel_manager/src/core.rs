@@ -1,5 +1,5 @@
 use anyhow::Result;
-trait CoreTool<ConfigType> {
+pub trait CoreTool<ConfigType> {
     fn run(&mut self) -> Result<()>;
     fn stop(&mut self) -> Result<()>;
     fn is_running(&self) -> bool;
@@ -9,5 +9,12 @@ trait CoreTool<ConfigType> {
             self.stop()?;
         }
         self.run()
+    }
+    fn update_config(&mut self, config: ConfigType) -> Result<()> {
+        self.set_config(config)?;
+        if self.is_running() {
+            self.restart()?;
+        }
+        Ok(())
     }
 }

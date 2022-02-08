@@ -1,4 +1,5 @@
 mod core;
+mod v2ray;
 #[cfg(test)]
 mod tests {
     #[test]

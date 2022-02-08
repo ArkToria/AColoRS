@@ -152,10 +152,13 @@ pub mod tests {
         bc.group_id = 0;
         ac.group_name = String::new();
         bc.group_name = String::new();
+
+        // TODO: routing
         ac.routing_id = 0;
         bc.routing_id = 0;
         ac.routing_name = String::new();
         bc.routing_name = String::new();
+
         ac == bc
     }
     pub fn generate_test_node(number: i32) -> NodeData {

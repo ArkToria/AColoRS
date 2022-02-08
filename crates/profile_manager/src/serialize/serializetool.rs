@@ -50,9 +50,9 @@ pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {
 mod tests {
     use std::collections::HashMap;
 
+    use super::*;
     use anyhow::Result;
     use regex::Regex;
-    use serializetool::*;
 
     #[test]
     fn test_vmess() -> Result<()> {

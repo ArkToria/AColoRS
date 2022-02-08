@@ -6,7 +6,7 @@ pub async fn get_http_content<T: reqwest::IntoUrl>(url: T) -> anyhow::Result<Str
 }
 #[cfg(test)]
 mod tests {
-    use profile_manager::serialize::serialize::get_nodes_from_base64;
+    use profile_manager::serialize::serializetool::get_nodes_from_base64;
 
     use super::*;
     #[tokio::test]

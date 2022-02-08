@@ -35,7 +35,7 @@ impl CoreTool<String> for V2rayCore {
             None => return Err(anyhow!("No ChildStdin")),
         };
 
-        stdin.write(self.config.as_bytes())?;
+        stdin.write_all(self.config.as_bytes())?;
 
         self.child_process = Some(child);
         Ok(())
@@ -58,11 +58,7 @@ impl CoreTool<String> for V2rayCore {
             false
         } else {
             let child = self.child_process.as_mut().unwrap();
-            if let Ok(None) = child.try_wait() {
-                true
-            } else {
-                false
-            }
+            matches!(child.try_wait(), Ok(None))
         }
     }
 

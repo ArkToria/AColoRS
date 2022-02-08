@@ -2,7 +2,6 @@ use std::process;
 
 use anyhow::Result;
 use args::Args;
-use spdlog::error;
 
 mod app;
 mod args;
@@ -11,7 +10,7 @@ mod serve;
 fn main() {
     spdlog::init_env_level().unwrap();
     if let Err(err) = Args::parse().and_then(try_main) {
-        error!("{}", err);
+        println!("{}", err);
         process::exit(2);
     }
 }

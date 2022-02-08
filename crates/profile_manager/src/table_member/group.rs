@@ -173,6 +173,11 @@ impl AColoRSListModel<Node, NodeData> for Group {
         let mut item = item.clone();
         item.group_id = self.data().id;
         item.group_name = self.data().name.clone();
+
+        // TODO: routing
+        item.routing_name = "default_routings".to_string();
+        item.routing_id = 0;
+
         insert_into_table::<Node, NodeData>(&self.connection(), &item)
     }
     fn set(&mut self, id: usize, item: &NodeData) -> anyhow::Result<()> {

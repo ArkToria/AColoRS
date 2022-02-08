@@ -104,7 +104,7 @@ impl AttachedToTable<ValueData> for Value {
     where
         Self: Sized,
     {
-        let iter = statement.query_map(&[&id], |row| {
+        let mut iter = statement.query_map(&[&id], |row| {
             Ok(ValueData {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -112,7 +112,7 @@ impl AttachedToTable<ValueData> for Value {
                 value: row.get(3)?,
             })
         })?;
-        for data in iter {
+        if let Some(data) = iter.next() {
             return Ok(Value {
                 data: data?,
                 connection,

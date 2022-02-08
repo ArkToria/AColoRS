@@ -3,8 +3,8 @@ use serde_json::Value;
 
 use crate::protobuf::acolors_proto::EntryType;
 use crate::protobuf::v2ray_proto::*;
-use crate::serialize::serialize::URLMetaObject;
 use crate::serialize::serializer::check_is_default_and_delete;
+use crate::serialize::serializetool::URLMetaObject;
 use crate::NodeData;
 
 pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
@@ -38,7 +38,7 @@ pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     node.port = server.port as i32;
     node.password = user.id.clone();
     node.raw = serde_json::to_string_pretty(&raw)?;
-    node.url = url_str.clone();
+    node.url = url_str;
 
     Ok(node)
 }
@@ -181,8 +181,9 @@ fn vmess_base64_decode(url_str: &str) -> Result<URLMetaObject> {
                 let mut quic = transport_object::QuicObject::default();
 
                 if let Value::String(quic_type) = &root["type"] {
-                    let mut header = transport_object::quic_object::HeaderObject::default();
-                    header.r#type = quic_type.clone();
+                    let header = transport_object::quic_object::HeaderObject {
+                        r#type: quic_type.clone(),
+                    };
 
                     quic.header = Some(header);
                 }
@@ -207,8 +208,10 @@ fn vmess_base64_decode(url_str: &str) -> Result<URLMetaObject> {
     }
 
     if let Value::String(sni) = &root["sni"] {
-        let mut tls = stream_settings_object::TlsObject::default();
-        tls.server_name = sni.clone();
+        let tls = stream_settings_object::TlsObject {
+            server_name: sni.clone(),
+            ..Default::default()
+        };
         stream.tls_settings = Some(tls);
     }
 

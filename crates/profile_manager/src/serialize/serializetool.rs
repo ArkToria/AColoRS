@@ -39,20 +39,20 @@ pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {
         return Err(anyhow!("No scheme"));
     }
     match scheme {
-        "vmess" => return vmess_outbound_from_base64(url_string),
-        "trojan" => return trojan_outbound_from_url(url_string),
-        "ss" => return shadowsocks_outbound_from_url(url_string),
-        _ => return Err(anyhow!("Not implemented")),
-    };
+        "vmess" => vmess_outbound_from_base64(url_string),
+        "trojan" => trojan_outbound_from_url(url_string),
+        "ss" => shadowsocks_outbound_from_url(url_string),
+        _ => Err(anyhow!("Not implemented")),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use super::*;
     use anyhow::Result;
     use regex::Regex;
+    use serializetool::*;
 
     #[test]
     fn test_vmess() -> Result<()> {

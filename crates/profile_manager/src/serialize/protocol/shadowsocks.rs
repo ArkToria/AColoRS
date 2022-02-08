@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 
 use crate::protobuf::acolors_proto::EntryType;
 use crate::protobuf::v2ray_proto::*;
-use crate::serialize::serialize::URLMetaObject;
 use crate::serialize::serializer::check_is_default_and_delete;
+use crate::serialize::serializetool::URLMetaObject;
 use crate::NodeData;
 
 pub fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
@@ -36,7 +36,7 @@ pub fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
     node.port = server.port as i32;
     node.password = server.password.clone();
     node.raw = serde_json::to_string_pretty(&raw)?;
-    node.url = url_str.clone();
+    node.url = url_str;
 
     Ok(node)
 }
@@ -46,15 +46,17 @@ fn sip002_decode(url_str: &str) -> Result<URLMetaObject> {
     // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
 
     let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:#]*)#([^#]*)"#)?;
-    let caps = match re.captures(&url_str) {
+    let caps = match re.captures(url_str) {
         Some(c) => c,
         None => {
             return Err(anyhow!("Failed to parse sip002 url"));
         }
     };
 
-    let mut meta = URLMetaObject::default();
-    meta.name = caps[5].to_string();
+    let mut meta = URLMetaObject {
+        name: caps[5].to_string(),
+        ..Default::default()
+    };
 
     let mut outbound = &mut meta.outbound;
     outbound.protocol = "shadowsocks".into();
@@ -69,7 +71,7 @@ fn sip002_decode(url_str: &str) -> Result<URLMetaObject> {
         return Err(anyhow!("Empty User Info"));
     }
 
-    let mut user_info = user_info.split(":");
+    let mut user_info = user_info.split(':');
 
     server.address = caps[3].to_string();
     server.port = caps[4].parse()?;

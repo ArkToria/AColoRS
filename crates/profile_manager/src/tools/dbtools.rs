@@ -45,8 +45,8 @@ where
     D: Clone,
 {
     let sql = T::get_insert_sql();
-    let mut statement = connection.prepare(&sql)?;
-    T::execute_statement(&item, &mut statement)?;
+    let mut statement = connection.prepare(sql)?;
+    T::execute_statement(item, &mut statement)?;
     Ok(())
 }
 pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> Result<()>
@@ -55,7 +55,7 @@ where
     D: Clone,
 {
     let sql = T::get_update_sql();
-    let mut statement = connection.prepare(&sql)?;
+    let mut statement = connection.prepare(sql)?;
     T::execute_statement_with_id(item, id, &mut statement)?;
     Ok(())
 }
@@ -65,7 +65,7 @@ where
     D: Clone,
 {
     let sql = T::get_remove_sql();
-    let mut statement = connection.prepare(&sql)?;
+    let mut statement = connection.prepare(sql)?;
     statement.execute(&[&id])?;
     Ok(())
 }
@@ -75,7 +75,7 @@ where
     D: Clone,
 {
     let sql = T::get_query_sql();
-    let mut statement = connection.prepare(&sql)?;
+    let mut statement = connection.prepare(sql)?;
     let item_data = T::query_map(connection.clone(), &mut statement, id)?;
     Ok(item_data)
 }

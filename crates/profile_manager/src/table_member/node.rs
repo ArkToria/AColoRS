@@ -104,7 +104,7 @@ impl AttachedToTable<NodeData> for Node {
         statement: &mut rusqlite::Statement,
         id: usize,
     ) -> anyhow::Result<Node> {
-        let iter = statement.query_map(&[&id], |row| {
+        let mut iter = statement.query_map(&[&id], |row| {
             Ok(NodeData {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -125,7 +125,7 @@ impl AttachedToTable<NodeData> for Node {
                 modified_at: row.get(16)?,
             })
         })?;
-        for data in iter {
+        if let Some(data) = iter.next() {
             return Ok(Node {
                 data: data?,
                 connection,

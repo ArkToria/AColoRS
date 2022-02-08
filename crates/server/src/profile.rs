@@ -4,7 +4,7 @@ use spdlog::info;
 use tonic::{Code, Request, Response, Status};
 
 use crate::{protobuf::acolors_proto::*, utils::get_http_content};
-use profile_manager::{self, serialize::serialize::get_nodes_from_base64};
+use profile_manager::{self, serialize::serializetool::get_nodes_from_base64};
 
 #[derive(Debug)]
 pub struct AColoRSProfile {

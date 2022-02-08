@@ -47,7 +47,7 @@ impl Group {
     pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Node>> {
         let group_id = self.data().id;
         let sql = "SELECT * FROM nodes WHERE GroupID = ?";
-        let mut statement = self.connection.prepare(&sql)?;
+        let mut statement = self.connection.prepare(sql)?;
         let mut result: Vec<Node> = Vec::new();
         let mut rows = statement.query(&[&group_id])?;
         while let Some(row) = rows.next()? {
@@ -135,7 +135,7 @@ impl AttachedToTable<GroupData> for Group {
         statement: &mut rusqlite::Statement,
         id: usize,
     ) -> anyhow::Result<Group> {
-        let iter = statement.query_map(&[&id], |row| {
+        let mut iter = statement.query_map(&[&id], |row| {
             Ok(GroupData {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -147,7 +147,7 @@ impl AttachedToTable<GroupData> for Group {
                 modified_at: row.get(7)?,
             })
         })?;
-        for data in iter {
+        if let Some(data) = iter.next() {
             return Ok(Group {
                 data: data?,
                 connection,

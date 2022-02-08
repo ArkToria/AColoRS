@@ -4,8 +4,8 @@ use anyhow::{anyhow, Result};
 
 use crate::protobuf::acolors_proto::EntryType;
 use crate::protobuf::v2ray_proto::*;
-use crate::serialize::serialize::URLMetaObject;
 use crate::serialize::serializer::check_is_default_and_delete;
+use crate::serialize::serializetool::URLMetaObject;
 use crate::NodeData;
 
 pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
@@ -38,7 +38,7 @@ pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
     node.port = server.port as i32;
     node.password = server.password.clone();
     node.raw = serde_json::to_string_pretty(&raw)?;
-    node.url = url_str.clone();
+    node.url = url_str;
 
     Ok(node)
 }
@@ -47,15 +47,17 @@ fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // trojan://<password>@<host>:<port>?sni=<server_name>&allowinsecure=<allow_insecure>&alpn=h2%0Ahttp/1.1#<name>
     let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:]*)\?([^%]*)%0A([^#]*)#([^#]*)"#)?;
-    let caps = match re.captures(&url_str) {
+    let caps = match re.captures(url_str) {
         Some(c) => c,
         None => {
             return Err(anyhow!("Failed to parse sip002 url"));
         }
     };
 
-    let mut meta = URLMetaObject::default();
-    meta.name = caps[7].to_string();
+    let mut meta = URLMetaObject {
+        name: caps[7].to_string(),
+        ..Default::default()
+    };
 
     let mut outbound = &mut meta.outbound;
     outbound.protocol = "trojan".into();
@@ -73,10 +75,10 @@ fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     server.port = caps[4].parse()?;
     server.password = caps[2].to_string();
 
-    let query: Vec<&str> = caps[5].split("&").into_iter().collect();
+    let query: Vec<&str> = caps[5].split('&').into_iter().collect();
     let mut map = HashMap::new();
     for pair in &query {
-        let pair: Vec<&str> = pair.split("=").collect();
+        let pair: Vec<&str> = pair.split('=').collect();
         if pair.len() != 2 {
             return Err(anyhow!("Wrong query arguments"));
         }
@@ -88,13 +90,13 @@ fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     let mut tls = stream_settings_object::TlsObject::default();
 
     if map.contains_key("sni") {
-        tls.server_name = map.remove("sni").unwrap_or("".to_string());
+        tls.server_name = map.remove("sni").unwrap_or_else(|| "".to_string());
     }
 
     if map.contains_key("allowinsecure") {
         let allowinsecure: bool = map
             .remove("allowinsecure")
-            .unwrap_or("false".to_string())
+            .unwrap_or_else(|| "false".to_string())
             .parse()?;
         tls.allow_insecure = allowinsecure;
     } else {
@@ -103,13 +105,13 @@ fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     }
 
     if map.contains_key("alpn") {
-        let alpn = map.remove("alpn").unwrap_or("".to_string());
+        let alpn = map.remove("alpn").unwrap_or_else(|| "".to_string());
 
         let mut values: Vec<&str> = Vec::new();
         if alpn.contains(',') {
             values = alpn.split(',').collect();
         } else if alpn.contains('\n') {
-            values = alpn.split(',').collect();
+            values = alpn.split('\n').collect();
         }
 
         if values.is_empty() {

@@ -21,7 +21,7 @@ impl GroupList {
     }
     pub fn list_all_groups(&self) -> anyhow::Result<Vec<Group>> {
         let sql = "SELECT * FROM groups";
-        let mut statement = self.connection.prepare(&sql)?;
+        let mut statement = self.connection.prepare(sql)?;
         let mut result: Vec<Group> = Vec::new();
         let mut rows = statement.query([])?;
         while let Some(row) = rows.next()? {

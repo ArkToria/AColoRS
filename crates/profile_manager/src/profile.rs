@@ -15,7 +15,7 @@ impl Profile {
         let connection = Rc::new(connection);
         Profile {
             group_list: GroupList::new(connection.clone()),
-            runtime_value: RuntimeValue::new(connection.clone()),
+            runtime_value: RuntimeValue::new(connection),
         }
     }
 }

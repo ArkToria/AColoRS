@@ -10,7 +10,7 @@ pub fn check_is_default_and_delete(value: &mut Value) -> bool {
             if value_vec.is_empty() {
                 true
             } else {
-                value_vec.into_iter().for_each(|v| {
+                value_vec.iter_mut().for_each(|v| {
                     if let Value::Object(_) = v {
                         check_is_default_and_delete(v);
                     }
@@ -28,7 +28,7 @@ pub fn check_is_default_and_delete(value: &mut Value) -> bool {
                         flag = false;
                         return true;
                     }
-                    return false;
+                    false
                 });
                 flag
             }

@@ -1,8 +1,11 @@
+use std::ffi::OsString;
+
 use anyhow::Result;
 pub trait CoreTool<ConfigType> {
+    fn new(path: OsString) -> Self;
     fn run(&mut self) -> Result<()>;
     fn stop(&mut self) -> Result<()>;
-    fn is_running(&self) -> bool;
+    fn is_running(&mut self) -> bool;
     fn set_config(&mut self, config: ConfigType) -> Result<()>;
     fn restart(&mut self) -> Result<()> {
         if self.is_running() {

@@ -79,20 +79,10 @@ impl CoreTool<String> for V2rayCore {
 #[cfg(test)]
 mod tests {
 
-    use std::{process::ExitStatus, thread::sleep, time::Duration};
+    use std::{thread::sleep, time::Duration};
 
     use super::*;
     use anyhow::Result;
-    impl V2rayCore {
-        pub fn wait(&mut self) -> Result<ExitStatus> {
-            let child = match self.child_process.as_mut() {
-                Some(c) => c,
-                None => return Err(anyhow!("child not exists")),
-            };
-
-            Ok(child.wait()?)
-        }
-    }
     #[test]
     fn test_core_run() -> Result<()> {
         let mut core = V2rayCore::new("v2ray".into());

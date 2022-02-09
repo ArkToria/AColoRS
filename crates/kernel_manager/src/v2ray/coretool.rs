@@ -28,6 +28,7 @@ impl CoreTool<String> for V2rayCore {
         let mut child = Command::new(&self.path)
             .arg("--config=stdin:")
             .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
             .spawn()?;
 
         let mut stdin = match child.stdin.take() {
@@ -73,6 +74,13 @@ impl CoreTool<String> for V2rayCore {
             self.restart()?;
         }
         Ok(())
+    }
+
+    fn get_stdout(&mut self) -> Option<std::process::ChildStdout> {
+        match self.child_process.as_mut() {
+            Some(child) => child.stdout.take(),
+            None => None,
+        }
     }
 }
 

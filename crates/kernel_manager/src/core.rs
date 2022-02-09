@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::{ffi::OsString, process::ChildStdout};
 
 use anyhow::Result;
 pub trait CoreTool<ConfigType> {
@@ -20,4 +20,6 @@ pub trait CoreTool<ConfigType> {
         }
         Ok(())
     }
+
+    fn get_stdout(&mut self) -> Option<ChildStdout>;
 }

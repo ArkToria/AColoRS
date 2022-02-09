@@ -5,7 +5,7 @@ use tokio::sync::oneshot;
 
 use crate::{GroupData, NodeData};
 
-use super::{producer::create_producer, reply::ProfileReply, request::ProfileRequest};
+use super::{consumer::create_consumer, reply::ProfileReply, request::ProfileRequest};
 
 const BUFFER_SIZE: usize = 512;
 #[derive(Debug)]
@@ -17,7 +17,7 @@ impl ProfileManager {
     pub async fn new(path: String) -> Result<ProfileManager> {
         let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
 
-        create_producer(rx, path).await;
+        create_consumer(rx, path).await;
 
         Ok(ProfileManager { sender })
     }

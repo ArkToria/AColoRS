@@ -183,6 +183,8 @@ impl AColoRSListModel<Node, NodeData> for Group {
     fn set(&mut self, id: usize, item: &NodeData) -> anyhow::Result<()> {
         let mut item = item.clone();
         item.group_id = self.data().id;
+        item.update_modified_at();
+
         update_table::<Node, NodeData>(&self.connection(), id, &item)
     }
 }

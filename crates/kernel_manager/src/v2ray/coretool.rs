@@ -110,8 +110,7 @@ mod tests {
 
         core.restart()?;
         assert_eq!(true, core.is_running());
-
-        core.wait()?;
+        sleep(Duration::from_millis(500));
 
         Ok(())
     }

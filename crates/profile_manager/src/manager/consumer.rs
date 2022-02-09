@@ -9,7 +9,7 @@ use crate::{table_member::traits::AColoRSListModel, GroupData, NodeData, Profile
 
 use super::{profile_manager::Request, reply::ProfileReply, request::ProfileRequest};
 
-pub async fn create_producer(rx: Receiver<Request>, path: String) {
+pub async fn create_consumer(rx: Receiver<Request>, path: String) {
     task::spawn_blocking(move || -> Result<()> {
         let receiver = rx;
         let connection = create_connection(path)?;

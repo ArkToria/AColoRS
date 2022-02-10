@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Error;
 use spdlog::info;
 
@@ -8,11 +10,12 @@ use profile_manager::{self, serialize::serializetool::get_nodes_from_base64};
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
-    manager: profile_manager::ProfileManager,
+    manager: Arc<profile_manager::ProfileManager>,
 }
 impl AColoRSProfile {
-    pub async fn new(path: String) -> Result<AColoRSProfile, Error> {
-        let manager = profile_manager::ProfileManager::new(path).await?;
+    pub async fn new(
+        manager: Arc<profile_manager::ProfileManager>,
+    ) -> Result<AColoRSProfile, Error> {
         Ok(AColoRSProfile { manager })
     }
 }

@@ -9,17 +9,17 @@ use super::{consumer::create_consumer, reply::ProfileReply, request::ProfileRequ
 
 const BUFFER_SIZE: usize = 512;
 #[derive(Debug)]
-pub struct ProfileManager {
+pub struct ProfileTaskProducer {
     sender: mpsc::SyncSender<Request>,
 }
 
-impl ProfileManager {
-    pub async fn new(path: String) -> Result<ProfileManager> {
+impl ProfileTaskProducer {
+    pub async fn new(path: String) -> Result<ProfileTaskProducer> {
         let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
 
         create_consumer(rx, path).await;
 
-        Ok(ProfileManager { sender })
+        Ok(ProfileTaskProducer { sender })
     }
 
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {

@@ -17,7 +17,7 @@ pub use table_member::runtime::RuntimeValue;
 
 pub use profile::Profile;
 
-pub use manager::profile_manager::ProfileManager;
+pub use manager::profile_manager::ProfileTaskProducer;
 
 pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()

@@ -5,23 +5,24 @@ use spdlog::info;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::{protobuf::acolors_proto::*, utils::get_http_content};
-use profile_manager::{self, serialize::serializetool::get_nodes_from_base64};
+use crate::{
+    protobuf::acolors_proto::{profile_manager_server::ProfileManager, *},
+    utils::get_http_content,
+};
+use profile_manager::{self, serialize::serializetool::get_nodes_from_base64, ProfileTaskProducer};
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
-    manager: Arc<profile_manager::ProfileManager>,
+    manager: Arc<ProfileTaskProducer>,
 }
 impl AColoRSProfile {
-    pub async fn new(
-        manager: Arc<profile_manager::ProfileManager>,
-    ) -> Result<AColoRSProfile, Error> {
+    pub async fn new(manager: Arc<ProfileTaskProducer>) -> Result<AColoRSProfile, Error> {
         Ok(AColoRSProfile { manager })
     }
 }
 
 #[tonic::async_trait]
-impl profile_manager_server::ProfileManager for AColoRSProfile {
+impl ProfileManager for AColoRSProfile {
     async fn count_groups(
         &self,
         request: Request<CountGroupsRequest>,

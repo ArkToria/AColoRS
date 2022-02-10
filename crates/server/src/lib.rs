@@ -36,8 +36,9 @@ pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
 }
 
 async fn start_server(addr: SocketAddr, database_path: String) -> Result<()> {
-    let profile_manager = Arc::new(profile_manager::ProfileTaskProducer::new(database_path).await?);
-    let acolors_profile = AColoRSProfile::new(profile_manager).await?;
+    let profile_task_producer =
+        Arc::new(profile_manager::ProfileTaskProducer::new(database_path).await?);
+    let acolors_profile = AColoRSProfile::new(profile_task_producer).await?;
 
     info!("gRPC server is available at http://{}\n", addr);
 

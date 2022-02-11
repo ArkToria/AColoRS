@@ -61,6 +61,22 @@ impl WithConnection for GroupList {
 }
 
 impl AColoRSListModel<Group, GroupData> for GroupList {
+    fn append(&mut self, item: &GroupData) -> anyhow::Result<()> {
+        let mut item = item.clone();
+
+        item.update_create_at();
+        item.update_modified_at();
+
+        crate::tools::dbtools::insert_into_table::<Group, GroupData>(&self.connection(), &item)
+    }
+
+    fn set(&mut self, id: usize, item: &GroupData) -> anyhow::Result<()> {
+        let mut item = item.clone();
+        item.update_modified_at();
+
+        crate::tools::dbtools::update_table::<Group, GroupData>(&self.connection(), id, &item)
+    }
+
     fn remove(&mut self, id: usize) -> anyhow::Result<()> {
         let group = self.query(id)?;
 

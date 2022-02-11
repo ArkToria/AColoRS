@@ -1,6 +1,6 @@
 use std::{
     ffi::OsString,
-    io::Write,
+    io::{Read, Write},
     process::{Child, Command, Stdio},
 };
 
@@ -13,15 +13,56 @@ pub struct V2rayCore {
     config: String,
     child_process: Option<Child>,
     path: OsString,
+    name: String,
+    version: semver::Version,
+}
+
+impl V2rayCore {
+    fn spawn_version_process(path: &OsString) -> Result<Child> {
+        let mut process = Command::new(path)
+            .arg("version")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()?;
+        let mut stdin = match process.stdin.take() {
+            Some(cs) => cs,
+            None => return Err(anyhow!("No ChildStdin")),
+        };
+        stdin.write_all(b"}{")?;
+        Ok(process)
+    }
+
+    fn get_name_and_version(child: Child) -> Result<(String, String)> {
+        let mut stdout = match child.stdout {
+            Some(out) => out,
+            None => return Err(anyhow!("No child stdout")),
+        };
+        let mut buf = [0; 20];
+        stdout.read_exact(&mut buf)?;
+
+        let core_info = String::from_utf8_lossy(&buf);
+        let mut info_split = core_info.split(' ');
+        let name = info_split.next().unwrap_or("").to_string();
+        let version = info_split.next().unwrap_or("").to_string();
+        Ok((name, version))
+    }
 }
 
 impl CoreTool<String> for V2rayCore {
-    fn new(path: OsString) -> Self {
-        Self {
+    fn new(path: OsString) -> Result<Self> {
+        let output = Self::spawn_version_process(&path)?;
+
+        let (name, version) = Self::get_name_and_version(output)?;
+
+        let semver_version = semver::Version::parse(&version)?;
+
+        Ok(Self {
+            name,
+            version: semver_version,
             path,
             config: String::new(),
             child_process: None,
-        }
+        })
     }
 
     fn run(&mut self) -> Result<()> {
@@ -82,6 +123,14 @@ impl CoreTool<String> for V2rayCore {
             None => None,
         }
     }
+
+    fn get_version(&self) -> semver::Version {
+        self.version.clone()
+    }
+
+    fn get_name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[cfg(test)]
@@ -92,8 +141,14 @@ mod tests {
     use super::*;
     use anyhow::Result;
     #[test]
+    fn test_core_version() -> Result<()> {
+        let core = V2rayCore::new("v2ray".into())?;
+        dbg!(core.name, core.version);
+        Ok(())
+    }
+    #[test]
     fn test_core_run() -> Result<()> {
-        let mut core = V2rayCore::new("v2ray".into());
+        let mut core = V2rayCore::new("v2ray".into())?;
 
         assert_eq!(false, core.is_running());
         core.set_config("}{".to_string())?;

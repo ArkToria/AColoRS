@@ -71,7 +71,7 @@ fn test_and_set_port(port: &mut u16) {
     }
 
     if port_not_available {
-        *port = if let Some(p) = tcp_get_available_port(DEFAULT_PORT) {
+        *port = if let Some(p) = tcp_get_available_port(11451..19198) {
             p
         } else {
             error!("No port avaiable");

@@ -79,10 +79,7 @@ fn update_group_by_id_reply(
 
     debug!("Updating group");
 
-    let nodes = nodes;
-
-    for node_data in nodes {
-        let mut node_data = node_data.clone();
+    for mut node_data in nodes {
         node_data.update_create_at();
         node_data.update_modified_at();
 

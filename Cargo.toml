@@ -21,6 +21,7 @@ members = [
     "crates/server",
     "crates/plugin",
     "crates/cli",
+    "crates/config_manager",
     "components/utils",
 ]
 

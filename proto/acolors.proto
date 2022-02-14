@@ -28,6 +28,7 @@ service ProfileManager {
     rpc UpdateGroupByID(UpdateGroupByIDRequest) returns (UpdateGroupByIDReply) {}
 }
 
+
 message CountGroupsRequest {}
 message ListAllGroupsRequest {}
 message SetGroupByIDReply {}
@@ -139,4 +140,43 @@ message GroupData {
     int32 cycle_time = 6;
     int64 create_at = 7;
     int64 modified_at = 8;
+}
+
+service ConfigManager {
+
+}
+
+message Inbound
+{
+  message Auth
+  {
+    bool enable = 1;
+    string username = 2;
+    string password = 3;
+  }
+
+  message SOCKS5
+  {
+    bool enable = 1;
+    string listen = 2;
+    uint32 port = 3;
+    bool udp_enable = 4;
+    string udp_ip = 5;
+    int32 user_level = 6;
+    Auth auth = 7;
+  }
+
+  message HTTP
+  {
+    bool enable = 1;
+    string listen = 2;
+    uint32 port = 3;
+    bool allow_transparent = 4;
+    int64 timeout = 5;
+    int32 user_level = 6;
+    Auth auth = 7;
+  }
+
+  SOCKS5 socks5 = 1;
+  HTTP http = 2;
 }

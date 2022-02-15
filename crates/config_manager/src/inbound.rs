@@ -1,15 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+fn local_ip_string() -> String {
+    "127.0.0.1".to_string()
+}
+
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Inbounds {
-    pub inbounds: Vec<Inbound>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Inbound {
-    Http(HTTPInbound),
-    Socks5(SOCKS5Inbound),
+    pub socks5: Option<SOCKS5Inbound>,
+    pub http: Option<HTTPInbound>,
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
@@ -31,6 +30,7 @@ pub struct SOCKS5Inbound {
     pub listen: String,
     pub port: u32,
     pub udp_enable: bool,
+    #[serde(default = "local_ip_string")]
     pub udp_ip: String,
     pub user_level: i32,
     pub auth: Option<Auth>,
@@ -54,10 +54,39 @@ impl Inbounds {
 mod tests {
     use super::*;
     #[test]
-    fn test_inbounds_deserialize() -> anyhow::Result<()> {
+    fn test_empty_inbounds_deserialize() -> anyhow::Result<()> {
         let test_empty = Inbounds::from_str("{}")?;
         dbg!(&test_empty);
-        assert_eq!(true, test_empty.inbounds.is_empty());
+        assert_eq!(true, test_empty.socks5.is_none());
+        assert_eq!(true, test_empty.http.is_none());
+        Ok(())
+    }
+    #[test]
+    fn test_inbounds_deserialize() -> anyhow::Result<()> {
+        let inbounds = Inbounds::from_str(
+            r#"
+{
+    "socks5": {
+        "enable": true,
+        "listen": "127.0.0.1",
+        "port": 4444,
+        "udp_enable": true,
+        "auth": {}
+    },
+    "http": {
+        "enable": true,
+        "listen": "127.0.0.1",
+        "port": 4445,
+        "auth": {
+            "enable": true,
+            "username": "testusername",
+            "password": "testpassword"
+        }
+    }
+}
+        "#,
+        )?;
+        dbg!(&inbounds);
         Ok(())
     }
 }

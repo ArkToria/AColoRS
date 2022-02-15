@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Inbounds {
-    #[serde(default)]
     pub inbounds: Vec<Inbound>,
 }
 
@@ -12,49 +12,35 @@ pub enum Inbound {
     Socks5(SOCKS5Inbound),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct HTTPInbound {
-    #[serde(default)]
     pub enable: bool,
-    #[serde(default)]
     pub listen: String,
-    #[serde(default)]
     pub port: u32,
-    #[serde(default)]
     pub allow_transparent: bool,
-    #[serde(default)]
     pub timeout: i64,
-    #[serde(default)]
     pub user_level: i32,
-    #[serde(default)]
     pub auth: Option<Auth>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SOCKS5Inbound {
-    #[serde(default)]
     pub enable: bool,
-    #[serde(default)]
     pub listen: String,
-    #[serde(default)]
     pub port: u32,
-    #[serde(default)]
     pub udp_enable: bool,
-    #[serde(default)]
     pub udp_ip: String,
-    #[serde(default)]
     pub user_level: i32,
-    #[serde(default)]
     pub auth: Option<Auth>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Auth {
-    #[serde(default)]
     pub enable: bool,
-    #[serde(default)]
     pub username: String,
-    #[serde(default)]
     pub password: String,
 }
 

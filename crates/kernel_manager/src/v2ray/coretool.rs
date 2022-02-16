@@ -28,6 +28,7 @@ impl V2RayCore {
             .arg("version")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
+            .stderr(Stdio::null())
             .spawn()?;
         let mut stdin = match process.stdin.take() {
             Some(cs) => cs,
@@ -43,10 +44,10 @@ impl V2RayCore {
             Some(out) => out,
             None => return Err(anyhow!("No child stdout")),
         };
-        let mut buf = [0; 20];
-        stdout.read_exact(&mut buf)?;
+        let mut output = String::new();
+        stdout.read_to_string(&mut output)?;
 
-        let core_info = String::from_utf8_lossy(&buf);
+        let core_info = &output[0..20];
         let mut info_split = core_info.split(' ');
         let name = info_split.next().unwrap_or("").to_string();
         let version = info_split.next().unwrap_or("").to_string();

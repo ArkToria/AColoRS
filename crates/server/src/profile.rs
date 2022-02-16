@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use spdlog::info;
 
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 use crate::utils::get_http_content;
 use core_protobuf::acolors_proto::{profile_manager_server::ProfileManager, *};
@@ -328,10 +328,7 @@ impl ProfileManager for AColoRSProfile {
         };
 
         if let Err(e) = self.manager.update_group_by_id(group_id, nodes).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Group unavailable: \"{}\"", e),
-            ));
+            return Err(Status::unavailable(format!("Group unavailable: \"{}\"", e)));
         }
 
         let reply = UpdateGroupByIdReply {};

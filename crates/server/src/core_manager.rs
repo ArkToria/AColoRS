@@ -9,7 +9,7 @@ use kernel_manager::CoreTool;
 use profile_manager::ProfileTaskProducer;
 use spdlog::info;
 use tokio::sync::{Mutex, RwLock};
-use tonic::{Code, Request, Response, Status};
+use tonic::{Request, Response, Status};
 
 type ConfigType = String;
 #[derive(Debug)]
@@ -55,7 +55,7 @@ where
 
         let mut core_guard = self.core.lock().await;
         if let Err(e) = core_guard.run() {
-            return Err(Status::new(Code::Aborted, format!("Core run Error: {}", e)));
+            return Err(Status::aborted(format!("Core run Error: {}", e)));
         }
 
         let reply = RunReply {};
@@ -66,10 +66,7 @@ where
 
         let mut core_guard = self.core.lock().await;
         if let Err(e) = core_guard.stop() {
-            return Err(Status::new(
-                Code::Aborted,
-                format!("Core stop Error: {}", e),
-            ));
+            return Err(Status::aborted(format!("Core stop Error: {}", e)));
         }
 
         let reply = StopReply {};
@@ -86,10 +83,7 @@ where
 
         let mut core_guard = self.core.lock().await;
         if let Err(e) = core_guard.restart() {
-            return Err(Status::new(
-                Code::Aborted,
-                format!("Core restart Error: {}", e),
-            ));
+            return Err(Status::aborted(format!("Core restart Error: {}", e)));
         }
 
         let reply = RestartReply {};
@@ -119,12 +113,7 @@ where
 
         let node_data = match self.profile.get_node_by_id(node_id).await {
             Ok(c) => c,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::Cancelled,
-                    format!("Node unavailable: \"{}\"", e),
-                ))
-            }
+            Err(e) => return Err(Status::cancelled(format!("Node unavailable: \"{}\"", e))),
         };
 
         let mut data_guard = self.current_node.lock().await;

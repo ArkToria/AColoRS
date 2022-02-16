@@ -121,7 +121,7 @@ where
             Ok(c) => c,
             Err(e) => {
                 return Err(Status::new(
-                    Code::Unavailable,
+                    Code::Cancelled,
                     format!("Node unavailable: \"{}\"", e),
                 ))
             }
@@ -148,7 +148,7 @@ where
     let node_data = match current_node_guard {
         Some(d) => d,
         None => {
-            return Err(Status::new(Code::Aborted, format!("No node selected")));
+            return Err(Status::cancelled(format!("No node selected")));
         }
     };
     let inbounds = &*inbounds.read().await;
@@ -156,19 +156,16 @@ where
     let config = match Core::generate_config(node_data, inbounds) {
         Ok(c) => c,
         Err(e) => {
-            return Err(Status::new(
-                Code::Aborted,
-                format!("Generating configuration Error: {}", e),
-            ));
+            return Err(Status::cancelled(format!(
+                "Generating configuration Error: {}",
+                e
+            )));
         }
     };
 
     let mut core_guard = core.lock().await;
     if let Err(e) = core_guard.set_config(config) {
-        return Err(Status::new(
-            Code::Aborted,
-            format!("Core set config Error: {}", e),
-        ));
+        return Err(Status::cancelled(format!("Core set config Error: {}", e)));
     }
     Ok(())
 }

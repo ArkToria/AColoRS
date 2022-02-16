@@ -32,12 +32,7 @@ impl ProfileManager for AColoRSProfile {
 
         let count = match self.manager.count_groups().await {
             Ok(c) => c,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::Unavailable,
-                    format!("Count unavailable: \"{}\"", e),
-                ))
-            }
+            Err(e) => return Err(Status::not_found(format!("Count unavailable: \"{}\"", e))),
         };
 
         let reply = CountGroupsReply {
@@ -55,12 +50,7 @@ impl ProfileManager for AColoRSProfile {
         let group_list: Vec<core_protobuf::acolors_proto::GroupData> =
             match self.manager.list_all_groups().await {
                 Ok(c) => c.into_iter().map(|group| group.into()).collect(),
-                Err(e) => {
-                    return Err(Status::new(
-                        Code::Unavailable,
-                        format!("Group unavailable: \"{}\"", e),
-                    ))
-                }
+                Err(e) => return Err(Status::not_found(format!("Groups unavailable: \"{}\"", e))),
             };
 
         let length = group_list.len();
@@ -81,12 +71,7 @@ impl ProfileManager for AColoRSProfile {
 
         let count = match self.manager.count_nodes(group_id).await {
             Ok(c) => c,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::Unavailable,
-                    format!("Count unavailable: \"{}\"", e),
-                ))
-            }
+            Err(e) => return Err(Status::not_found(format!("Count unavailable: \"{}\"", e))),
         };
 
         let reply = CountNodesReply {
@@ -106,12 +91,7 @@ impl ProfileManager for AColoRSProfile {
         let group_list: Vec<core_protobuf::acolors_proto::NodeData> =
             match self.manager.list_all_nodes(group_id).await {
                 Ok(c) => c.into_iter().map(|group| group.into()).collect(),
-                Err(e) => {
-                    return Err(Status::new(
-                        Code::Unavailable,
-                        format!("Node unavailable: \"{}\"", e),
-                    ))
-                }
+                Err(e) => return Err(Status::not_found(format!("Nodes unavailable: \"{}\"", e))),
             };
 
         let length = group_list.len();
@@ -134,10 +114,7 @@ impl ProfileManager for AColoRSProfile {
             match self.manager.get_group_by_id(group_id).await {
                 Ok(c) => c.into(),
                 Err(e) => {
-                    return Err(Status::new(
-                        Code::Unavailable,
-                        format!("Group unavailable: \"{}\"", e),
-                    ))
+                    return Err(Status::not_found(format!("Group unavailable: \"{}\"", e)));
                 }
             };
 
@@ -156,12 +133,7 @@ impl ProfileManager for AColoRSProfile {
         let node_data: core_protobuf::acolors_proto::NodeData =
             match self.manager.get_node_by_id(node_id).await {
                 Ok(c) => c.into(),
-                Err(e) => {
-                    return Err(Status::new(
-                        Code::Unavailable,
-                        format!("Node unavailable: \"{}\"", e),
-                    ))
-                }
+                Err(e) => return Err(Status::not_found(format!("Node unavailable: \"{}\"", e))),
             };
 
         let reply = node_data;
@@ -183,10 +155,7 @@ impl ProfileManager for AColoRSProfile {
         };
 
         if let Err(e) = self.manager.set_group_by_id(group_id, data.into()).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Group unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Group unavailable: \"{}\"", e)));
         }
 
         let reply = SetGroupByIdReply {};
@@ -207,10 +176,7 @@ impl ProfileManager for AColoRSProfile {
         };
 
         if let Err(e) = self.manager.set_node_by_id(node_id, data.into()).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Node unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Node unavailable: \"{}\"", e)));
         }
 
         let reply = SetNodeByIdReply {};
@@ -231,10 +197,7 @@ impl ProfileManager for AColoRSProfile {
         };
 
         if let Err(e) = self.manager.append_group(data.into()).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Group unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Group unavailable: \"{}\"", e)));
         }
 
         let reply = AppendGroupReply {};
@@ -259,10 +222,7 @@ impl ProfileManager for AColoRSProfile {
         };
 
         if let Err(e) = self.manager.append_node(group_id, data.into()).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Node unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Node unavailable: \"{}\"", e)));
         }
 
         let reply = AppendNodeReply {};
@@ -286,18 +246,12 @@ impl ProfileManager for AColoRSProfile {
         let group_data = match decode_outbound_from_url(url) {
             Ok(data) => data,
             Err(e) => {
-                return Err(Status::new(
-                    Code::Unavailable,
-                    format!("Decode error: \"{}\"", e),
-                ));
+                return Err(Status::invalid_argument(format!("Decode error: \"{}\"", e)));
             }
         };
 
         if let Err(e) = self.manager.append_node(group_id, group_data).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Node unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Node unavailable: \"{}\"", e)));
         }
 
         let reply = AppendNodeByUrlReply {};
@@ -317,10 +271,7 @@ impl ProfileManager for AColoRSProfile {
         let group_id = request.into_inner().group_id;
 
         if let Err(e) = self.manager.remove_group_by_id(group_id).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Group unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Group unavailable: \"{}\"", e)));
         };
 
         let reply = RemoveGroupByIdReply {};
@@ -336,10 +287,7 @@ impl ProfileManager for AColoRSProfile {
         let node_id = request.into_inner().node_id;
 
         if let Err(e) = self.manager.remove_node_by_id(node_id).await {
-            return Err(Status::new(
-                Code::Unavailable,
-                format!("Node unavailable: \"{}\"", e),
-            ));
+            return Err(Status::aborted(format!("Node unavailable: \"{}\"", e)));
         };
 
         let reply = RemoveNodeByIdReply {};
@@ -361,32 +309,22 @@ impl ProfileManager for AColoRSProfile {
 
         let group_data = match self.manager.get_group_by_id(group_id).await {
             Ok(c) => c,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::Unavailable,
-                    format!("Group unavailable: \"{}\"", e),
-                ))
-            }
+            Err(e) => return Err(Status::aborted(format!("Group unavailable: \"{}\"", e))),
         };
 
         let base64: String = match get_http_content(group_data.url).await {
             Ok(s) => s.lines().map(|line| line.trim()).collect(),
             Err(e) => {
-                return Err(Status::new(
-                    Code::Unavailable,
-                    format!("Url unavailable: \"{}\"", e),
-                ))
+                return Err(Status::invalid_argument(format!(
+                    "Url unavailable: \"{}\"",
+                    e
+                )))
             }
         };
 
         let nodes = match get_nodes_from_base64(&base64) {
             Ok(n) => n,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::Unavailable,
-                    format!("Nodes url parsing error\"{}\"", e),
-                ))
-            }
+            Err(e) => return Err(Status::aborted(format!("Nodes url parsing error\"{}\"", e))),
         };
 
         if let Err(e) = self.manager.update_group_by_id(group_id, nodes).await {

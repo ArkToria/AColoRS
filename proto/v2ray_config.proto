@@ -401,7 +401,7 @@ message TransportObject
       HTTPResponseObject response = 3;
     }
 
-    bool accpetProxyProtocol = 1;
+    bool acceptProxyProtocol = 1;
     HeaderObject header = 2;
   }
 
@@ -422,7 +422,7 @@ message TransportObject
 
   message WebSocketObject
   {
-    bool accpetProxyProtocol = 1;
+    bool acceptProxyProtocol = 1;
     string path = 2;
     map<string, string> headers = 3;
     int32 maxEarlyData = 4;

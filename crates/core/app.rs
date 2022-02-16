@@ -18,7 +18,12 @@ pub fn app() -> App<'static> {
                     .short('d')
                     .long("dbpath")
                     .takes_value(true)
-                    .help("Database path (default: across.db)"),
+                    .help("Database path (default: \"\")"),
+                Arg::new("corepath")
+                    .short('c')
+                    .long("corepath")
+                    .takes_value(true)
+                    .help("Core path (default: \"v2ray\")"),
                 Arg::new("port")
                     .short('p')
                     .long("port")

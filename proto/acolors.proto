@@ -184,3 +184,26 @@ message Inbounds
   SOCKS5 socks5 = 1;
   HTTP http = 2;
 }
+
+service CoreManager {
+    rpc Run(RunRequest) returns (RunReply);
+    rpc Stop(StopRequest) returns (StopReply);
+    rpc Restart(RestartRequest) returns (RestartReply);
+    rpc GetIsRunning(GetIsRunningRequest) returns (GetIsRunningReply);
+    rpc SetConfigByNodeID(SetConfigByNodeIDRequest) returns (SetConfigByNodeIDReply);
+}
+
+message RunRequest {}
+message RunReply {}
+message StopRequest {}
+message StopReply {}
+message RestartRequest {}
+message RestartReply {}
+message GetIsRunningRequest {}
+message GetIsRunningReply {
+    bool is_running = 1;
+}
+message SetConfigByNodeIDRequest {
+    int32 node_id = 1;
+}
+message SetConfigByNodeIDReply {}

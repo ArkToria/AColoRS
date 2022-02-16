@@ -14,7 +14,7 @@ use super::configtool::set_inbound_object;
 use core_protobuf::v2ray_proto::{OutboundObject, V2RayConfig};
 
 #[derive(Debug)]
-pub struct V2rayCore {
+pub struct V2RayCore {
     config: String,
     child_process: Option<Child>,
     path: OsString,
@@ -22,7 +22,7 @@ pub struct V2rayCore {
     version: semver::Version,
 }
 
-impl V2rayCore {
+impl V2RayCore {
     fn spawn_version_process(path: &OsStr) -> Result<Child> {
         let mut process = Command::new(path)
             .arg("version")
@@ -37,7 +37,8 @@ impl V2rayCore {
         Ok(process)
     }
 
-    fn get_name_and_version(child: Child) -> Result<(String, String)> {
+    fn get_name_and_version(mut child: Child) -> Result<(String, String)> {
+        child.wait()?;
         let mut stdout = match child.stdout {
             Some(out) => out,
             None => return Err(anyhow!("No child stdout")),
@@ -53,7 +54,7 @@ impl V2rayCore {
     }
 }
 
-impl CoreTool<String> for V2rayCore {
+impl CoreTool<String> for V2RayCore {
     fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self> {
         let output = Self::spawn_version_process(path.as_ref())?;
 
@@ -73,6 +74,11 @@ impl CoreTool<String> for V2rayCore {
     }
 
     fn run(&mut self) -> Result<()> {
+        if self.is_running() {
+            return Err(anyhow!("Core is running"));
+        }
+        println!("{}", &self.config);
+
         let mut child = Command::new(&self.path)
             .arg("--config=stdin:")
             .stdin(Stdio::piped())
@@ -98,6 +104,7 @@ impl CoreTool<String> for V2rayCore {
         let mut child = self.child_process.take().unwrap();
 
         child.kill()?;
+        child.wait()?;
 
         Ok(())
     }
@@ -223,13 +230,13 @@ mod tests {
     use anyhow::Result;
     #[test]
     fn test_core_version() -> Result<()> {
-        let core = V2rayCore::new("v2ray")?;
+        let core = V2RayCore::new("v2ray")?;
         dbg!(core.name, core.version);
         Ok(())
     }
     #[test]
     fn test_core_run() -> Result<()> {
-        let mut core = V2rayCore::new("v2ray")?;
+        let mut core = V2RayCore::new("v2ray")?;
 
         assert_eq!(false, core.is_running());
         core.set_config("}{".to_string())?;

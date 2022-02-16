@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use config_manager::Inbounds;
-use kernel_manager::{v2ray::coretool::V2rayCore, CoreTool};
+use kernel_manager::{v2ray::coretool::V2RayCore, CoreTool};
 use profile_manager::serialize::serializetool::decode_outbound_from_url;
 const INBOUND_STR: &str = r#"
 {
@@ -27,7 +27,7 @@ const INBOUND_STR: &str = r#"
         "#;
 #[test]
 fn generate_vmess_config_and_print_json() -> Result<()> {
-    let mut core = V2rayCore::new("v2ray")?;
+    let mut core = V2RayCore::new("v2ray")?;
 
     let inbounds = Inbounds::from_str(INBOUND_STR)?;
 
@@ -40,7 +40,7 @@ fn generate_vmess_config_and_print_json() -> Result<()> {
         }
     };
 
-    let config = V2rayCore::generate_config(&node_data, &inbounds)?;
+    let config = V2RayCore::generate_config(&node_data, &inbounds)?;
 
     core.set_config(config)?;
 

@@ -22,6 +22,7 @@ base64 = "0.13.0"
 
 profile_manager = { path = "../profile_manager" }
 config_manager = { path = "../config_manager" }
+kernel_manager = { path = "../kernel_manager" }
 core_protobuf = {path = "../../components/core_protobuf"}
 
 [build-dependencies]

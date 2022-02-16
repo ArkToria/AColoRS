@@ -4,19 +4,24 @@ use std::sync::Arc;
 use anyhow::Result;
 use anyhow::{anyhow, Context};
 use core_protobuf::acolors_proto::config_manager_server::ConfigManagerServer;
+use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
+use kernel_manager::v2ray::coretool::V2RayCore;
+use kernel_manager::CoreTool;
 use spdlog::{error, info};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tonic::transport::Server;
 
+use crate::core_manager::AColoRSCore;
 use crate::inbounds::AColoRSConfig;
 use crate::profile::AColoRSProfile;
 use core_protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
+mod core_manager;
 mod inbounds;
 mod profile;
 mod utils;
 
-pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
+pub fn serve(address: SocketAddr, database_path: String, core_path: String) -> Result<()> {
     check_tcp_bind(address)?;
 
     let addr: SocketAddr = address;
@@ -25,7 +30,7 @@ pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
         .build()
         .expect("Could not build tokio runtime");
 
-    match rt.block_on(start_server(addr, database_path)) {
+    match rt.block_on(start_server(addr, database_path, core_path)) {
         Ok(()) => {
             info!("gRPC Server stopped normally.");
         }
@@ -37,18 +42,30 @@ pub fn serve(address: SocketAddr, database_path: String) -> Result<()> {
     Ok(())
 }
 
-async fn start_server(addr: SocketAddr, database_path: String) -> Result<()> {
+async fn start_server(addr: SocketAddr, database_path: String, core_path: String) -> Result<()> {
     let profile_task_producer =
         Arc::new(profile_manager::ProfileTaskProducer::new(database_path).await?);
-    let acolors_profile = AColoRSProfile::new(profile_task_producer).await;
+    let acolors_profile = AColoRSProfile::new(profile_task_producer.clone()).await;
+
     let inbounds = Arc::new(RwLock::new(config_manager::Inbounds::default()));
-    let acolors_config = AColoRSConfig::new(inbounds).await;
+    let acolors_config = AColoRSConfig::new(inbounds.clone()).await;
+
+    let core = match V2RayCore::new(&core_path) {
+        Ok(c) => c,
+        Err(e) => {
+            error!("Core not found : {}", e);
+            std::process::exit(1);
+        }
+    };
+    let wraped_core = Arc::new(Mutex::new(core));
+    let acolors_core = AColoRSCore::new::<V2RayCore>(wraped_core, profile_task_producer, inbounds);
 
     info!("gRPC server is available at http://{}\n", addr);
 
     Server::builder()
         .add_service(ProfileManagerServer::new(acolors_profile))
         .add_service(ConfigManagerServer::new(acolors_config))
+        .add_service(CoreManagerServer::new(acolors_core))
         .serve(addr)
         .await
         .context("Failed to start gRPC server.")?;

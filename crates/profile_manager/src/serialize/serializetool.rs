@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn test_vmess() -> Result<()> {
-        let t=decode_outbound_from_url("vmess://eyJhZGQiOiJ0ZXN0MiIsImFpZCI6MzEyLCJob3N0IjoiZmQiLCJpZCI6InRlc3QzIiwibmV0Ijoid3MiLCJwYXRoIjoiYWZkIiwicG9ydCI6MTQyLCJwcyI6InRlc3QxIiwic2N5IjoiY2hhY2hhMjAtcG9seTEzMDUiLCJzbmkiOiI0MTIiLCJ0bHMiOiJ0bHMiLCJ0eXBlIjoibm9uZSIsInYiOiIyIn0=@");
+        let t=decode_outbound_from_url("vmess://eyJhZGQiOiJ0ZXN0MiIsImFpZCI6MzEyLCJob3N0IjoiZmQiLCJpZCI6ImIyOTYxOWI3LTZkOWEtNGQwYy03MjI5LWRkMjczNGExY2FhNCIsIm5ldCI6IndzIiwicGF0aCI6ImFmZCIsInBvcnQiOjE0MiwicHMiOiJ0ZXN0MSIsInNjeSI6ImNoYWNoYTIwLXBvbHkxMzA1Iiwic25pIjoiNDEyIiwidGxzIjoidGxzIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9@");
         let data = match t {
             Ok(d) => d,
             Err(e) => {

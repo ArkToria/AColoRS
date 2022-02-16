@@ -44,14 +44,18 @@ pub struct Auth {
     pub password: String,
 }
 
-impl Inbounds {
-    pub fn from_str(input: &str) -> Result<Inbounds, serde_json::Error> {
-        serde_json::from_str(input)
+impl std::str::FromStr for Inbounds {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     #[test]
     fn test_empty_inbounds_deserialize() -> anyhow::Result<()> {

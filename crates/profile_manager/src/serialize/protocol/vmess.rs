@@ -63,7 +63,7 @@ fn vmess_base64_decode(url_str: &str) -> Result<URLMetaObject> {
     //  }
     let mut info = url_str.split("://").last().unwrap_or("");
     if info.ends_with('@') {
-        info = &info[0..info.len() - 2];
+        info = &info[0..info.len() - 1];
     }
     if info.is_empty() {
         return Err(anyhow!("No Content"));

@@ -1,5 +1,5 @@
 [package]
-name = "profile-manager"
+name = "profile_manager"
 version = "0.1.0"
 authors = ["khonoka <kagiyamahonoka@protonmail.com>"]
 edition = "2018"

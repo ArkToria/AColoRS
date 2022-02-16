@@ -36,6 +36,10 @@ anyhow = "1.0.53"
 utils = { path = "components/utils" }
 server = { path = "crates/server" }
 
+profile_manager = {path = "crates/profile_manager"} 
+config_manager = {path = "crates/config_manager"} 
+kernel_manager = {path = "crates/kernel_manager"} 
+
 [profile.release]
 codegen-units = 1
 lto = true

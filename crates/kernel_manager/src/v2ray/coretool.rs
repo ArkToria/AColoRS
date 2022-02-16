@@ -1,12 +1,19 @@
 use std::{
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     io::{Read, Write},
     process::{Child, Command, Stdio},
+    str::FromStr,
 };
 
 use anyhow::{anyhow, Result};
+use profile_manager::serialize::serializer::check_is_default_and_delete;
 
 use crate::core::CoreTool;
+
+use super::{
+    configtool::set_inbound_object,
+    protobuf::v2ray_proto::{OutboundObject, V2RayConfig},
+};
 
 #[derive(Debug)]
 pub struct V2rayCore {
@@ -18,7 +25,7 @@ pub struct V2rayCore {
 }
 
 impl V2rayCore {
-    fn spawn_version_process(path: &OsString) -> Result<Child> {
+    fn spawn_version_process(path: &OsStr) -> Result<Child> {
         let mut process = Command::new(path)
             .arg("version")
             .stdin(Stdio::piped())
@@ -49,12 +56,14 @@ impl V2rayCore {
 }
 
 impl CoreTool<String> for V2rayCore {
-    fn new(path: OsString) -> Result<Self> {
-        let output = Self::spawn_version_process(&path)?;
+    fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self> {
+        let output = Self::spawn_version_process(path.as_ref())?;
 
         let (name, version) = Self::get_name_and_version(output)?;
 
         let semver_version = semver::Version::parse(&version)?;
+
+        let path = path.into();
 
         Ok(Self {
             name,
@@ -131,6 +140,80 @@ impl CoreTool<String> for V2rayCore {
     fn get_name(&self) -> &str {
         &self.name
     }
+
+    fn generate_config(
+        node_data: &profile_manager::NodeData,
+        inbounds: &config_manager::Inbounds,
+    ) -> Result<String> {
+        let mut node_config = V2RayConfig::default();
+        let mut json;
+
+        set_inbound_object(&mut node_config, inbounds);
+
+        if !node_data.url.contains("://") {
+            json = config_to_json(&node_config, &node_data.raw)?;
+        } else {
+            let mut outbound = json_to_outbound(&node_data.raw)?;
+
+            if outbound.tag.is_empty() {
+                outbound.tag = "PROXY".to_string();
+            }
+
+            node_config.outbounds.push(outbound);
+
+            json = config_to_json(&node_config, "")?;
+        }
+
+        check_is_default_and_delete(&mut json);
+
+        Ok(json.to_string())
+    }
+
+    fn get_config(&self) -> &str {
+        &self.config
+    }
+}
+
+fn json_to_outbound(json_str: &str) -> Result<OutboundObject, serde_json::Error> {
+    serde_json::from_str(json_str)
+}
+
+fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<serde_json::Value> {
+    let mut root = serde_json::to_value(&origin_config)?;
+
+    if root["inbounds"].is_null() {
+        return Ok(serde_json::Value::Null);
+    };
+
+    let fix_format = |root: &mut serde_json::Value, keys: Vec<&'static str>| {
+        keys.into_iter().for_each(|key| {
+            if let serde_json::Value::Array(xbounds) = &mut root[key] {
+                xbounds.into_iter().for_each(|xbound| {
+                    let protocol = xbound["protocol"]
+                        .as_str()
+                        .unwrap_or("null")
+                        .replace('-', "_");
+
+                    let setting = &mut xbound["settings"][&protocol];
+                    xbound["settings"] = setting.clone();
+                });
+            }
+        });
+    };
+
+    if outbound_raw.is_empty() {
+        fix_format(&mut root, vec!["inbounds", "outbounds"]);
+    } else {
+        fix_format(&mut root, vec!["inbounds"]);
+
+        let outbound = serde_json::Value::from_str(outbound_raw)?;
+
+        if !outbound.is_null() {
+            root["outbounds"][0] = outbound;
+        }
+    }
+
+    Ok(root)
 }
 
 #[cfg(test)]
@@ -142,13 +225,13 @@ mod tests {
     use anyhow::Result;
     #[test]
     fn test_core_version() -> Result<()> {
-        let core = V2rayCore::new("v2ray".into())?;
+        let core = V2rayCore::new("v2ray")?;
         dbg!(core.name, core.version);
         Ok(())
     }
     #[test]
     fn test_core_run() -> Result<()> {
-        let mut core = V2rayCore::new("v2ray".into())?;
+        let mut core = V2rayCore::new("v2ray")?;
 
         assert_eq!(false, core.is_running());
         core.set_config("}{".to_string())?;

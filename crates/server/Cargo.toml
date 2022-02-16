@@ -20,7 +20,7 @@ rusqlite = "0.26.3"
 reqwest = { version = "0.11.9", features = ["json"]}
 base64 = "0.13.0"
 
-profile-manager = { path = "../profile_manager" }
+profile_manager = { path = "../profile_manager" }
 
 [build-dependencies]
 tonic-build = "0.6.2"

@@ -1,5 +1,7 @@
 mod core;
-mod v2ray;
+pub mod v2ray;
+
+pub use crate::core::CoreTool;
 #[cfg(test)]
 mod tests {
     #[test]

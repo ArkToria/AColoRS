@@ -20,6 +20,7 @@ where
     core: Arc<Mutex<Core>>,
     profile: Arc<ProfileTaskProducer>,
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
+    current_node: Mutex<Option<profile_manager::NodeData>>,
 }
 
 impl<Core> AColoRSCore<Core>
@@ -36,6 +37,7 @@ where
             core,
             profile,
             inbounds,
+            current_node: Mutex::new(None),
         }
     }
 }
@@ -48,6 +50,8 @@ where
 {
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<RunReply>, Status> {
         info!("Run from {:?}", request.remote_addr());
+
+        regenerate_config(&self.current_node, &self.inbounds, &self.core).await?;
 
         let mut core_guard = self.core.lock().await;
         if let Err(e) = core_guard.run() {
@@ -76,7 +80,9 @@ where
         &self,
         request: Request<RestartRequest>,
     ) -> Result<Response<RestartReply>, Status> {
-        info!("restart from {:?}", request.remote_addr());
+        info!("Restart from {:?}", request.remote_addr());
+
+        regenerate_config(&self.current_node, &self.inbounds, &self.core).await?;
 
         let mut core_guard = self.core.lock().await;
         if let Err(e) = core_guard.restart() {
@@ -107,7 +113,7 @@ where
         &self,
         request: Request<SetConfigByNodeIdRequest>,
     ) -> Result<Response<SetConfigByNodeIdReply>, Status> {
-        info!("get_is_running from {:?}", request.remote_addr());
+        info!("Set config by node id from {:?}", request.remote_addr());
 
         let node_id = request.into_inner().node_id;
 
@@ -121,27 +127,48 @@ where
             }
         };
 
-        let inbounds = &*self.inbounds.read().await;
-
-        let config = match Core::generate_config(&node_data, inbounds) {
-            Ok(c) => c,
-            Err(e) => {
-                return Err(Status::new(
-                    Code::Aborted,
-                    format!("Generating configuration Error: {}", e),
-                ));
-            }
-        };
-
-        let mut core_guard = self.core.lock().await;
-        if let Err(e) = core_guard.set_config(config) {
-            return Err(Status::new(
-                Code::Aborted,
-                format!("Core set config Error: {}", e),
-            ));
-        }
+        let mut data_guard = self.current_node.lock().await;
+        *data_guard = Some(node_data);
 
         let reply = SetConfigByNodeIdReply {};
         Ok(Response::new(reply))
     }
+}
+
+async fn regenerate_config<Core>(
+    current_node: &Mutex<Option<profile_manager::NodeData>>,
+    inbounds: &Arc<RwLock<config_manager::Inbounds>>,
+    core: &Arc<Mutex<Core>>,
+) -> Result<(), Status>
+where
+    Core: CoreTool<ConfigType> + Send + Sync + 'static,
+    ConfigType: Send + Sync + 'static,
+{
+    let current_node_guard = &*current_node.lock().await;
+    let node_data = match current_node_guard {
+        Some(d) => d,
+        None => {
+            return Err(Status::new(Code::Aborted, format!("No node selected")));
+        }
+    };
+    let inbounds = &*inbounds.read().await;
+
+    let config = match Core::generate_config(node_data, inbounds) {
+        Ok(c) => c,
+        Err(e) => {
+            return Err(Status::new(
+                Code::Aborted,
+                format!("Generating configuration Error: {}", e),
+            ));
+        }
+    };
+
+    let mut core_guard = core.lock().await;
+    if let Err(e) = core_guard.set_config(config) {
+        return Err(Status::new(
+            Code::Aborted,
+            format!("Core set config Error: {}", e),
+        ));
+    }
+    Ok(())
 }

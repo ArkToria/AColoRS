@@ -24,6 +24,7 @@ service ProfileManager {
 
     rpc AppendGroup(AppendGroupRequest) returns (AppendGroupReply) {}
     rpc AppendNode(AppendNodeRequest) returns (AppendNodeReply) {}
+    rpc AppendNodeByUrl(AppendNodeByUrlRequest) returns (AppendNodeByUrlReply) {}
 
     rpc UpdateGroupByID(UpdateGroupByIDRequest) returns (UpdateGroupByIDReply) {}
 }
@@ -38,6 +39,7 @@ message RemoveNodeByIDReply {}
 message AppendGroupReply {}
 message UpdateGroupByIDReply {}
 message AppendNodeReply {}
+message AppendNodeByUrlReply {}
 
 message CountNodesRequest {
     int32 group_id = 1;
@@ -78,6 +80,11 @@ message UpdateGroupByIDRequest {
 message AppendNodeRequest {
     int32 group_id = 1;
     NodeData data = 2;
+}
+
+message AppendNodeByUrlRequest {
+    int32 group_id = 1;
+    string url = 2;
 }
 
 message CountNodesReply {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use core_protobuf::acolors_proto::{config_manager_server::ConfigManager, *};
-use spdlog::info;
+use spdlog::{debug, info};
 use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 
@@ -23,6 +23,7 @@ impl ConfigManager for AColoRSConfig {
         request: Request<Inbounds>,
     ) -> Result<Response<SetInboundsReply>, Status> {
         info!("Set inbounds from {:?}", request.remote_addr());
+        debug!("Current inbounds: {:?}", &*self.inbounds.read().await);
         let mut inbounds_write = self.inbounds.write().await;
 
         let inbounds = request.into_inner();

@@ -6,7 +6,11 @@ use tonic::{Code, Request, Response, Status};
 
 use crate::utils::get_http_content;
 use core_protobuf::acolors_proto::{profile_manager_server::ProfileManager, *};
-use profile_manager::{self, serialize::serializetool::get_nodes_from_base64, ProfileTaskProducer};
+use profile_manager::{
+    self,
+    serialize::serializetool::{decode_outbound_from_url, get_nodes_from_base64},
+    ProfileTaskProducer,
+};
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
@@ -262,6 +266,41 @@ impl ProfileManager for AColoRSProfile {
         }
 
         let reply = AppendNodeReply {};
+
+        Ok(Response::new(reply))
+    }
+
+    async fn append_node_by_url(
+        &self,
+        request: Request<AppendNodeByUrlRequest>,
+    ) -> Result<Response<AppendNodeByUrlReply>, Status> {
+        info!(
+            "Request append node by group id from {:?}",
+            request.remote_addr()
+        );
+
+        let inner = request.into_inner();
+        let group_id = inner.group_id;
+        let url = inner.url;
+
+        let group_data = match decode_outbound_from_url(url) {
+            Ok(data) => data,
+            Err(e) => {
+                return Err(Status::new(
+                    Code::Unavailable,
+                    format!("Decode error: \"{}\"", e),
+                ));
+            }
+        };
+
+        if let Err(e) = self.manager.append_node(group_id, group_data).await {
+            return Err(Status::new(
+                Code::Unavailable,
+                format!("Node unavailable: \"{}\"", e),
+            ));
+        }
+
+        let reply = AppendNodeByUrlReply {};
 
         Ok(Response::new(reply))
     }

@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 
-use crate::NodeData;
+use core_data::NodeData;
 use core_protobuf::v2ray_proto::*;
 
 use super::protocol::shadowsocks::shadowsocks_outbound_from_url;

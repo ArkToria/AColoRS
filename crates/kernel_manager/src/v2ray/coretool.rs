@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use profile_manager::serialize::serializer::check_is_default_and_delete;
+use serialize_tool::serialize::serializer::check_is_default_and_delete;
 
 use crate::core::CoreTool;
 
@@ -147,7 +147,7 @@ impl CoreTool<String> for V2RayCore {
     }
 
     fn generate_config(
-        node_data: &profile_manager::NodeData,
+        node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
     ) -> Result<String> {
         let mut node_config = V2RayConfig::default();

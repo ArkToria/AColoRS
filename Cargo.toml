@@ -23,6 +23,8 @@ members = [
     "crates/cli",
     "crates/config_manager",
     "components/core_protobuf",
+    "components/core_data",
+    "components/serialize_tool",
     "components/utils",
 ]
 
@@ -33,10 +35,14 @@ spdlog-rs = { version = "0.2.2", features = [
     "release-level-info",
 ] }
 anyhow = "1.0.53"
+tokio = { version = "1.16.1", features = ["rt-multi-thread", "macros", "sync"] }
 
 utils = { path = "components/utils" }
-server = { path = "crates/server" }
+core_protobuf = {path = "components/core_protobuf"}
+core_data = {path = "components/core_data"}
+serialize_tool = {path = "components/serialize_tool"}
 
+server = { path = "crates/server" }
 profile_manager = {path = "crates/profile_manager"} 
 config_manager = {path = "crates/config_manager"} 
 kernel_manager = {path = "crates/kernel_manager"} 

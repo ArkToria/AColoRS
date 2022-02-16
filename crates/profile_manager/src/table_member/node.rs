@@ -3,7 +3,7 @@ use std::rc::Rc;
 use anyhow::anyhow;
 use rusqlite::{params, Connection};
 
-use crate::data_type::node::*;
+use core_data::data_type::node::*;
 
 use super::traits::{AttachedToTable, WithConnection};
 

@@ -1,11 +1,12 @@
 use std::sync::mpsc::Receiver;
 
 use anyhow::{anyhow, Result};
+use core_data::{GroupData, NodeData};
 use rusqlite::Connection;
 use spdlog::{debug, error, info};
 use tokio::{sync::oneshot, task};
 
-use crate::{table_member::traits::AColoRSListModel, GroupData, NodeData, Profile};
+use crate::{table_member::traits::AColoRSListModel, Profile};
 
 use super::{profile_manager::Request, reply::ProfileReply, request::ProfileRequest};
 

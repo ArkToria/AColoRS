@@ -13,8 +13,8 @@ serde_json = "1.0.79"
 serde = {version = "1.0.136", features=["derive"]}
 
 
-
 config_manager = { path = "../config_manager/" }
-profile_manager = { path = "../profile_manager/" }
 core_protobuf = {path = "../../components/core_protobuf"}
+core_data = {path = "../../components/core_data"}
+serialize_tool = {path = "../../components/serialize_tool"}
 

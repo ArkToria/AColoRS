@@ -1,4 +1,4 @@
-use crate::{GroupData, NodeData};
+use core_data::{GroupData, NodeData};
 
 #[derive(Debug)]
 pub enum ProfileReply {

@@ -3,7 +3,7 @@ use std::sync::mpsc::{self};
 use anyhow::{anyhow, Result};
 use tokio::sync::oneshot;
 
-use crate::{GroupData, NodeData};
+use core_data::{GroupData, NodeData};
 
 use super::{consumer::create_consumer, reply::ProfileReply, request::ProfileRequest};
 

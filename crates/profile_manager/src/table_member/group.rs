@@ -3,10 +3,8 @@ use std::rc::Rc;
 use anyhow::anyhow;
 use rusqlite::{params, Connection};
 
-use crate::{
-    data_type::{group::*, node::*},
-    tools::dbtools::{insert_into_table, update_table},
-};
+use crate::tools::dbtools::{insert_into_table, update_table};
+use core_data::data_type::{group::*, node::*};
 
 use super::{
     node::Node,

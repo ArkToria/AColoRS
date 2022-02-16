@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
-use crate::NodeData;
+use core_data::NodeData;
 use core_protobuf::acolors_proto::EntryType;
 use core_protobuf::v2ray_proto::*;
 

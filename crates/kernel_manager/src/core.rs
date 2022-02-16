@@ -11,7 +11,7 @@ pub trait CoreTool<ConfigType> {
     fn set_config(&mut self, config: ConfigType) -> Result<()>;
 
     fn generate_config(
-        node_data: &profile_manager::NodeData,
+        node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
     ) -> Result<ConfigType>;
 

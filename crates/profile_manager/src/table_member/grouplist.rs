@@ -3,8 +3,9 @@ use std::rc::Rc;
 use rusqlite::Connection;
 
 use crate::table_member::group::Group;
+use crate::tools::dbtools::test_and_create_group_table;
 use crate::tools::dbtools::test_and_create_node_table;
-use crate::{data_type::group::*, tools::dbtools::test_and_create_group_table};
+use core_data::data_type::group::*;
 
 use super::traits::{AColoRSListModel, HasTable, WithConnection};
 

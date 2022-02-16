@@ -20,7 +20,7 @@ where
     core: Arc<Mutex<Core>>,
     profile: Arc<ProfileTaskProducer>,
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
-    current_node: Mutex<Option<profile_manager::NodeData>>,
+    current_node: Mutex<Option<core_data::NodeData>>,
 }
 
 impl<Core> AColoRSCore<Core>
@@ -125,7 +125,7 @@ where
 }
 
 async fn regenerate_config<Core>(
-    current_node: &Mutex<Option<profile_manager::NodeData>>,
+    current_node: &Mutex<Option<core_data::NodeData>>,
     inbounds: &Arc<RwLock<config_manager::Inbounds>>,
     core: &Arc<Mutex<Core>>,
 ) -> Result<(), Status>
@@ -137,7 +137,7 @@ where
     let node_data = match current_node_guard {
         Some(d) => d,
         None => {
-            return Err(Status::cancelled(format!("No node selected")));
+            return Err(Status::cancelled("No node selected".to_string()));
         }
     };
     let inbounds = &*inbounds.read().await;

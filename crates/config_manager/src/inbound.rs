@@ -4,14 +4,14 @@ fn local_ip_string() -> String {
     "127.0.0.1".to_string()
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Inbounds {
     pub socks5: Option<SOCKS5Inbound>,
     pub http: Option<HTTPInbound>,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HTTPInbound {
     pub enable: bool,
@@ -23,7 +23,7 @@ pub struct HTTPInbound {
     pub auth: Option<Auth>,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SOCKS5Inbound {
     pub enable: bool,
@@ -36,7 +36,7 @@ pub struct SOCKS5Inbound {
     pub auth: Option<Auth>,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Auth {
     pub enable: bool,

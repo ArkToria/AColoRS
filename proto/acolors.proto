@@ -143,10 +143,14 @@ message GroupData {
 }
 
 service ConfigManager {
-
+    rpc SetInbounds(Inbounds) returns (SetInboundsReply) {}
+    rpc GetInbounds(GetInboundsRequest) returns (Inbounds) {}
 }
 
-message Inbound
+message SetInboundsReply {}
+message GetInboundsRequest {}
+
+message Inbounds
 {
   message Auth
   {

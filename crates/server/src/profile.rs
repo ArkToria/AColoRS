@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Error;
 use spdlog::info;
 
 use tonic::{Code, Request, Response, Status};
@@ -14,8 +13,8 @@ pub struct AColoRSProfile {
     manager: Arc<ProfileTaskProducer>,
 }
 impl AColoRSProfile {
-    pub async fn new(manager: Arc<ProfileTaskProducer>) -> Result<AColoRSProfile, Error> {
-        Ok(AColoRSProfile { manager })
+    pub async fn new(manager: Arc<ProfileTaskProducer>) -> Self {
+        Self { manager }
     }
 }
 

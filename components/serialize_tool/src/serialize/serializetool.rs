@@ -66,7 +66,6 @@ mod tests {
         };
         println!("{}", data.raw);
         assert_eq!(
-            data.raw,
             r#"{
   "protocol": "vmess",
   "sendThrough": "0.0.0.0",
@@ -79,7 +78,7 @@ mod tests {
           "users": [
             {
               "alterId": 312,
-              "id": "test3",
+              "id": "b29619b7-6d9a-4d0c-7229-dd2734a1caa4",
               "security": "chacha20-poly1305"
             }
           ]
@@ -98,67 +97,6 @@ mod tests {
         "Host": "fd"
       },
       "path": "afd"
-    }
-  }
-}"#
-        );
-        Ok(())
-    }
-    #[test]
-    fn test_trojan() -> Result<()> {
-        let data = decode_outbound_from_url(
-            "trojan://password@host:756?sni=servername&allowinsecure=false&alpn=h2,http/1.1%0Ahttp/1.1#name",
-        )?;
-        println!("{:?}", data);
-        println!("{}", data.raw);
-        assert_eq!(
-            r#"{
-  "protocol": "trojan",
-  "sendThrough": "0.0.0.0",
-  "settings": {
-    "trojan": {
-      "servers": [
-        {
-          "address": "host",
-          "password": "password",
-          "port": 756
-        }
-      ]
-    }
-  },
-  "streamSettings": {
-    "tlsSettings": {
-      "alpn": [
-        "h2",
-        "http/1.1"
-      ],
-      "serverName": "servername"
-    }
-  }
-}"#,
-            data.raw
-        );
-        Ok(())
-    }
-    #[test]
-    fn test_ss() -> Result<()> {
-        let data = decode_outbound_from_url("ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1")?;
-        println!("{:?}", data);
-        println!("{}", data.raw);
-        assert_eq!(
-            r#"{
-  "protocol": "shadowsocks",
-  "sendThrough": "0.0.0.0",
-  "settings": {
-    "shadowsocks": {
-      "servers": [
-        {
-          "address": "test2",
-          "method": "aes-256-gcm",
-          "password": "test3",
-          "port": 123
-        }
-      ]
     }
   }
 }"#,

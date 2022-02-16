@@ -1,5 +1,5 @@
-use super::protobuf::v2ray_proto::*;
-use super::protobuf::v2ray_proto::{
+use core_protobuf::v2ray_proto::*;
+use core_protobuf::v2ray_proto::{
     inbound_object::{inbound_settings, InboundSettings},
     InboundObject, V2RayConfig,
 };
@@ -23,7 +23,7 @@ fn set_inbound_http_object(inbounds: &config_manager::Inbounds, config: &mut V2R
             let auth_setting = &http_inbound.auth;
             if let Some(auth) = auth_setting {
                 if auth.enable {
-                    let auth = super::protobuf::v2ray_proto::http_object::AccountObject {
+                    let auth = core_protobuf::v2ray_proto::http_object::AccountObject {
                         user: auth.username.clone(),
                         pass: auth.password.clone(),
                     };
@@ -68,7 +68,7 @@ fn set_inbound_socks5_object(inbounds: &config_manager::Inbounds, config: &mut V
             let auth_setting = &socks5_inbound.auth;
             if let Some(auth) = auth_setting {
                 if auth.enable {
-                    let auth = super::protobuf::v2ray_proto::socks_object::AccountObject {
+                    let auth = core_protobuf::v2ray_proto::socks_object::AccountObject {
                         user: auth.username.clone(),
                         pass: auth.password.clone(),
                     };

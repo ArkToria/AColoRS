@@ -5,10 +5,8 @@ use spdlog::info;
 
 use tonic::{Code, Request, Response, Status};
 
-use crate::{
-    protobuf::acolors_proto::{profile_manager_server::ProfileManager, *},
-    utils::get_http_content,
-};
+use crate::utils::get_http_content;
+use core_protobuf::acolors_proto::{profile_manager_server::ProfileManager, *};
 use profile_manager::{self, serialize::serializetool::get_nodes_from_base64, ProfileTaskProducer};
 
 #[derive(Debug)]
@@ -51,7 +49,7 @@ impl ProfileManager for AColoRSProfile {
     ) -> Result<Response<GroupList>, Status> {
         info!("Request list all groups from {:?}", request.remote_addr());
 
-        let group_list: Vec<crate::protobuf::acolors_proto::GroupData> =
+        let group_list: Vec<core_protobuf::acolors_proto::GroupData> =
             match self.manager.list_all_groups().await {
                 Ok(c) => c.into_iter().map(|group| group.into()).collect(),
                 Err(e) => {
@@ -102,7 +100,7 @@ impl ProfileManager for AColoRSProfile {
 
         let group_id = request.into_inner().group_id;
 
-        let group_list: Vec<crate::protobuf::acolors_proto::NodeData> =
+        let group_list: Vec<core_protobuf::acolors_proto::NodeData> =
             match self.manager.list_all_nodes(group_id).await {
                 Ok(c) => c.into_iter().map(|group| group.into()).collect(),
                 Err(e) => {
@@ -129,7 +127,7 @@ impl ProfileManager for AColoRSProfile {
 
         let group_id = request.into_inner().group_id;
 
-        let group_data: crate::protobuf::acolors_proto::GroupData =
+        let group_data: core_protobuf::acolors_proto::GroupData =
             match self.manager.get_group_by_id(group_id).await {
                 Ok(c) => c.into(),
                 Err(e) => {
@@ -152,7 +150,7 @@ impl ProfileManager for AColoRSProfile {
 
         let node_id = request.into_inner().node_id;
 
-        let node_data: crate::protobuf::acolors_proto::NodeData =
+        let node_data: core_protobuf::acolors_proto::NodeData =
             match self.manager.get_node_by_id(node_id).await {
                 Ok(c) => c.into(),
                 Err(e) => {

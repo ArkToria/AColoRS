@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 
-use crate::protobuf::v2ray_proto::*;
 use crate::NodeData;
+use core_protobuf::v2ray_proto::*;
 
 use super::protocol::shadowsocks::shadowsocks_outbound_from_url;
 use super::protocol::trojan::trojan_outbound_from_url;

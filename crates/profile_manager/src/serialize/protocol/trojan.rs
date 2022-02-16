@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
 
-use crate::protobuf::acolors_proto::EntryType;
-use crate::protobuf::v2ray_proto::*;
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
 use crate::NodeData;
+use core_protobuf::acolors_proto::EntryType;
+use core_protobuf::v2ray_proto::*;
 
 pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
     let meta = trojan_decode(&url_str)?;

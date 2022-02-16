@@ -22,6 +22,7 @@ members = [
     "crates/plugin",
     "crates/cli",
     "crates/config_manager",
+    "components/core_protobuf",
     "components/utils",
 ]
 

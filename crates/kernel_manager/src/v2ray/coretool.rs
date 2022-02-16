@@ -10,10 +10,8 @@ use profile_manager::serialize::serializer::check_is_default_and_delete;
 
 use crate::core::CoreTool;
 
-use super::{
-    configtool::set_inbound_object,
-    protobuf::v2ray_proto::{OutboundObject, V2RayConfig},
-};
+use super::configtool::set_inbound_object;
+use core_protobuf::v2ray_proto::{OutboundObject, V2RayConfig};
 
 #[derive(Debug)]
 pub struct V2rayCore {

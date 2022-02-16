@@ -1,11 +1,11 @@
 use anyhow::{anyhow, Result};
 use serde_json::Value;
 
-use crate::protobuf::acolors_proto::EntryType;
-use crate::protobuf::v2ray_proto::*;
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
 use crate::NodeData;
+use core_protobuf::acolors_proto::EntryType;
+use core_protobuf::v2ray_proto::*;
 
 pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     let meta = vmess_base64_decode(&url_str)?;

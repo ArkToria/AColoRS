@@ -21,6 +21,7 @@ reqwest = { version = "0.11.9", features = ["json"]}
 base64 = "0.13.0"
 
 profile_manager = { path = "../profile_manager" }
+core_protobuf = {path = "../../components/core_protobuf"}
 
 [build-dependencies]
 tonic-build = "0.6.2"

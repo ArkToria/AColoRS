@@ -1,6 +1,6 @@
-impl From<profile_manager::GroupData> for crate::protobuf::acolors_proto::GroupData {
-    fn from(group_data: profile_manager::GroupData) -> Self {
-        crate::protobuf::acolors_proto::GroupData {
+impl From<crate::GroupData> for core_protobuf::acolors_proto::GroupData {
+    fn from(group_data: crate::GroupData) -> Self {
+        core_protobuf::acolors_proto::GroupData {
             id: group_data.id,
             name: group_data.name,
             is_subscription: group_data.is_subscription,
@@ -12,9 +12,9 @@ impl From<profile_manager::GroupData> for crate::protobuf::acolors_proto::GroupD
         }
     }
 }
-impl From<crate::protobuf::acolors_proto::GroupData> for profile_manager::GroupData {
-    fn from(group_data: crate::protobuf::acolors_proto::GroupData) -> Self {
-        profile_manager::GroupData {
+impl From<core_protobuf::acolors_proto::GroupData> for crate::GroupData {
+    fn from(group_data: core_protobuf::acolors_proto::GroupData) -> Self {
+        crate::GroupData {
             id: group_data.id,
             name: group_data.name,
             is_subscription: group_data.is_subscription,
@@ -27,9 +27,9 @@ impl From<crate::protobuf::acolors_proto::GroupData> for profile_manager::GroupD
     }
 }
 
-impl From<profile_manager::NodeData> for crate::protobuf::acolors_proto::NodeData {
-    fn from(node_data: profile_manager::NodeData) -> Self {
-        crate::protobuf::acolors_proto::NodeData {
+impl From<crate::NodeData> for core_protobuf::acolors_proto::NodeData {
+    fn from(node_data: crate::NodeData) -> Self {
+        core_protobuf::acolors_proto::NodeData {
             id: node_data.id,
             name: node_data.name,
             group_id: node_data.group_id,
@@ -50,9 +50,9 @@ impl From<profile_manager::NodeData> for crate::protobuf::acolors_proto::NodeDat
         }
     }
 }
-impl From<crate::protobuf::acolors_proto::NodeData> for profile_manager::NodeData {
-    fn from(node_data: crate::protobuf::acolors_proto::NodeData) -> Self {
-        profile_manager::NodeData {
+impl From<core_protobuf::acolors_proto::NodeData> for crate::NodeData {
+    fn from(node_data: core_protobuf::acolors_proto::NodeData) -> Self {
+        crate::NodeData {
             id: node_data.id,
             name: node_data.name,
             group_id: node_data.group_id,

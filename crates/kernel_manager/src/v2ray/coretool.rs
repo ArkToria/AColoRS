@@ -193,7 +193,7 @@ fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<ser
     let fix_format = |root: &mut serde_json::Value, keys: Vec<&'static str>| {
         keys.into_iter().for_each(|key| {
             if let serde_json::Value::Array(xbounds) = &mut root[key] {
-                xbounds.into_iter().for_each(|xbound| {
+                xbounds.iter_mut().for_each(|xbound| {
                     let protocol = xbound["protocol"]
                         .as_str()
                         .unwrap_or("null")

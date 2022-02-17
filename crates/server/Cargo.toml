@@ -10,6 +10,7 @@ edition = "2021"
 spdlog-rs = { version = "0.2.2", features = [
     "level-debug",
     "release-level-info",
+    "source-location",
 ] }
 tokio = { version = "1.16.1", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = "0.1.8"

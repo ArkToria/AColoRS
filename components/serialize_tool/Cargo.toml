@@ -10,6 +10,7 @@ anyhow ="1.0.53"
 spdlog-rs = { version = "0.2.2", features = [
     "level-debug",
     "release-level-info",
+    "source-location",
 ] }
 serde_json = "1.0.79"
 serde = {version = "1.0.136", features=["derive"]}

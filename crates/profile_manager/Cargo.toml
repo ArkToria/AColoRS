@@ -12,6 +12,7 @@ anyhow = "1.0.53"
 spdlog-rs = { version = "0.2.2", features = [
     "level-debug",
     "release-level-info",
+    "source-location",
 ] }
 tokio = { version = "1.16.1", features = ["rt-multi-thread", "macros", "sync"] }
 reqwest = "0.11.9"

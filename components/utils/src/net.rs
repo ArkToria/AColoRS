@@ -14,3 +14,14 @@ pub async fn get_http_content<T: reqwest::IntoUrl>(url: T) -> anyhow::Result<Str
 
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get() -> anyhow::Result<()> {
+        println!("{}", get_http_content("https://example.com/").await?);
+        Ok(())
+    }
+}

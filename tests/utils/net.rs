@@ -1,11 +1,4 @@
 use serialize_tool::serialize::serializetool::get_nodes_from_base64;
-use utils::net::get_http_content;
-
-#[tokio::test]
-async fn test_get() -> anyhow::Result<()> {
-    println!("{}", get_http_content("https://example.com/").await?);
-    Ok(())
-}
 
 #[tokio::test]
 async fn test_get_nodes_from_base64() -> anyhow::Result<()> {

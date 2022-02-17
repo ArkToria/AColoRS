@@ -47,7 +47,10 @@ impl V2RayCore {
         let mut output = String::new();
         stdout.read_to_string(&mut output)?;
 
-        let core_info = &output[0..20];
+        let core_info = match output.lines().next() {
+            Some(s) => s,
+            None => return Err(anyhow!("Failed to fetch core name&version")),
+        };
         let mut info_split = core_info.split(' ');
         let name = info_split.next().unwrap_or("").to_string();
         let version = info_split.next().unwrap_or("").to_string();
@@ -81,7 +84,7 @@ impl CoreTool<String> for V2RayCore {
         println!("{}", &self.config);
 
         let mut child = Command::new(&self.path)
-            .arg("--config=stdin:")
+            .args(&["run", "-format", "json"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()?;

@@ -51,7 +51,10 @@ async fn start_server(addr: SocketAddr, database_path: String, core_path: String
     let acolors_config = AColoRSConfig::new(inbounds.clone()).await;
 
     let core = match V2RayCore::new(&core_path) {
-        Ok(c) => c,
+        Ok(c) => {
+            info!("Core <{}> version ({})", c.get_name(), c.get_version());
+            c
+        }
         Err(e) => {
             error!("Core not found : {}", e);
             std::process::exit(1);

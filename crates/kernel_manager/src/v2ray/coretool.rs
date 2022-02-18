@@ -81,7 +81,6 @@ impl CoreTool<String> for V2RayCore {
         if self.is_running() {
             return Err(anyhow!("Core is running"));
         }
-        println!("{}", &self.config);
 
         let mut child = Command::new(&self.path)
             .args(&["run", "-format", "json"])

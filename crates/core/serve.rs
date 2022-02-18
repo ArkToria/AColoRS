@@ -19,12 +19,16 @@ pub fn serve(args: &Args) -> Result<bool> {
     let mut port = get_port_from(matches);
     let database_path = matches.value_of("dbpath").unwrap_or("").to_string();
     let core_path = matches.value_of("corepath").unwrap_or("v2ray").to_string();
+    let config_path = matches
+        .value_of("config")
+        .unwrap_or("acolors.json")
+        .to_string();
 
     test_and_set_port(&mut port);
 
     let address = format!("{}:{}", interface, port);
     let address = address_from_string(&address)?;
-    match server::serve(address, database_path, core_path) {
+    match server::serve(address, database_path, core_path, config_path) {
         Ok(()) => Ok(true),
         Err(e) => {
             error!("unravel error: {:?}", &e);

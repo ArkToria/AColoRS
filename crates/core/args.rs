@@ -1,6 +1,5 @@
 use std::{env, ffi::OsString, sync::Arc};
 
-use anyhow::anyhow;
 use clap::ArgMatches;
 
 use crate::app;
@@ -34,7 +33,7 @@ where
         Ok(matches) => return Ok(matches),
         Err(err) => err,
     };
-    Err(anyhow!("{}", err))
+    Err(err.into())
 }
 
 impl Args {

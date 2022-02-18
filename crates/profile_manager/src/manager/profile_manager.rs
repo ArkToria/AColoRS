@@ -1,4 +1,7 @@
-use std::sync::mpsc::{self};
+use std::{
+    path::Path,
+    sync::mpsc::{self},
+};
 
 use anyhow::{anyhow, Result};
 use tokio::sync::oneshot;
@@ -14,7 +17,7 @@ pub struct ProfileTaskProducer {
 }
 
 impl ProfileTaskProducer {
-    pub async fn new(path: String) -> Result<ProfileTaskProducer> {
+    pub async fn new<P: AsRef<Path>>(path: P) -> Result<ProfileTaskProducer> {
         let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
 
         create_consumer(rx, path).await;

@@ -1,4 +1,5 @@
 use std::net::{SocketAddr, TcpListener};
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -8,6 +9,7 @@ use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
 use kernel_manager::v2ray::coretool::V2RayCore;
 use kernel_manager::CoreTool;
 use spdlog::{error, info};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, RwLock};
 use tonic::transport::Server;
 
@@ -21,7 +23,12 @@ mod inbounds;
 mod profile;
 mod utils;
 
-pub fn serve(address: SocketAddr, database_path: String, core_path: String) -> Result<()> {
+pub fn serve<P: AsRef<Path>>(
+    address: SocketAddr,
+    database_path: P,
+    core_path: P,
+    config_path: P,
+) -> Result<()> {
     check_tcp_bind(address)?;
 
     let addr: SocketAddr = address;
@@ -30,7 +37,7 @@ pub fn serve(address: SocketAddr, database_path: String, core_path: String) -> R
         .build()
         .expect("Could not build tokio runtime");
 
-    match rt.block_on(start_server(addr, database_path, core_path)) {
+    match rt.block_on(start_server(addr, database_path, core_path, config_path)) {
         Ok(()) => {
             info!("gRPC Server stopped normally.");
         }
@@ -42,15 +49,29 @@ pub fn serve(address: SocketAddr, database_path: String, core_path: String) -> R
     Ok(())
 }
 
-async fn start_server(addr: SocketAddr, database_path: String, core_path: String) -> Result<()> {
+async fn start_server<P: AsRef<Path>>(
+    addr: SocketAddr,
+    database_path: P,
+    core_path: P,
+    config_path: P,
+) -> Result<()> {
+    let mut config = config_read_to_json(config_path).await?;
+    let config_inbounds = match config.get_mut("inbounds") {
+        Some(v) => {
+            let inbounds = serde_json::from_value(v.take())?;
+            Some(inbounds)
+        }
+        None => None,
+    };
+
     let profile_task_producer =
         Arc::new(profile_manager::ProfileTaskProducer::new(database_path).await?);
     let acolors_profile = AColoRSProfile::new(profile_task_producer.clone()).await;
 
-    let inbounds = Arc::new(RwLock::new(config_manager::Inbounds::default()));
+    let inbounds = Arc::new(RwLock::new(config_inbounds.unwrap_or_default()));
     let acolors_config = AColoRSConfig::new(inbounds.clone()).await;
 
-    let core = match V2RayCore::new(&core_path) {
+    let core = match V2RayCore::new(core_path.as_ref().as_os_str()) {
         Ok(c) => {
             info!("Core <{}> version ({})", c.get_name(), c.get_version());
             c
@@ -73,6 +94,58 @@ async fn start_server(addr: SocketAddr, database_path: String, core_path: String
         .await
         .context("Failed to start gRPC server.")?;
     Ok(())
+}
+
+async fn config_read_to_json<P: AsRef<Path>>(config_path: P) -> Result<serde_json::Value> {
+    let mut file = read_or_create(config_path).await?;
+
+    let mut content = String::new();
+    file.read_to_string(&mut content).await?;
+
+    let v = serde_json::from_str(&content)?;
+
+    Ok(v)
+}
+const DEFAULT_CONFIG_FILE_CONTENT: &str = r#"{
+  "inbounds": {
+    "socks5": {
+      "enable": true,
+      "listen": "127.0.0.1",
+      "port": 4444,
+      "udp_enable": true
+    },
+    "http": {
+      "enable": true,
+      "listen": "127.0.0.1",
+      "port": 4445
+    }
+  }
+}"#;
+async fn read_or_create<P: AsRef<Path>>(config_path: P) -> Result<tokio::fs::File> {
+    let file = match tokio::fs::File::open(&config_path).await {
+        Ok(f) => f,
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                create_and_reopen(config_path).await?
+            } else {
+                return Err(e.into());
+            }
+        }
+    };
+    Ok(file)
+}
+
+async fn create_and_reopen<P: AsRef<Path>>(config_path: P) -> Result<tokio::fs::File> {
+    let dir = match config_path.as_ref().parent() {
+        Some(d) => d,
+        None => {
+            return Err(anyhow!("No Directory"));
+        }
+    };
+    tokio::fs::create_dir_all(dir).await?;
+    let mut f = tokio::fs::File::create(&config_path).await?;
+    f.write_all(DEFAULT_CONFIG_FILE_CONTENT.as_bytes()).await?;
+    Ok(tokio::fs::File::open(&config_path).await?)
 }
 
 fn check_tcp_bind(bind_address: SocketAddr) -> Result<()> {

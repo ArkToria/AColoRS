@@ -1,6 +1,6 @@
-use std::sync::mpsc::Receiver;
+use std::{path::Path, sync::mpsc::Receiver};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use core_data::{GroupData, NodeData};
 use rusqlite::Connection;
 use spdlog::{debug, error, info};
@@ -10,7 +10,9 @@ use crate::{table_member::traits::AColoRSListModel, Profile};
 
 use super::{profile_manager::Request, reply::ProfileReply, request::ProfileRequest};
 
-pub async fn create_consumer(rx: Receiver<Request>, path: String) {
+pub async fn create_consumer<P: AsRef<Path>>(rx: Receiver<Request>, path: P) {
+    let path = path.as_ref().as_os_str().to_os_string();
+
     task::spawn_blocking(move || -> Result<()> {
         let receiver = rx;
         let connection = create_connection(path)?;
@@ -336,12 +338,12 @@ fn try_send(sender: oneshot::Sender<ProfileReply>, reply: ProfileReply) {
         info!("Reply failed: \"{:?}\"", p);
     }
 }
-fn create_connection(path: String) -> Result<Connection> {
+fn create_connection<P: AsRef<Path>>(path: P) -> Result<Connection> {
     match Connection::open(path) {
         Ok(c) => Ok(c),
         Err(e) => {
             error!("Channel open failed: {}", e);
-            return Err(anyhow!("{}", e));
+            return Err(e.into());
         }
     }
 }

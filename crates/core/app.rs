@@ -9,6 +9,11 @@ pub fn app() -> App<'static> {
         .subcommands(vec![App::new("serve")
             .about("Serve on the specified port and address")
             .args(&[
+                Arg::new("config")
+                    .short('c')
+                    .long("config")
+                    .takes_value(true)
+                    .help("Config path (default: \"./acolors.json\")"),
                 Arg::new("interface")
                     .short('i')
                     .long("interface")
@@ -20,7 +25,7 @@ pub fn app() -> App<'static> {
                     .takes_value(true)
                     .help("Database path (default: \"\")"),
                 Arg::new("corepath")
-                    .short('c')
+                    .short('k')
                     .long("corepath")
                     .takes_value(true)
                     .help("Core path (default: \"v2ray\")"),

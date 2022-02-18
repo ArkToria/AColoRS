@@ -1,12 +1,13 @@
-use clap::{crate_authors, crate_description, crate_version, App, Arg};
+use clap::{crate_authors, crate_description, crate_version, Arg, Command};
 
-pub fn app() -> App<'static> {
-    let app = App::new("acolors")
+pub fn app() -> Command<'static> {
+    let app = Command::new("acolors")
         .author(crate_authors!())
         .version(crate_version!())
         .about(crate_description!())
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
-        .subcommands(vec![App::new("serve")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommands(vec![Command::new("serve")
             .about("Serve on the specified port and address")
             .args(&[
                 Arg::new("config")

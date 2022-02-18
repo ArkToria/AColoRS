@@ -29,7 +29,7 @@ members = [
 ]
 
 [dependencies]
-clap = { version = "3.0.13", features = ["cargo"] }
+clap = { version = "3.1.0", features = ["cargo"] }
 spdlog-rs = { version = "0.2.2", features = [
     "level-debug",
     "release-level-info",
@@ -41,7 +41,7 @@ server = { path = "crates/server" }
 utils = { path = "components/utils" }
 
 [dev-dependencies]
-tokio = { version = "1.16.1", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros", "sync"] }
 core_protobuf = {path = "components/core_protobuf"}
 core_data = {path = "components/core_data"}
 serialize_tool = {path = "components/serialize_tool"}

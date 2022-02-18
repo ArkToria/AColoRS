@@ -14,7 +14,7 @@ spdlog-rs = { version = "0.2.2", features = [
     "release-level-info",
     "source-location",
 ] }
-tokio = { version = "1.16.1", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros", "sync"] }
 reqwest = "0.11.9"
 
 core_protobuf = {path = "../../components/core_protobuf"}

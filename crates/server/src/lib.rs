@@ -9,17 +9,16 @@ use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
 use kernel_manager::v2ray::coretool::V2RayCore;
 use kernel_manager::CoreTool;
 use spdlog::{error, info};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, RwLock};
 use tonic::transport::Server;
 
+use crate::config_manager::{config_read_to_json, AColoRSConfig};
 use crate::core_manager::AColoRSCore;
-use crate::inbounds::AColoRSConfig;
 use crate::profile::AColoRSProfile;
 use core_protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
+mod config_manager;
 mod core_manager;
-mod inbounds;
 mod profile;
 mod utils;
 
@@ -55,7 +54,7 @@ async fn start_server<P: AsRef<Path>>(
     core_path: P,
     config_path: P,
 ) -> Result<()> {
-    let mut config = config_read_to_json(config_path).await?;
+    let mut config = config_read_to_json(&config_path).await?;
     let config_inbounds = match config.get_mut("inbounds") {
         Some(v) => {
             let inbounds = serde_json::from_value(v.take())?;
@@ -69,7 +68,7 @@ async fn start_server<P: AsRef<Path>>(
     let acolors_profile = AColoRSProfile::new(profile_task_producer.clone()).await;
 
     let inbounds = Arc::new(RwLock::new(config_inbounds.unwrap_or_default()));
-    let acolors_config = AColoRSConfig::new(inbounds.clone()).await;
+    let acolors_config = AColoRSConfig::new(config_path, inbounds.clone()).await;
 
     let core = match V2RayCore::new(core_path.as_ref().as_os_str()) {
         Ok(c) => {
@@ -94,58 +93,6 @@ async fn start_server<P: AsRef<Path>>(
         .await
         .context("Failed to start gRPC server.")?;
     Ok(())
-}
-
-async fn config_read_to_json<P: AsRef<Path>>(config_path: P) -> Result<serde_json::Value> {
-    let mut file = read_or_create(config_path).await?;
-
-    let mut content = String::new();
-    file.read_to_string(&mut content).await?;
-
-    let v = serde_json::from_str(&content)?;
-
-    Ok(v)
-}
-const DEFAULT_CONFIG_FILE_CONTENT: &str = r#"{
-  "inbounds": {
-    "socks5": {
-      "enable": true,
-      "listen": "127.0.0.1",
-      "port": 4444,
-      "udp_enable": true
-    },
-    "http": {
-      "enable": true,
-      "listen": "127.0.0.1",
-      "port": 4445
-    }
-  }
-}"#;
-async fn read_or_create<P: AsRef<Path>>(config_path: P) -> Result<tokio::fs::File> {
-    let file = match tokio::fs::File::open(&config_path).await {
-        Ok(f) => f,
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                create_and_reopen(config_path).await?
-            } else {
-                return Err(e.into());
-            }
-        }
-    };
-    Ok(file)
-}
-
-async fn create_and_reopen<P: AsRef<Path>>(config_path: P) -> Result<tokio::fs::File> {
-    let dir = match config_path.as_ref().parent() {
-        Some(d) => d,
-        None => {
-            return Err(anyhow!("No Directory"));
-        }
-    };
-    tokio::fs::create_dir_all(dir).await?;
-    let mut f = tokio::fs::File::create(&config_path).await?;
-    f.write_all(DEFAULT_CONFIG_FILE_CONTENT.as_bytes()).await?;
-    Ok(tokio::fs::File::open(&config_path).await?)
 }
 
 fn check_tcp_bind(bind_address: SocketAddr) -> Result<()> {

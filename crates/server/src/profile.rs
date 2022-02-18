@@ -181,6 +181,32 @@ impl ProfileManager for AColoRSProfile {
         Ok(Response::new(reply))
     }
 
+    async fn set_node_by_url(
+        &self,
+        request: Request<SetNodeByUrlRequest>,
+    ) -> Result<Response<SetNodeByUrlReply>, Status> {
+        info!("Request set node by url from {:?}", request.remote_addr());
+
+        let inner = request.into_inner();
+        let node_id = inner.node_id;
+        let url = inner.url;
+
+        let node_data = match decode_outbound_from_url(url) {
+            Ok(data) => data,
+            Err(e) => {
+                return Err(Status::invalid_argument(format!("Decode error: \"{}\"", e)));
+            }
+        };
+
+        if let Err(e) = self.manager.set_node_by_id(node_id, node_data).await {
+            return Err(Status::aborted(format!("Node unavailable: \"{}\"", e)));
+        }
+
+        let reply = SetNodeByUrlReply {};
+
+        Ok(Response::new(reply))
+    }
+
     async fn append_group(
         &self,
         request: Request<AppendGroupRequest>,
@@ -240,14 +266,14 @@ impl ProfileManager for AColoRSProfile {
         let group_id = inner.group_id;
         let url = inner.url;
 
-        let group_data = match decode_outbound_from_url(url) {
+        let node_data = match decode_outbound_from_url(url) {
             Ok(data) => data,
             Err(e) => {
                 return Err(Status::invalid_argument(format!("Decode error: \"{}\"", e)));
             }
         };
 
-        if let Err(e) = self.manager.append_node(group_id, group_data).await {
+        if let Err(e) = self.manager.append_node(group_id, node_data).await {
             return Err(Status::aborted(format!("Node unavailable: \"{}\"", e)));
         }
 

@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use rusqlite::Connection;
+use spdlog::error;
 
 use crate::table_member::group::Group;
 use crate::tools::dbtools::test_and_create_group_table;
@@ -16,8 +17,12 @@ pub struct GroupList {
 
 impl GroupList {
     pub fn new(connection: Rc<Connection>) -> GroupList {
-        test_and_create_group_table(&connection).unwrap();
-        test_and_create_node_table(&connection).unwrap();
+        if let Err(e) = test_and_create_group_table(&connection) {
+            error!("{}", e);
+        }
+        if let Err(e) = test_and_create_node_table(&connection) {
+            error!("{}", e);
+        }
         GroupList { connection }
     }
     pub fn list_all_groups(&self) -> anyhow::Result<Vec<Group>> {

@@ -13,7 +13,7 @@ pub fn app() -> App<'static> {
                     .short('c')
                     .long("config")
                     .takes_value(true)
-                    .help("Config path (default: \"./acolors.json\")"),
+                    .help("Config path (default: \"./config/acolors.json\")"),
                 Arg::new("interface")
                     .short('i')
                     .long("interface")
@@ -23,7 +23,7 @@ pub fn app() -> App<'static> {
                     .short('d')
                     .long("dbpath")
                     .takes_value(true)
-                    .help("Database path (default: \"\")"),
+                    .help("Database path (default: \"./config/acolors.db\")"),
                 Arg::new("corepath")
                     .short('k')
                     .long("corepath")

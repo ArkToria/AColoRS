@@ -1,9 +1,10 @@
 use anyhow::anyhow;
 use clap::ArgMatches;
-use spdlog::{debug, error};
+use spdlog::{debug, error, info};
 use utils::net::{tcp_get_available_port, tcp_port_is_available};
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::process;
 
 use crate::args::Args;
@@ -17,12 +18,11 @@ pub fn serve(args: &Args) -> Result<bool> {
     let matches = get_serve_matches(args);
     let interface = matches.value_of("interface").unwrap_or("127.0.0.1");
     let mut port = get_port_from(matches);
-    let database_path = matches.value_of("dbpath").unwrap_or("").to_string();
-    let core_path = matches.value_of("corepath").unwrap_or("v2ray").to_string();
-    let config_path = matches
-        .value_of("config")
-        .unwrap_or("acolors.json")
-        .to_string();
+    let database_path = value_of_or(matches, "dbpath", "./config/acolors.db");
+    let config_path = value_of_or(matches, "config", "./config/acolors.json");
+    let core_path = value_of_or(matches, "corepath", "v2ray");
+
+    print_file_path(&database_path, &config_path, &core_path);
 
     test_and_set_port(&mut port);
 
@@ -35,6 +35,26 @@ pub fn serve(args: &Args) -> Result<bool> {
             process::exit(1);
         }
     }
+}
+
+fn value_of_or(matches: &ArgMatches, value: &str, default_path: &str) -> PathBuf {
+    let database_path: PathBuf = match matches.value_of(value) {
+        Some(s) => PathBuf::from(s),
+        None => PathBuf::from(default_path),
+    };
+    database_path
+}
+
+fn print_file_path(database_path: &PathBuf, config_path: &PathBuf, core_path: &PathBuf) {
+    info!(
+        "Database Path: {}",
+        database_path.as_os_str().to_string_lossy(),
+    );
+    info!(
+        "Configuration File Path: {}",
+        config_path.as_os_str().to_string_lossy(),
+    );
+    info!("Core Path: {}", core_path.as_os_str().to_string_lossy(),);
 }
 
 fn address_from_string(address: &str) -> Result<SocketAddr> {

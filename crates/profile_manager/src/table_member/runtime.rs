@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use spdlog::error;
 use std::rc::Rc;
 
 use rusqlite::{params, Connection};
@@ -13,7 +14,9 @@ pub struct RuntimeValue {
 }
 impl RuntimeValue {
     pub fn new(connection: Rc<Connection>) -> Self {
-        test_and_create_runtime_table(&connection).unwrap();
+        if let Err(e) = test_and_create_runtime_table(&connection) {
+            error!("{}", e);
+        }
         RuntimeValue { connection }
     }
 }

@@ -8,28 +8,25 @@ use tokio::sync::{broadcast, oneshot};
 
 use core_data::{GroupData, NodeData};
 
-use super::{
-    consumer::create_consumer, reply::ProfileReply, request::ProfileRequest, signal::ProfileSignal,
-};
+use super::{consumer::create_consumer, reply::ProfileReply, request::ProfileRequest};
+use acolors_signal::AColorSignal;
 
-const BUFFER_SIZE: usize = 16;
 #[derive(Debug)]
 pub struct ProfileTaskProducer {
     sender: mpsc::SyncSender<Request>,
-    signal_sender: broadcast::Sender<ProfileSignal>,
 }
 
 impl ProfileTaskProducer {
-    pub async fn new<P: AsRef<Path>>(path: P) -> Result<ProfileTaskProducer> {
-        let (signal_sender, _) = broadcast::channel(BUFFER_SIZE);
-        let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
+    pub async fn new<P: AsRef<Path>>(
+        path: P,
+        signal_sender: broadcast::Sender<AColorSignal>,
+        buffer_size: usize,
+    ) -> Result<ProfileTaskProducer> {
+        let (sender, rx) = mpsc::sync_channel(buffer_size);
 
         create_consumer(rx, signal_sender.clone(), path).await;
 
-        Ok(ProfileTaskProducer {
-            sender,
-            signal_sender,
-        })
+        Ok(ProfileTaskProducer { sender })
     }
 
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
@@ -185,9 +182,6 @@ impl ProfileTaskProducer {
 
             _ => unreachable!(),
         }
-    }
-    pub fn get_signal_recevier(&self) -> broadcast::Receiver<ProfileSignal> {
-        self.signal_sender.subscribe()
     }
 }
 

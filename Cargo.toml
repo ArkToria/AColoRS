@@ -26,6 +26,7 @@ members = [
     "components/core_data",
     "components/serialize_tool",
     "components/utils",
+    "components/acolors_signal",
 ]
 
 [dependencies]

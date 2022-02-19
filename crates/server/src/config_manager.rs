@@ -3,12 +3,13 @@ use std::{
     sync::Arc,
 };
 
+use acolors_signal::send_or_error_print;
 use core_protobuf::acolors_proto::{config_manager_server::ConfigManager, *};
 use serialize_tool::serialize::serializer::check_is_default_and_delete;
 use spdlog::{debug, info};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    sync::RwLock,
+    sync::{broadcast, RwLock},
 };
 use tonic::{Request, Response, Status};
 
@@ -16,15 +17,21 @@ use tonic::{Request, Response, Status};
 pub struct AColoRSConfig {
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
     path: PathBuf,
+    signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
 
 impl AColoRSConfig {
     pub async fn new<P: AsRef<Path>>(
         path: P,
         inbounds: Arc<RwLock<config_manager::Inbounds>>,
+        signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let path = path.as_ref().to_path_buf();
-        Self { inbounds, path }
+        Self {
+            inbounds,
+            path,
+            signal_sender,
+        }
     }
 }
 
@@ -42,6 +49,11 @@ impl ConfigManager for AColoRSConfig {
 
         write_config_to_file(&self.path, &inbounds).await?;
         *inbounds_write = inbounds.into();
+
+        send_or_error_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::UpdateInbounds,
+        );
 
         let reply = SetInboundsReply {};
         Ok(Response::new(reply))
@@ -133,7 +145,7 @@ async fn open_or_create<P: AsRef<Path>>(config_path: P) -> std::io::Result<tokio
             if e.kind() == std::io::ErrorKind::NotFound {
                 create_and_reopen(config_path).await?
             } else {
-                return Err(e.into());
+                return Err(e);
             }
         }
     };

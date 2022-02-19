@@ -19,6 +19,7 @@ reqwest = "0.11.9"
 
 core_protobuf = {path = "../../components/core_protobuf"}
 core_data = {path = "../../components/core_data"}
+acolors_signal = {path = "../../components/acolors_signal"}
 
 [build-dependencies]
 tonic-build = "0.6.2"

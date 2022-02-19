@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use acolors_signal::{send_or_error_print, AColorSignal};
 use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetIsRunningReply, GetIsRunningRequest, RestartReply,
     RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest,
@@ -8,7 +9,7 @@ use core_protobuf::acolors_proto::{
 use kernel_manager::CoreTool;
 use profile_manager::ProfileTaskProducer;
 use spdlog::info;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
 type ConfigType = String;
@@ -21,6 +22,7 @@ where
     profile: Arc<ProfileTaskProducer>,
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
     current_node: Mutex<Option<core_data::NodeData>>,
+    signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
 
 impl<Core> AColoRSCore<Core>
@@ -32,12 +34,14 @@ where
         core: Arc<Mutex<Core>>,
         profile: Arc<ProfileTaskProducer>,
         inbounds: Arc<RwLock<config_manager::Inbounds>>,
+        signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         Self {
             core,
             profile,
             inbounds,
             current_node: Mutex::new(None),
+            signal_sender,
         }
     }
 }
@@ -58,6 +62,8 @@ where
             return Err(Status::aborted(format!("Core run Error: {}", e)));
         }
 
+        send_or_error_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
+
         let reply = RunReply {};
         Ok(Response::new(reply))
     }
@@ -68,6 +74,8 @@ where
         if let Err(e) = core_guard.stop() {
             return Err(Status::aborted(format!("Core stop Error: {}", e)));
         }
+
+        send_or_error_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
         let reply = StopReply {};
         Ok(Response::new(reply))
@@ -85,6 +93,8 @@ where
         if let Err(e) = core_guard.restart() {
             return Err(Status::aborted(format!("Core restart Error: {}", e)));
         }
+
+        send_or_error_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
         let reply = RestartReply {};
         Ok(Response::new(reply))
@@ -118,6 +128,8 @@ where
 
         let mut data_guard = self.current_node.lock().await;
         *data_guard = Some(node_data);
+
+        send_or_error_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
 
         let reply = SetConfigByNodeIdReply {};
         Ok(Response::new(reply))

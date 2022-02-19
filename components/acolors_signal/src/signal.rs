@@ -1,9 +1,12 @@
 use core_protobuf::acolors_proto;
-use core_protobuf::acolors_proto::profile_signal::*;
+use core_protobuf::acolors_proto::a_color_signal::*;
 #[derive(Debug, Clone)]
-pub enum ProfileSignal {
+pub enum AColorSignal {
     Empty,
     AppendGroup,
+    UpdateCoreStatus,
+    UpdateInbounds,
+    CoreConfigChanged,
     RemoveGroupById(i32),
     RemoveNodeById(i32),
     SetGroupById(i32),
@@ -12,42 +15,54 @@ pub enum ProfileSignal {
     UpdateGroup(i32),
 }
 
-impl From<crate::ProfileSignal> for acolors_proto::ProfileSignal {
-    fn from(profile_signal: crate::ProfileSignal) -> Self {
+impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
+    fn from(profile_signal: crate::AColorSignal) -> Self {
         match profile_signal {
-            ProfileSignal::Empty => Self {
+            AColorSignal::Empty => Self {
                 signal: Some(Signal::Empty(Empty {})),
             },
-            ProfileSignal::AppendGroup => Self {
+            AColorSignal::AppendGroup => Self {
                 signal: Some(Signal::AppendGroup(AppendGroup {})),
             },
-            ProfileSignal::RemoveGroupById(group_id) => Self {
+            AColorSignal::UpdateCoreStatus => Self {
+                signal: Some(Signal::UpdateCoreStatus(UpdateCoreStatus {})),
+            },
+            AColorSignal::UpdateInbounds => Self {
+                signal: Some(Signal::UpdateInbounds(UpdateInbounds {})),
+            },
+            AColorSignal::CoreConfigChanged => Self {
+                signal: Some(Signal::CoreConfigChanged(CoreConfigChanged {})),
+            },
+            AColorSignal::RemoveGroupById(group_id) => Self {
                 signal: Some(Signal::RemoveGroupById(RemoveGroupById { group_id })),
             },
-            ProfileSignal::RemoveNodeById(node_id) => Self {
+            AColorSignal::RemoveNodeById(node_id) => Self {
                 signal: Some(Signal::RemoveNodeById(RemoveNodeById { node_id })),
             },
-            ProfileSignal::SetGroupById(group_id) => Self {
+            AColorSignal::SetGroupById(group_id) => Self {
                 signal: Some(Signal::SetGroupById(SetGroupById { group_id })),
             },
-            ProfileSignal::SetNodeById(node_id) => Self {
+            AColorSignal::SetNodeById(node_id) => Self {
                 signal: Some(Signal::SetNodeById(SetNodeById { node_id })),
             },
-            ProfileSignal::AppendNode(group_id) => Self {
+            AColorSignal::AppendNode(group_id) => Self {
                 signal: Some(Signal::AppendNode(AppendNode { group_id })),
             },
-            ProfileSignal::UpdateGroup(group_id) => Self {
+            AColorSignal::UpdateGroup(group_id) => Self {
                 signal: Some(Signal::UpdateGroup(UpdateGroup { group_id })),
             },
         }
     }
 }
-impl From<core_protobuf::acolors_proto::ProfileSignal> for crate::ProfileSignal {
-    fn from(profile_signal: core_protobuf::acolors_proto::ProfileSignal) -> Self {
+impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
+    fn from(profile_signal: core_protobuf::acolors_proto::AColorSignal) -> Self {
         match profile_signal.signal {
             Some(signal) => match signal {
                 Signal::Empty(_) => Self::Empty,
                 Signal::AppendGroup(_) => Self::AppendGroup,
+                Signal::UpdateCoreStatus(_) => Self::UpdateCoreStatus,
+                Signal::UpdateInbounds(_) => Self::UpdateInbounds,
+                Signal::CoreConfigChanged(_) => Self::CoreConfigChanged,
                 Signal::RemoveGroupById(m) => Self::RemoveGroupById(m.group_id),
                 Signal::RemoveNodeById(m) => Self::RemoveNodeById(m.node_id),
                 Signal::SetGroupById(m) => Self::SetGroupById(m.group_id),

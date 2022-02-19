@@ -8,13 +8,12 @@ use tokio::{sync::oneshot, task};
 
 use crate::{table_member::traits::AColoRSListModel, Profile};
 
-use super::{
-    profile_manager::Request, reply::ProfileReply, request::ProfileRequest, signal::ProfileSignal,
-};
+use super::{profile_manager::Request, reply::ProfileReply, request::ProfileRequest};
+use acolors_signal::{send_or_error_print, AColorSignal};
 
 pub async fn create_consumer<P: AsRef<Path>>(
     rx: Receiver<Request>,
-    signal_sender: tokio::sync::broadcast::Sender<ProfileSignal>,
+    signal_sender: tokio::sync::broadcast::Sender<AColorSignal>,
     path: P,
 ) {
     let path = path.as_ref().as_os_str().to_os_string();
@@ -26,9 +25,7 @@ pub async fn create_consumer<P: AsRef<Path>>(
         let mut profile = Profile::new(connection);
 
         while let Ok(request) = receiver.recv() {
-            if let Err(e) = try_reply(request, &signal_sender, &mut profile) {
-                error!("Consumer Reply Error: {}", e);
-            };
+            try_reply(request, &signal_sender, &mut profile);
         }
         Ok(())
     });
@@ -36,9 +33,9 @@ pub async fn create_consumer<P: AsRef<Path>>(
 
 fn try_reply(
     request: Request,
-    signal_sender: &tokio::sync::broadcast::Sender<ProfileSignal>,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     profile: &mut Profile,
-) -> Result<()> {
+) {
     debug!("Got = {:?}", request);
     let (sender, request) = (request.sender, request.content);
     debug!("{:?}/{:?}", sender, request);
@@ -52,34 +49,33 @@ fn try_reply(
         ProfileRequest::GetNodeById(node_id) => get_node_by_id_reply(profile, sender, node_id),
         ProfileRequest::RemoveGroupById(group_id) => {
             remove_group_by_id_reply(profile, sender, group_id);
-            signal_sender.send(ProfileSignal::RemoveGroupById(group_id))?;
+            send_or_error_print(signal_sender, AColorSignal::RemoveGroupById(group_id));
         }
         ProfileRequest::RemoveNodeById(node_id) => {
             remove_node_by_id_reply(profile, sender, node_id);
-            signal_sender.send(ProfileSignal::RemoveNodeById(node_id))?;
+            send_or_error_print(signal_sender, AColorSignal::RemoveNodeById(node_id));
         }
         ProfileRequest::SetGroupById(group_id, group_data) => {
             set_group_by_id_reply(profile, sender, group_id, group_data);
-            signal_sender.send(ProfileSignal::SetGroupById(group_id))?;
+            send_or_error_print(signal_sender, AColorSignal::SetGroupById(group_id));
         }
         ProfileRequest::SetNodeById(node_id, node_data) => {
             set_node_by_id_reply(profile, sender, node_id, node_data);
-            signal_sender.send(ProfileSignal::SetNodeById(node_id))?;
+            send_or_error_print(signal_sender, AColorSignal::SetNodeById(node_id));
         }
         ProfileRequest::AppendGroup(group_data) => {
             append_group_reply(profile, sender, group_data);
-            signal_sender.send(ProfileSignal::AppendGroup)?;
+            send_or_error_print(signal_sender, AColorSignal::AppendGroup);
         }
         ProfileRequest::AppendNode(group_id, node_data) => {
             append_node_reply(profile, sender, group_id, node_data);
-            signal_sender.send(ProfileSignal::AppendNode(group_id))?;
+            send_or_error_print(signal_sender, AColorSignal::AppendNode(group_id));
         }
         ProfileRequest::UpdateGroup(group_id, nodes) => {
             update_group_by_id_reply(profile, sender, group_id, nodes);
-            signal_sender.send(ProfileSignal::UpdateGroup(group_id))?;
+            send_or_error_print(signal_sender, AColorSignal::UpdateGroup(group_id));
         }
     }
-    Ok(())
 }
 
 fn update_group_by_id_reply(
@@ -366,7 +362,7 @@ fn create_connection<P: AsRef<Path>>(path: P) -> Result<Connection> {
         Ok(c) => Ok(c),
         Err(e) => {
             error!("Channel open failed: {}", e);
-            return Err(e.into());
+            Err(e.into())
         }
     }
 }

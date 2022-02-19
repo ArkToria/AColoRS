@@ -1,4 +1,4 @@
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 
 use spdlog::info;
 
@@ -8,10 +8,6 @@ use core_protobuf::acolors_proto::{profile_manager_server::ProfileManager, *};
 use profile_manager::{self, ProfileTaskProducer};
 use serialize_tool::serialize::serializetool::{decode_outbound_from_url, get_nodes_from_base64};
 use utils::net::get_http_content;
-
-use crate::signal_stream::SignalStream;
-
-type Stream<T> = Pin<Box<dyn futures::Stream<Item = Result<T, Status>> + Send>>;
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
@@ -25,18 +21,6 @@ impl AColoRSProfile {
 
 #[tonic::async_trait]
 impl ProfileManager for AColoRSProfile {
-    type GetNotificationsStream = Stream<ProfileSignal>;
-    async fn get_notifications(
-        &self,
-        request: Request<GetNotificationsRequest>,
-    ) -> Result<Response<Self::GetNotificationsStream>, Status> {
-        info!("Client connected from {:?}", request.remote_addr());
-
-        Ok(Response::new(
-            Box::pin(SignalStream::new(self.manager.get_signal_recevier()))
-                as Self::GetNotificationsStream,
-        ))
-    }
     async fn count_groups(
         &self,
         request: Request<CountGroupsRequest>,

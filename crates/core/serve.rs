@@ -4,7 +4,7 @@ use spdlog::{debug, error, info};
 use utils::net::{tcp_get_available_port, tcp_port_is_available};
 
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use crate::args::Args;
@@ -45,7 +45,7 @@ fn value_of_or(matches: &ArgMatches, value: &str, default_path: &str) -> PathBuf
     database_path
 }
 
-fn print_file_path(database_path: &PathBuf, config_path: &PathBuf, core_path: &PathBuf) {
+fn print_file_path(database_path: &Path, config_path: &Path, core_path: &Path) {
     info!(
         "Database Path: {}",
         database_path.as_os_str().to_string_lossy(),

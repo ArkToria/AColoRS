@@ -28,6 +28,7 @@ core_protobuf = {path = "../../components/core_protobuf"}
 core_data = {path = "../../components/core_data"}
 serialize_tool = {path = "../../components/serialize_tool"}
 utils = { path = "../../components/utils" }
+acolors_signal = {path = "../../components/acolors_signal"}
 
 [build-dependencies]
 tonic-build = "0.6.2"

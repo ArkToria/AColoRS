@@ -6,19 +6,22 @@ use anyhow::Result;
 use anyhow::{anyhow, Context};
 use core_protobuf::acolors_proto::config_manager_server::ConfigManagerServer;
 use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
+use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
 use kernel_manager::v2ray::coretool::V2RayCore;
 use kernel_manager::CoreTool;
 use spdlog::{error, info};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::transport::Server;
 
 use crate::config_manager::{config_read_to_json, AColoRSConfig};
 use crate::core_manager::AColoRSCore;
+use crate::notifications::AColoRSNotifications;
 use crate::profile::AColoRSProfile;
 use core_protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
 mod config_manager;
 mod core_manager;
+mod notifications;
 mod profile;
 mod signal_stream;
 mod utils;
@@ -49,6 +52,7 @@ pub fn serve<P: AsRef<Path>>(
     Ok(())
 }
 
+const BUFFER_SIZE: usize = 16;
 async fn start_server<P: AsRef<Path>>(
     addr: SocketAddr,
     database_path: P,
@@ -64,12 +68,24 @@ async fn start_server<P: AsRef<Path>>(
         None => None,
     };
 
-    let profile_task_producer =
-        Arc::new(profile_manager::ProfileTaskProducer::new(database_path).await?);
+    let (signal_sender, _) = broadcast::channel(BUFFER_SIZE);
+
+    let acolors_notifications = AColoRSNotifications::new(signal_sender.clone());
+
+    let profile_task_producer = Arc::new(
+        profile_manager::ProfileTaskProducer::new(
+            database_path,
+            signal_sender.clone(),
+            BUFFER_SIZE,
+        )
+        .await?,
+    );
+
     let acolors_profile = AColoRSProfile::new(profile_task_producer.clone()).await;
 
     let inbounds = Arc::new(RwLock::new(config_inbounds.unwrap_or_default()));
-    let acolors_config = AColoRSConfig::new(config_path, inbounds.clone()).await;
+    let acolors_config =
+        AColoRSConfig::new(config_path, inbounds.clone(), signal_sender.clone()).await;
 
     let core = match V2RayCore::new(core_path.as_ref().as_os_str()) {
         Ok(c) => {
@@ -82,11 +98,13 @@ async fn start_server<P: AsRef<Path>>(
         }
     };
     let wraped_core = Arc::new(Mutex::new(core));
-    let acolors_core = AColoRSCore::new::<V2RayCore>(wraped_core, profile_task_producer, inbounds);
+    let acolors_core =
+        AColoRSCore::new::<V2RayCore>(wraped_core, profile_task_producer, inbounds, signal_sender);
 
     info!("gRPC server is available at http://{}\n", addr);
 
     Server::builder()
+        .add_service(NotificationsServer::new(acolors_notifications))
         .add_service(ProfileManagerServer::new(acolors_profile))
         .add_service(ConfigManagerServer::new(acolors_config))
         .add_service(CoreManagerServer::new(acolors_core))

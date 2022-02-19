@@ -28,7 +28,32 @@ service ProfileManager {
   rpc AppendNodeByUrl(AppendNodeByUrlRequest) returns (AppendNodeByUrlReply) {}
 
   rpc UpdateGroupByID(UpdateGroupByIDRequest) returns (UpdateGroupByIDReply) {}
+
+  rpc GetNotifications(GetNotificationsRequest) returns (stream ProfileSignal);
 }
+
+message ProfileSignal {
+  message Empty {}
+  message AppendGroup {}
+  message RemoveGroupByID { int32 group_id = 1; }
+  message RemoveNodeByID { int32 node_id = 1; }
+  message SetGroupByID { int32 group_id = 1; }
+  message SetNodeByID { int32 node_id = 1; }
+  message AppendNode { int32 group_id = 1; }
+  message UpdateGroup { int32 group_id = 1; }
+  oneof signal {
+    Empty empty = 1;
+    AppendGroup append_group = 2;
+    RemoveGroupByID remove_group_by_id = 3;
+    RemoveNodeByID remove_node_by_id = 4;
+    SetGroupByID set_group_by_id = 5;
+    SetNodeByID set_node_by_id = 6;
+    AppendNode append_node = 7;
+    UpdateGroup update_group = 8;
+  }
+}
+
+message GetNotificationsRequest {}
 
 message CountGroupsRequest {}
 message ListAllGroupsRequest {}

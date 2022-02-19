@@ -8,24 +8,37 @@ use tokio::{sync::oneshot, task};
 
 use crate::{table_member::traits::AColoRSListModel, Profile};
 
-use super::{profile_manager::Request, reply::ProfileReply, request::ProfileRequest};
+use super::{
+    profile_manager::Request, reply::ProfileReply, request::ProfileRequest, signal::ProfileSignal,
+};
 
-pub async fn create_consumer<P: AsRef<Path>>(rx: Receiver<Request>, path: P) {
+pub async fn create_consumer<P: AsRef<Path>>(
+    rx: Receiver<Request>,
+    signal_sender: tokio::sync::broadcast::Sender<ProfileSignal>,
+    path: P,
+) {
     let path = path.as_ref().as_os_str().to_os_string();
 
     task::spawn_blocking(move || -> Result<()> {
         let receiver = rx;
         let connection = create_connection(path)?;
+        let signal_sender = signal_sender;
         let mut profile = Profile::new(connection);
 
         while let Ok(request) = receiver.recv() {
-            try_reply(request, &mut profile);
+            if let Err(e) = try_reply(request, &signal_sender, &mut profile) {
+                error!("Consumer Reply Error: {}", e);
+            };
         }
         Ok(())
     });
 }
 
-fn try_reply(request: Request, profile: &mut Profile) {
+fn try_reply(
+    request: Request,
+    signal_sender: &tokio::sync::broadcast::Sender<ProfileSignal>,
+    profile: &mut Profile,
+) -> Result<()> {
     debug!("Got = {:?}", request);
     let (sender, request) = (request.sender, request.content);
     debug!("{:?}/{:?}", sender, request);
@@ -38,25 +51,35 @@ fn try_reply(request: Request, profile: &mut Profile) {
         ProfileRequest::GetGroupById(group_id) => get_group_by_id_reply(profile, sender, group_id),
         ProfileRequest::GetNodeById(node_id) => get_node_by_id_reply(profile, sender, node_id),
         ProfileRequest::RemoveGroupById(group_id) => {
-            remove_group_by_id_reply(profile, sender, group_id)
+            remove_group_by_id_reply(profile, sender, group_id);
+            signal_sender.send(ProfileSignal::RemoveGroupById(group_id))?;
         }
         ProfileRequest::RemoveNodeById(node_id) => {
-            remove_node_by_id_reply(profile, sender, node_id)
+            remove_node_by_id_reply(profile, sender, node_id);
+            signal_sender.send(ProfileSignal::RemoveNodeById(node_id))?;
         }
         ProfileRequest::SetGroupById(group_id, group_data) => {
-            set_group_by_id_reply(profile, sender, group_id, group_data)
+            set_group_by_id_reply(profile, sender, group_id, group_data);
+            signal_sender.send(ProfileSignal::SetGroupById(group_id))?;
         }
         ProfileRequest::SetNodeById(node_id, node_data) => {
-            set_node_by_id_reply(profile, sender, node_id, node_data)
+            set_node_by_id_reply(profile, sender, node_id, node_data);
+            signal_sender.send(ProfileSignal::SetNodeById(node_id))?;
         }
-        ProfileRequest::AppendGroup(group_data) => append_group_reply(profile, sender, group_data),
+        ProfileRequest::AppendGroup(group_data) => {
+            append_group_reply(profile, sender, group_data);
+            signal_sender.send(ProfileSignal::AppendGroup)?;
+        }
         ProfileRequest::AppendNode(group_id, node_data) => {
-            append_node_reply(profile, sender, group_id, node_data)
+            append_node_reply(profile, sender, group_id, node_data);
+            signal_sender.send(ProfileSignal::AppendNode(group_id))?;
         }
         ProfileRequest::UpdateGroup(group_id, nodes) => {
-            update_group_by_id_reply(profile, sender, group_id, nodes)
+            update_group_by_id_reply(profile, sender, group_id, nodes);
+            signal_sender.send(ProfileSignal::UpdateGroup(group_id))?;
         }
     }
+    Ok(())
 }
 
 fn update_group_by_id_reply(

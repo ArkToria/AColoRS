@@ -20,6 +20,7 @@ use core_protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 mod config_manager;
 mod core_manager;
 mod profile;
+mod signal_stream;
 mod utils;
 
 pub fn serve<P: AsRef<Path>>(

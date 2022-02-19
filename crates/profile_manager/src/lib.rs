@@ -12,3 +12,4 @@ pub use table_member::runtime::RuntimeValue;
 pub use profile::Profile;
 
 pub use manager::profile_manager::ProfileTaskProducer;
+pub use manager::signal::ProfileSignal;

@@ -4,25 +4,32 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use tokio::sync::oneshot;
+use tokio::sync::{broadcast, oneshot};
 
 use core_data::{GroupData, NodeData};
 
-use super::{consumer::create_consumer, reply::ProfileReply, request::ProfileRequest};
+use super::{
+    consumer::create_consumer, reply::ProfileReply, request::ProfileRequest, signal::ProfileSignal,
+};
 
-const BUFFER_SIZE: usize = 512;
+const BUFFER_SIZE: usize = 16;
 #[derive(Debug)]
 pub struct ProfileTaskProducer {
     sender: mpsc::SyncSender<Request>,
+    signal_sender: broadcast::Sender<ProfileSignal>,
 }
 
 impl ProfileTaskProducer {
     pub async fn new<P: AsRef<Path>>(path: P) -> Result<ProfileTaskProducer> {
+        let (signal_sender, _) = broadcast::channel(BUFFER_SIZE);
         let (sender, rx) = mpsc::sync_channel(BUFFER_SIZE);
 
-        create_consumer(rx, path).await;
+        create_consumer(rx, signal_sender.clone(), path).await;
 
-        Ok(ProfileTaskProducer { sender })
+        Ok(ProfileTaskProducer {
+            sender,
+            signal_sender,
+        })
     }
 
     fn send_request(&self, content: ProfileRequest) -> Result<oneshot::Receiver<ProfileReply>> {
@@ -178,6 +185,9 @@ impl ProfileTaskProducer {
 
             _ => unreachable!(),
         }
+    }
+    pub fn get_signal_recevier(&self) -> broadcast::Receiver<ProfileSignal> {
+        self.signal_sender.subscribe()
     }
 }
 

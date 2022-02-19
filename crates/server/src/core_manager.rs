@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{marker, sync::Arc};
 
 use acolors_signal::{send_or_error_print, AColorSignal};
 use core_protobuf::acolors_proto::{
@@ -12,25 +12,27 @@ use spdlog::info;
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
-type ConfigType = String;
+//type ConfigType = String;
 #[derive(Debug)]
-pub struct AColoRSCore<Core>
+pub struct AColoRSCore<Core, ConfigType>
 where
     Core: CoreTool<ConfigType> + Send + Sync + 'static,
+    ConfigType: Clone + Send + Sync + 'static,
 {
     core: Arc<Mutex<Core>>,
     profile: Arc<ProfileTaskProducer>,
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
     current_node: Mutex<Option<core_data::NodeData>>,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
+    _config_type_marker: marker::PhantomData<ConfigType>,
 }
 
-impl<Core> AColoRSCore<Core>
+impl<Core, ConfigType> AColoRSCore<Core, ConfigType>
 where
     Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Send + Sync + 'static,
+    ConfigType: Clone + Send + Sync + 'static,
 {
-    pub fn new<String>(
+    pub fn new(
         core: Arc<Mutex<Core>>,
         profile: Arc<ProfileTaskProducer>,
         inbounds: Arc<RwLock<config_manager::Inbounds>>,
@@ -42,15 +44,16 @@ where
             inbounds,
             current_node: Mutex::new(None),
             signal_sender,
+            _config_type_marker: marker::PhantomData::default(),
         }
     }
 }
 
 #[tonic::async_trait]
-impl<Core> CoreManager for AColoRSCore<Core>
+impl<Core, ConfigType> CoreManager for AColoRSCore<Core, ConfigType>
 where
     Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Send + Sync + 'static,
+    ConfigType: Clone + Send + Sync + 'static,
 {
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<RunReply>, Status> {
         info!("Run from {:?}", request.remote_addr());
@@ -136,14 +139,14 @@ where
     }
 }
 
-async fn regenerate_config<Core>(
+async fn regenerate_config<Core, ConfigType>(
     current_node: &Mutex<Option<core_data::NodeData>>,
     inbounds: &Arc<RwLock<config_manager::Inbounds>>,
     core: &Arc<Mutex<Core>>,
 ) -> Result<(), Status>
 where
     Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Send + Sync + 'static,
+    ConfigType: Clone + Send + Sync + 'static,
 {
     let current_node_guard = &*current_node.lock().await;
     let node_data = match current_node_guard {

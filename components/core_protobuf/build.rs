@@ -72,6 +72,13 @@ const STRUCT_PATHS: &[&str] = &[
 ];
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::compile_protos("../../proto/acolors.proto")?;
+
+    compile_v2ray_protos()?;
+
+    Ok(())
+}
+
+fn compile_v2ray_protos() -> Result<(), Box<dyn std::error::Error>> {
     let mut builder = tonic_build::configure()
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .field_attribute(
@@ -83,6 +90,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         builder = builder.type_attribute(object, "#[serde(default)]");
     }
     builder.compile(&["../../proto/v2ray_config.proto"], &["../../proto"])?;
-
     Ok(())
 }

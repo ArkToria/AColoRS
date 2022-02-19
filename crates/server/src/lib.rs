@@ -99,7 +99,7 @@ async fn start_server<P: AsRef<Path>>(
     };
     let wraped_core = Arc::new(Mutex::new(core));
     let acolors_core =
-        AColoRSCore::new::<V2RayCore>(wraped_core, profile_task_producer, inbounds, signal_sender);
+        AColoRSCore::new(wraped_core, profile_task_producer, inbounds, signal_sender);
 
     info!("gRPC server is available at http://{}\n", addr);
 

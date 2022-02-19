@@ -123,7 +123,7 @@ where
 
         let node_data = match self.profile.get_node_by_id(node_id).await {
             Ok(c) => c,
-            Err(e) => return Err(Status::cancelled(format!("Node unavailable: \"{}\"", e))),
+            Err(e) => return Err(Status::not_found(format!("Node unavailable: \"{}\"", e))),
         };
 
         let mut data_guard = self.current_node.lock().await;

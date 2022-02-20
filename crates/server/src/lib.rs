@@ -22,7 +22,6 @@ mod core_manager;
 mod notifications;
 mod profile;
 mod signal_stream;
-mod utils;
 
 pub fn serve<P: AsRef<Path>>(
     address: SocketAddr,
@@ -58,13 +57,10 @@ async fn start_server<P: AsRef<Path>>(
     config_path: P,
 ) -> Result<()> {
     let mut config = config_read_to_json(&config_path).await?;
-    let config_inbounds = match config.get_mut("inbounds") {
-        Some(v) => {
-            let inbounds = serde_json::from_value(v.take())?;
-            Some(inbounds)
-        }
-        None => None,
-    };
+    let config_inbounds = config
+        .get_mut("inbounds")
+        .map(|v| serde_json::from_value(v.take()))
+        .transpose()?;
 
     let (signal_sender, _) = broadcast::channel(BUFFER_SIZE);
 

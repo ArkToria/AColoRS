@@ -7,31 +7,26 @@ pub fn check_is_default_and_delete(value: &mut Value) -> bool {
         Value::Number(n) => n.as_u64().unwrap_or(0) == 0,
         Value::String(s) => s.is_empty(),
         Value::Array(value_vec) => {
-            if value_vec.is_empty() {
-                true
-            } else {
-                value_vec.iter_mut().for_each(|v| {
-                    if let Value::Object(_) = v {
-                        check_is_default_and_delete(v);
-                    }
-                });
-                false
-            }
+            value_vec.iter_mut().for_each(|v| {
+                if let Value::Object(_) = v {
+                    check_is_default_and_delete(v);
+                }
+            });
+
+            value_vec.is_empty()
         }
         Value::Object(map) => {
-            if map.is_empty() {
-                true
-            } else {
-                let mut flag = true;
-                map.retain(|_, value| {
-                    if !check_is_default_and_delete(value) {
-                        flag = false;
-                        return true;
-                    }
+            let mut contain_non_default_member = true;
+            map.retain(|_, value| {
+                if check_is_default_and_delete(value) {
                     false
-                });
-                flag
-            }
+                } else {
+                    contain_non_default_member = false;
+                    true
+                }
+            });
+
+            map.is_empty() || contain_non_default_member
         }
     }
 }

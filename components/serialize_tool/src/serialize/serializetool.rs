@@ -21,6 +21,7 @@ pub fn get_nodes_from_base64(base64: &str) -> anyhow::Result<Vec<NodeData>> {
 
     url_lines.into_iter().for_each(|node_url| {
         let node = decode_outbound_from_url(node_url);
+
         match node {
             Ok(n) => nodes.push(n),
             Err(e) => {
@@ -35,9 +36,11 @@ pub fn get_nodes_from_base64(base64: &str) -> anyhow::Result<Vec<NodeData>> {
 pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {
     let url_string: String = url.into();
     let scheme = url_string.split("://").next().unwrap_or("");
+
     if scheme.is_empty() {
         return Err(anyhow!("No scheme"));
     }
+
     match scheme {
         "vmess" => vmess_outbound_from_base64(url_string),
         "trojan" => trojan_outbound_from_url(url_string),
@@ -54,9 +57,10 @@ mod tests {
     use anyhow::Result;
     use regex::Regex;
 
+    const TEST_VMESS: &str = "vmess://eyJhZGQiOiJ0ZXN0MiIsImFpZCI6MzEyLCJob3N0IjoiZmQiLCJpZCI6ImIyOTYxOWI3LTZkOWEtNGQwYy03MjI5LWRkMjczNGExY2FhNCIsIm5ldCI6IndzIiwicGF0aCI6ImFmZCIsInBvcnQiOjE0MiwicHMiOiJ0ZXN0MSIsInNjeSI6ImNoYWNoYTIwLXBvbHkxMzA1Iiwic25pIjoiNDEyIiwidGxzIjoidGxzIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9@";
     #[test]
     fn test_vmess() -> Result<()> {
-        let t=decode_outbound_from_url("vmess://eyJhZGQiOiJ0ZXN0MiIsImFpZCI6MzEyLCJob3N0IjoiZmQiLCJpZCI6ImIyOTYxOWI3LTZkOWEtNGQwYy03MjI5LWRkMjczNGExY2FhNCIsIm5ldCI6IndzIiwicGF0aCI6ImFmZCIsInBvcnQiOjE0MiwicHMiOiJ0ZXN0MSIsInNjeSI6ImNoYWNoYTIwLXBvbHkxMzA1Iiwic25pIjoiNDEyIiwidGxzIjoidGxzIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9@");
+        let t = decode_outbound_from_url(TEST_VMESS);
         let data = match t {
             Ok(d) => d,
             Err(e) => {
@@ -64,6 +68,7 @@ mod tests {
                 return Ok(());
             }
         };
+
         println!("{}", data.raw);
         assert_eq!(
             r#"{

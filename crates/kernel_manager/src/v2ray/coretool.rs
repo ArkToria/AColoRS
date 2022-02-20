@@ -47,10 +47,10 @@ impl V2RayCore {
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()?;
-        let mut stdin = match process.stdin.take() {
-            Some(cs) => cs,
-            None => return Err(anyhow!("No ChildStdin")),
-        };
+        let mut stdin = process
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("No ChildStdin"))?;
         stdin.write_all(b"}{")?;
         Ok(process)
     }
@@ -64,10 +64,10 @@ impl V2RayCore {
         let mut output = String::new();
         stdout.read_to_string(&mut output)?;
 
-        let core_info = match output.lines().next() {
-            Some(s) => s,
-            None => return Err(anyhow!("Failed to fetch core name&version")),
-        };
+        let core_info = output
+            .lines()
+            .next()
+            .ok_or_else(|| anyhow!("Failed to fetch core name&version"))?;
         let mut info_split = core_info.split(' ');
         let name = info_split.next().unwrap_or("").to_string();
         let version = info_split.next().unwrap_or("").to_string();
@@ -162,10 +162,9 @@ impl CoreTool for V2RayCore {
     }
 
     fn get_stdout(&mut self) -> Option<std::process::ChildStdout> {
-        match self.child_process.as_mut() {
-            Some(child) => child.stdout.take(),
-            None => None,
-        }
+        self.child_process
+            .as_mut()
+            .and_then(|child| child.stdout.take())
     }
 
     fn get_version(&self) -> semver::Version {

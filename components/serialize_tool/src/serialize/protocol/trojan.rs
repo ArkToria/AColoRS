@@ -13,16 +13,17 @@ pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
     let mut node = NodeData::default();
 
     let outbound = meta.outbound;
-    let outbound_settings = match &outbound.settings {
-        Some(s) => s,
-        None => return Err(anyhow!("No OutboundSettings")),
-    };
-    let trojan = match &outbound_settings.kind {
-        Some(s) => match s {
-            outbound_object::outbound_settings::Kind::Trojan(trojan) => trojan,
-            _ => return Err(anyhow!("Protocol Error")),
-        },
-        None => return Err(anyhow!("No OutboundSettings Kind")),
+    let outbound_settings = outbound
+        .settings
+        .as_ref()
+        .ok_or_else(|| anyhow!("No OutboundSettings"))?;
+    let kind = outbound_settings
+        .kind
+        .as_ref()
+        .ok_or_else(|| anyhow!("No OutboundSettings Kind"))?;
+    let trojan = match kind {
+        outbound_object::outbound_settings::Kind::Trojan(trojan) => trojan,
+        _ => return Err(anyhow!("Protocol Error")),
     };
 
     let server = &trojan.servers[0];
@@ -47,12 +48,9 @@ fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // trojan://<password>@<host>:<port>?sni=<server_name>&allowinsecure=<allow_insecure>&alpn=h2%0Ahttp/1.1#<name>
     let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:]*)\?([^%]*)%0A([^#]*)#([^#]*)"#)?;
-    let caps = match re.captures(url_str) {
-        Some(c) => c,
-        None => {
-            return Err(anyhow!("Failed to parse sip002 url"));
-        }
-    };
+    let caps = re
+        .captures(url_str)
+        .ok_or_else(|| anyhow!("Failed to parse sip002 url"))?;
 
     let mut meta = URLMetaObject {
         name: caps[7].to_string(),

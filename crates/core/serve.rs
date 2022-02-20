@@ -38,10 +38,10 @@ pub fn serve(args: &Args) -> Result<bool> {
 }
 
 fn value_of_or(matches: &ArgMatches, value: &str, default_path: &str) -> PathBuf {
-    let database_path: PathBuf = match matches.value_of(value) {
-        Some(s) => PathBuf::from(s),
-        None => PathBuf::from(default_path),
-    };
+    let database_path = matches
+        .value_of(value)
+        .map_or_else(|| PathBuf::from(default_path), PathBuf::from);
+
     database_path
 }
 

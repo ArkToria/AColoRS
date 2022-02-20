@@ -56,8 +56,9 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
 }
 impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
     fn from(profile_signal: core_protobuf::acolors_proto::AColorSignal) -> Self {
-        match profile_signal.signal {
-            Some(signal) => match signal {
+        profile_signal
+            .signal
+            .map(|s| match s {
                 Signal::Empty(_) => Self::Empty,
                 Signal::AppendGroup(_) => Self::AppendGroup,
                 Signal::UpdateCoreStatus(_) => Self::UpdateCoreStatus,
@@ -69,8 +70,7 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
                 Signal::SetNodeById(m) => Self::SetNodeById(m.node_id),
                 Signal::AppendNode(m) => Self::AppendNode(m.group_id),
                 Signal::UpdateGroup(m) => Self::UpdateGroup(m.group_id),
-            },
-            None => Self::Empty,
-        }
+            })
+            .unwrap_or(Self::Empty)
     }
 }

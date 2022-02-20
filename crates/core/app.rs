@@ -30,6 +30,11 @@ pub fn app() -> Command<'static> {
                     .long("corepath")
                     .takes_value(true)
                     .help("Core path (default: \"v2ray\")"),
+                Arg::new("corename")
+                    .short('t')
+                    .long("corename")
+                    .takes_value(true)
+                    .help("Core name (default: \"v2ray\")"),
                 Arg::new("port")
                     .short('p')
                     .long("port")

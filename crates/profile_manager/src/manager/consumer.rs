@@ -358,11 +358,8 @@ fn try_send(sender: oneshot::Sender<ProfileReply>, reply: ProfileReply) {
     }
 }
 fn create_connection<P: AsRef<Path>>(path: P) -> Result<Connection> {
-    match Connection::open(path) {
-        Ok(c) => Ok(c),
-        Err(e) => {
-            error!("Channel open failed: {}", e);
-            Err(e.into())
-        }
-    }
+    Connection::open(path).map_err(|e| {
+        error!("Channel open failed: {}", e);
+        e.into()
+    })
 }

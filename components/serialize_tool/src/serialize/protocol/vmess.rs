@@ -12,16 +12,17 @@ pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
     let mut node = NodeData::default();
 
     let outbound = meta.outbound;
-    let outbound_settings = match &outbound.settings {
-        Some(s) => s,
-        None => return Err(anyhow!("No OutboundSettings")),
-    };
-    let vmess = match &outbound_settings.kind {
-        Some(s) => match s {
-            outbound_object::outbound_settings::Kind::Vmess(vm) => vm,
-            _ => return Err(anyhow!("Protocol Error")),
-        },
-        None => return Err(anyhow!("No OutboundSettings Kind")),
+    let outbound_settings = outbound
+        .settings
+        .as_ref()
+        .ok_or_else(|| anyhow!("No OutboundSettings"))?;
+    let kind = outbound_settings
+        .kind
+        .as_ref()
+        .ok_or_else(|| anyhow!("No OutboundSettings Kind"))?;
+    let vmess = match kind {
+        outbound_object::outbound_settings::Kind::Vmess(vm) => vm,
+        _ => return Err(anyhow!("Protocol Error")),
     };
 
     let server = &vmess.vnext[0];

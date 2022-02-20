@@ -11,16 +11,19 @@ pub fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
     let mut node = NodeData::default();
 
     let outbound = meta.outbound;
-    let outbound_settings = match &outbound.settings {
-        Some(s) => s,
-        None => return Err(anyhow!("No OutboundSettings")),
-    };
-    let shadowsocks = match &outbound_settings.kind {
-        Some(s) => match s {
-            outbound_object::outbound_settings::Kind::Shadowsocks(ss) => ss,
-            _ => return Err(anyhow!("Protocol Error")),
-        },
-        None => return Err(anyhow!("No OutboundSettings Kind")),
+    let outbound_settings = outbound
+        .settings
+        .as_ref()
+        .ok_or_else(|| anyhow!("No OutboundSettings"))?;
+
+    let kind = outbound_settings
+        .kind
+        .as_ref()
+        .ok_or_else(|| anyhow!("No OutboundSettings Kind"))?;
+
+    let shadowsocks = match kind {
+        outbound_object::outbound_settings::Kind::Shadowsocks(ss) => ss,
+        _ => return Err(anyhow!("Protocol Error")),
     };
 
     let server = &shadowsocks.servers[0];
@@ -46,12 +49,9 @@ fn sip002_decode(url_str: &str) -> Result<URLMetaObject> {
     // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
 
     let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:#]*)#([^#]*)"#)?;
-    let caps = match re.captures(url_str) {
-        Some(c) => c,
-        None => {
-            return Err(anyhow!("Failed to parse sip002 url"));
-        }
-    };
+    let caps = re
+        .captures(url_str)
+        .ok_or_else(|| anyhow!("Failed to parse sip002 url"))?;
 
     let mut meta = URLMetaObject {
         name: caps[5].to_string(),

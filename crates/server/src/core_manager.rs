@@ -1,14 +1,19 @@
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    ffi::{OsStr, OsString},
+    sync::Arc,
+};
 
 use acolors_signal::{send_or_error_print, AColorSignal};
+use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetIsRunningReply, GetIsRunningRequest, RestartReply,
     RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest,
     StopReply, StopRequest,
 };
-use kernel_manager::CoreTool;
+use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::ProfileTaskProducer;
-use spdlog::info;
+use spdlog::{error, info};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
@@ -19,6 +24,7 @@ pub struct AColoRSCore {
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
     current_node: Mutex<Option<core_data::NodeData>>,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
+    core_map: HashMap<String, (String, OsString)>,
 }
 
 impl AColoRSCore {
@@ -28,19 +34,55 @@ impl AColoRSCore {
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let core = Arc::new(Mutex::new(None));
+        let core_map = HashMap::new();
         Self {
             current_core: core,
             profile,
             inbounds,
             current_node: Mutex::new(None),
             signal_sender,
+            core_map,
         }
     }
 
-    pub async fn set_core(&mut self, core: Option<Box<Core>>) {
+    pub async fn set_core(&mut self, core_name: &str) -> Result<()> {
         let mut core_guard = self.current_core.lock().await;
 
-        *core_guard = core;
+        let (core_type, path) = match self.core_map.get(core_name) {
+            Some(p) => p,
+            None => {
+                return Err(anyhow!("Core Not Added"));
+            }
+        };
+
+        let core = match create_core_by_path(path, core_type) {
+            Ok(c) => c,
+            Err(e) => {
+                error!("Core not found : {}", e);
+                return Err(e);
+            }
+        };
+
+        info!(
+            "Core <{}> version ({})",
+            core.get_name(),
+            core.get_version()
+        );
+
+        *core_guard = Some(core);
+        Ok(())
+    }
+    pub async fn add_core<S: AsRef<OsStr>>(
+        &mut self,
+        core_type: &str,
+        name: &str,
+        core_path: S,
+    ) -> Result<()> {
+        let name = name.to_string();
+        let core_path = core_path.as_ref().to_os_string();
+        let core_type = core_type.to_string();
+        self.core_map.insert(name, (core_type, core_path));
+        Ok(())
     }
 }
 

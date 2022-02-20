@@ -7,8 +7,6 @@ use anyhow::{anyhow, Context};
 use core_protobuf::acolors_proto::config_manager_server::ConfigManagerServer;
 use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
 use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
-use kernel_manager::v2ray::coretool::V2RayCore;
-use kernel_manager::CoreTool;
 use spdlog::{error, info};
 use tokio::sync::{broadcast, RwLock};
 use tonic::transport::Server;
@@ -87,19 +85,11 @@ async fn start_server<P: AsRef<Path>>(
     let acolors_config =
         AColoRSConfig::new(config_path, inbounds.clone(), signal_sender.clone()).await;
 
-    let core = match V2RayCore::new(core_path.as_ref().as_os_str()) {
-        Ok(c) => {
-            info!("Core <{}> version ({})", c.get_name(), c.get_version());
-            c
-        }
-        Err(e) => {
-            error!("Core not found : {}", e);
-            std::process::exit(1);
-        }
-    };
-    let wraped_core = Box::new(core) as Box<dyn CoreTool + Sync + Send + 'static>;
     let mut acolors_core = AColoRSCore::new(profile_task_producer, inbounds, signal_sender);
-    acolors_core.set_core(Some(wraped_core)).await;
+    acolors_core
+        .add_core("v2ray", "default_core", core_path.as_ref().as_os_str())
+        .await?;
+    acolors_core.set_core("default_core").await?;
 
     info!("gRPC server is available at http://{}\n", addr);
 

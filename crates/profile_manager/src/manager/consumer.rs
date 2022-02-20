@@ -48,38 +48,32 @@ fn try_reply(
         ProfileRequest::GetGroupById(group_id) => get_group_by_id_reply(profile, sender, group_id),
         ProfileRequest::GetNodeById(node_id) => get_node_by_id_reply(profile, sender, node_id),
         ProfileRequest::RemoveGroupById(group_id) => {
-            remove_group_by_id_reply(profile, sender, group_id);
-            send_or_error_print(signal_sender, AColorSignal::RemoveGroupById(group_id));
+            remove_group_by_id_reply(profile, signal_sender, sender, group_id);
         }
         ProfileRequest::RemoveNodeById(node_id) => {
-            remove_node_by_id_reply(profile, sender, node_id);
-            send_or_error_print(signal_sender, AColorSignal::RemoveNodeById(node_id));
+            remove_node_by_id_reply(profile, signal_sender, sender, node_id);
         }
         ProfileRequest::SetGroupById(group_id, group_data) => {
-            set_group_by_id_reply(profile, sender, group_id, group_data);
-            send_or_error_print(signal_sender, AColorSignal::SetGroupById(group_id));
+            set_group_by_id_reply(profile, signal_sender, sender, group_id, group_data);
         }
         ProfileRequest::SetNodeById(node_id, node_data) => {
-            set_node_by_id_reply(profile, sender, node_id, node_data);
-            send_or_error_print(signal_sender, AColorSignal::SetNodeById(node_id));
+            set_node_by_id_reply(profile, signal_sender, sender, node_id, node_data);
         }
         ProfileRequest::AppendGroup(group_data) => {
-            append_group_reply(profile, sender, group_data);
-            send_or_error_print(signal_sender, AColorSignal::AppendGroup);
+            append_group_reply(profile, signal_sender, sender, group_data);
         }
         ProfileRequest::AppendNode(group_id, node_data) => {
-            append_node_reply(profile, sender, group_id, node_data);
-            send_or_error_print(signal_sender, AColorSignal::AppendNode(group_id));
+            append_node_reply(profile, signal_sender, sender, group_id, node_data);
         }
         ProfileRequest::UpdateGroup(group_id, nodes) => {
-            update_group_by_id_reply(profile, sender, group_id, nodes);
-            send_or_error_print(signal_sender, AColorSignal::UpdateGroup(group_id));
+            update_group_by_id_reply(profile, signal_sender, sender, group_id, nodes);
         }
     }
 }
 
 fn update_group_by_id_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     group_id: i32,
     nodes: Vec<NodeData>,
@@ -114,9 +108,11 @@ fn update_group_by_id_reply(
         }
     }
     try_send(sender, ProfileReply::UpdateGroup);
+    send_or_error_print(signal_sender, AColorSignal::UpdateGroup(group_id));
 }
 fn remove_group_by_id_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     group_id: i32,
 ) {
@@ -126,6 +122,7 @@ fn remove_group_by_id_reply(
         Ok(_) => {
             debug!("Remove group By ID : {}", group_id);
             try_send(sender, ProfileReply::RemoveGroupById);
+            send_or_error_print(signal_sender, AColorSignal::RemoveGroupById(group_id));
         }
         Err(e) => {
             debug!("Remove group By ID Failed : {}", e);
@@ -135,6 +132,7 @@ fn remove_group_by_id_reply(
 }
 fn remove_node_by_id_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     node_id: i32,
 ) {
@@ -146,6 +144,7 @@ fn remove_node_by_id_reply(
         Ok(_) => {
             debug!("Remove node By ID : {}", node_id);
             try_send(sender, ProfileReply::RemoveNodeById);
+            send_or_error_print(signal_sender, AColorSignal::RemoveNodeById(node_id));
         }
         Err(e) => {
             debug!("Remove node By ID Failed : {}", e);
@@ -156,6 +155,7 @@ fn remove_node_by_id_reply(
 
 fn append_group_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     group_data: GroupData,
 ) {
@@ -165,6 +165,7 @@ fn append_group_reply(
         Ok(_) => {
             debug!("Append group");
             try_send(sender, ProfileReply::AppendGroup);
+            send_or_error_print(signal_sender, AColorSignal::AppendGroup);
         }
         Err(e) => {
             debug!("Append group Failed : {}", e);
@@ -174,6 +175,7 @@ fn append_group_reply(
 }
 fn append_node_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     group_id: i32,
     node_data: NodeData,
@@ -193,6 +195,7 @@ fn append_node_reply(
         Ok(_) => {
             debug!("Append node");
             try_send(sender, ProfileReply::AppendNode);
+            send_or_error_print(signal_sender, AColorSignal::AppendNode(group_id));
         }
         Err(e) => {
             debug!("Append node Failed : {}", e);
@@ -202,6 +205,7 @@ fn append_node_reply(
 }
 fn set_group_by_id_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     group_id: i32,
     group_data: GroupData,
@@ -212,6 +216,7 @@ fn set_group_by_id_reply(
         Ok(_) => {
             debug!("Set group By ID : {}", group_id);
             try_send(sender, ProfileReply::SetGroupById);
+            send_or_error_print(signal_sender, AColorSignal::SetGroupById(group_id));
         }
         Err(e) => {
             debug!("Set group By ID Failed : {}", e);
@@ -221,6 +226,7 @@ fn set_group_by_id_reply(
 }
 fn set_node_by_id_reply(
     profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
     sender: oneshot::Sender<ProfileReply>,
     node_id: i32,
     node_data: NodeData,
@@ -233,6 +239,7 @@ fn set_node_by_id_reply(
         Ok(_) => {
             debug!("Set node By ID : {}", node_id);
             try_send(sender, ProfileReply::SetNodeById);
+            send_or_error_print(signal_sender, AColorSignal::SetNodeById(node_id));
         }
         Err(e) => {
             debug!("Set node By ID Failed : {}", e);

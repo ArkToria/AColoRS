@@ -23,6 +23,23 @@ pub struct V2RayCore {
 }
 
 impl V2RayCore {
+    pub fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self> {
+        let output = Self::spawn_version_process(path.as_ref())?;
+
+        let (name, version) = Self::get_name_and_version(output)?;
+
+        let semver_version = semver::Version::parse(&version)?;
+
+        let path = path.into();
+
+        Ok(Self {
+            name,
+            version: semver_version,
+            path,
+            config: String::new(),
+            child_process: None,
+        })
+    }
     fn spawn_version_process(path: &OsStr) -> Result<Child> {
         let mut process = Command::new(path)
             .arg("version")
@@ -56,27 +73,37 @@ impl V2RayCore {
         let version = info_split.next().unwrap_or("").to_string();
         Ok((name, version))
     }
+
+    fn generate_config(
+        node_data: &core_data::NodeData,
+        inbounds: &config_manager::Inbounds,
+    ) -> Result<String> {
+        let mut node_config = V2RayConfig::default();
+        let mut json;
+
+        set_inbound_object(&mut node_config, inbounds);
+
+        if !node_data.url.contains("://") {
+            json = config_to_json(&node_config, &node_data.raw)?;
+        } else {
+            let mut outbound = json_to_outbound(&node_data.raw)?;
+
+            if outbound.tag.is_empty() {
+                outbound.tag = "PROXY".to_string();
+            }
+
+            node_config.outbounds.push(outbound);
+
+            json = config_to_json(&node_config, "")?;
+        }
+
+        check_is_default_and_delete(&mut json);
+
+        Ok(json.to_string())
+    }
 }
 
-impl CoreTool<String> for V2RayCore {
-    fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self> {
-        let output = Self::spawn_version_process(path.as_ref())?;
-
-        let (name, version) = Self::get_name_and_version(output)?;
-
-        let semver_version = semver::Version::parse(&version)?;
-
-        let path = path.into();
-
-        Ok(Self {
-            name,
-            version: semver_version,
-            path,
-            config: String::new(),
-            child_process: None,
-        })
-    }
-
+impl CoreTool for V2RayCore {
     fn run(&mut self) -> Result<()> {
         if self.is_running() {
             return Err(anyhow!("Core is running"));
@@ -149,36 +176,18 @@ impl CoreTool<String> for V2RayCore {
         &self.name
     }
 
-    fn generate_config(
-        node_data: &core_data::NodeData,
-        inbounds: &config_manager::Inbounds,
-    ) -> Result<String> {
-        let mut node_config = V2RayConfig::default();
-        let mut json;
-
-        set_inbound_object(&mut node_config, inbounds);
-
-        if !node_data.url.contains("://") {
-            json = config_to_json(&node_config, &node_data.raw)?;
-        } else {
-            let mut outbound = json_to_outbound(&node_data.raw)?;
-
-            if outbound.tag.is_empty() {
-                outbound.tag = "PROXY".to_string();
-            }
-
-            node_config.outbounds.push(outbound);
-
-            json = config_to_json(&node_config, "")?;
-        }
-
-        check_is_default_and_delete(&mut json);
-
-        Ok(json.to_string())
-    }
-
     fn get_config(&self) -> &str {
         &self.config
+    }
+
+    fn set_config_by_node_and_inbounds(
+        &mut self,
+        node_data: &core_data::NodeData,
+        inbounds: &config_manager::Inbounds,
+    ) -> Result<()> {
+        let config = Self::generate_config(node_data, inbounds)?;
+
+        self.set_config(config)
     }
 }
 

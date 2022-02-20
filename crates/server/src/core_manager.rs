@@ -1,4 +1,4 @@
-use std::{marker, sync::Arc};
+use std::sync::Arc;
 
 use acolors_signal::{send_or_error_print, AColorSignal};
 use core_protobuf::acolors_proto::{
@@ -12,28 +12,18 @@ use spdlog::info;
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
-//type ConfigType = String;
-#[derive(Debug)]
-pub struct AColoRSCore<Core, ConfigType>
-where
-    Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Clone + Send + Sync + 'static,
-{
-    core: Arc<Mutex<Core>>,
+type Core = dyn CoreTool + Sync + Send;
+pub struct AColoRSCore {
+    core: Arc<Mutex<Box<Core>>>,
     profile: Arc<ProfileTaskProducer>,
     inbounds: Arc<RwLock<config_manager::Inbounds>>,
     current_node: Mutex<Option<core_data::NodeData>>,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
-    _config_type_marker: marker::PhantomData<ConfigType>,
 }
 
-impl<Core, ConfigType> AColoRSCore<Core, ConfigType>
-where
-    Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Clone + Send + Sync + 'static,
-{
+impl AColoRSCore {
     pub fn new(
-        core: Arc<Mutex<Core>>,
+        core: Arc<Mutex<Box<Core>>>,
         profile: Arc<ProfileTaskProducer>,
         inbounds: Arc<RwLock<config_manager::Inbounds>>,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
@@ -44,17 +34,12 @@ where
             inbounds,
             current_node: Mutex::new(None),
             signal_sender,
-            _config_type_marker: marker::PhantomData::default(),
         }
     }
 }
 
 #[tonic::async_trait]
-impl<Core, ConfigType> CoreManager for AColoRSCore<Core, ConfigType>
-where
-    Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Clone + Send + Sync + 'static,
-{
+impl CoreManager for AColoRSCore {
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<RunReply>, Status> {
         info!("Run from {:?}", request.remote_addr());
 
@@ -139,15 +124,11 @@ where
     }
 }
 
-async fn regenerate_config<Core, ConfigType>(
+async fn regenerate_config(
     current_node: &Mutex<Option<core_data::NodeData>>,
     inbounds: &Arc<RwLock<config_manager::Inbounds>>,
-    core: &Arc<Mutex<Core>>,
-) -> Result<(), Status>
-where
-    Core: CoreTool<ConfigType> + Send + Sync + 'static,
-    ConfigType: Clone + Send + Sync + 'static,
-{
+    core: &Arc<Mutex<Box<Core>>>,
+) -> Result<(), Status> {
     let current_node_guard = &*current_node.lock().await;
     let node_data = match current_node_guard {
         Some(d) => d,
@@ -157,18 +138,8 @@ where
     };
     let inbounds = &*inbounds.read().await;
 
-    let config = match Core::generate_config(node_data, inbounds) {
-        Ok(c) => c,
-        Err(e) => {
-            return Err(Status::cancelled(format!(
-                "Generating configuration Error: {}",
-                e
-            )));
-        }
-    };
-
     let mut core_guard = core.lock().await;
-    if let Err(e) = core_guard.set_config(config) {
+    if let Err(e) = core_guard.set_config_by_node_and_inbounds(node_data, inbounds) {
         return Err(Status::cancelled(format!("Core set config Error: {}", e)));
     }
     Ok(())

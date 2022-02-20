@@ -97,7 +97,9 @@ async fn start_server<P: AsRef<Path>>(
             std::process::exit(1);
         }
     };
-    let wraped_core = Arc::new(Mutex::new(core));
+    let wraped_core = Arc::new(Mutex::new(
+        Box::new(core) as Box<dyn CoreTool + Sync + Send + 'static>
+    ));
     let acolors_core =
         AColoRSCore::new(wraped_core, profile_task_producer, inbounds, signal_sender);
 

@@ -40,9 +40,7 @@ fn generate_vmess_config_and_print_json() -> Result<()> {
         }
     };
 
-    let config = V2RayCore::generate_config(&node_data, &inbounds)?;
-
-    core.set_config(config)?;
+    core.set_config_by_node_and_inbounds(&node_data, &inbounds)?;
 
     dbg!(core.get_config());
     println!("{}", core.get_config());

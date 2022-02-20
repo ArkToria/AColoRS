@@ -1,19 +1,16 @@
-use std::{ffi::OsStr, process::ChildStdout};
+use std::process::ChildStdout;
 
 use anyhow::Result;
-pub trait CoreTool<ConfigType> {
-    fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self>
-    where
-        Self: Sized;
+pub trait CoreTool {
     fn run(&mut self) -> Result<()>;
     fn stop(&mut self) -> Result<()>;
     fn is_running(&mut self) -> bool;
-    fn set_config(&mut self, config: ConfigType) -> Result<()>;
-
-    fn generate_config(
+    fn set_config(&mut self, config: String) -> Result<()>;
+    fn set_config_by_node_and_inbounds(
+        &mut self,
         node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
-    ) -> Result<ConfigType>;
+    ) -> Result<()>;
 
     fn restart(&mut self) -> Result<()> {
         if self.is_running() {
@@ -21,7 +18,7 @@ pub trait CoreTool<ConfigType> {
         }
         self.run()
     }
-    fn update_config(&mut self, config: ConfigType) -> Result<()> {
+    fn update_config(&mut self, config: String) -> Result<()> {
         self.set_config(config)?;
         if self.is_running() {
             self.restart()?;

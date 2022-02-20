@@ -10,7 +10,7 @@ use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
 use kernel_manager::v2ray::coretool::V2RayCore;
 use kernel_manager::CoreTool;
 use spdlog::{error, info};
-use tokio::sync::{broadcast, Mutex, RwLock};
+use tokio::sync::{broadcast, RwLock};
 use tonic::transport::Server;
 
 use crate::config_manager::{config_read_to_json, AColoRSConfig};
@@ -97,11 +97,9 @@ async fn start_server<P: AsRef<Path>>(
             std::process::exit(1);
         }
     };
-    let wraped_core = Arc::new(Mutex::new(
-        Box::new(core) as Box<dyn CoreTool + Sync + Send + 'static>
-    ));
-    let acolors_core =
-        AColoRSCore::new(wraped_core, profile_task_producer, inbounds, signal_sender);
+    let wraped_core = Box::new(core) as Box<dyn CoreTool + Sync + Send + 'static>;
+    let mut acolors_core = AColoRSCore::new(profile_task_producer, inbounds, signal_sender);
+    acolors_core.set_core(Some(wraped_core)).await;
 
     info!("gRPC server is available at http://{}\n", addr);
 

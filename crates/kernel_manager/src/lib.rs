@@ -1,11 +1,21 @@
 mod core;
 pub mod v2ray;
 
+use std::ffi::OsStr;
+
+use v2ray::coretool::V2RayCore;
+
 pub use crate::core::CoreTool;
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+
+type Core = dyn CoreTool + Sync + Send + 'static;
+pub fn create_core_by_path<S: AsRef<OsStr> + ?Sized>(
+    path: &S,
+    core_name: &str,
+) -> anyhow::Result<Box<Core>> {
+    match core_name.to_ascii_lowercase().as_str() {
+        "v2ray" => Ok(Box::new(V2RayCore::new(path)?) as Box<Core>),
+        _ => {
+            todo!()
+        }
     }
 }

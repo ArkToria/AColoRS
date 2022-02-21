@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use acolors_signal::{send_or_error_print, AColorSignal};
+use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetIsRunningReply, GetIsRunningRequest, RestartReply,
@@ -97,7 +97,7 @@ impl CoreManager for AColoRSCore {
         core.run()
             .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
 
-        send_or_error_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
+        send_or_warn_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
         let reply = RunReply {};
         Ok(Response::new(reply))
@@ -114,7 +114,7 @@ impl CoreManager for AColoRSCore {
         core.stop()
             .map_err(|e| Status::aborted(format!("Core stop Error: {}", e)))?;
 
-        send_or_error_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
+        send_or_warn_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
         let reply = StopReply {};
         Ok(Response::new(reply))
@@ -137,7 +137,7 @@ impl CoreManager for AColoRSCore {
         core.restart()
             .map_err(|e| Status::aborted(format!("Core restart Error: {}", e)))?;
 
-        send_or_error_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
+        send_or_warn_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
         let reply = RestartReply {};
         Ok(Response::new(reply))
@@ -178,7 +178,7 @@ impl CoreManager for AColoRSCore {
         let mut data_guard = self.current_node.lock().await;
         *data_guard = Some(node_data);
 
-        send_or_error_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
+        send_or_warn_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
 
         let reply = SetConfigByNodeIdReply {};
         Ok(Response::new(reply))
@@ -196,7 +196,7 @@ impl CoreManager for AColoRSCore {
             .await
             .map_err(|e| Status::not_found(format!("Core not found: \"{}\"", e)))?;
 
-        send_or_error_print(&self.signal_sender, AColorSignal::CoreChanged);
+        send_or_warn_print(&self.signal_sender, AColorSignal::CoreChanged);
 
         let reply = SetCoreByTagReply {};
         Ok(Response::new(reply))

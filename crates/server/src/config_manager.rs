@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use acolors_signal::send_or_error_print;
+use acolors_signal::send_or_warn_print;
 use core_protobuf::acolors_proto::{config_manager_server::ConfigManager, *};
 use serialize_tool::serialize::serializer::check_is_default_and_delete;
 use spdlog::{debug, info};
@@ -50,7 +50,7 @@ impl ConfigManager for AColoRSConfig {
         write_config_to_file(&self.path, &inbounds).await?;
         *inbounds_write = inbounds.into();
 
-        send_or_error_print(
+        send_or_warn_print(
             &self.signal_sender,
             acolors_signal::AColorSignal::UpdateInbounds,
         );

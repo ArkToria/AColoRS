@@ -9,7 +9,7 @@ use tokio::{sync::oneshot, task};
 use crate::{table_member::traits::AColoRSListModel, Profile};
 
 use super::{profile_manager::Request, reply::ProfileReply, request::ProfileRequest};
-use acolors_signal::{send_or_error_print, AColorSignal};
+use acolors_signal::{send_or_warn_print, AColorSignal};
 
 pub async fn create_consumer<P: AsRef<Path>>(
     rx: Receiver<Request>,
@@ -108,7 +108,7 @@ fn update_group_by_id_reply(
         }
     }
     try_send(sender, ProfileReply::UpdateGroup);
-    send_or_error_print(signal_sender, AColorSignal::UpdateGroup(group_id));
+    send_or_warn_print(signal_sender, AColorSignal::UpdateGroup(group_id));
 }
 fn remove_group_by_id_reply(
     profile: &mut Profile,
@@ -122,7 +122,7 @@ fn remove_group_by_id_reply(
         Ok(_) => {
             debug!("Remove group By ID : {}", group_id);
             try_send(sender, ProfileReply::RemoveGroupById);
-            send_or_error_print(signal_sender, AColorSignal::RemoveGroupById(group_id));
+            send_or_warn_print(signal_sender, AColorSignal::RemoveGroupById(group_id));
         }
         Err(e) => {
             debug!("Remove group By ID Failed : {}", e);
@@ -144,7 +144,7 @@ fn remove_node_by_id_reply(
         Ok(_) => {
             debug!("Remove node By ID : {}", node_id);
             try_send(sender, ProfileReply::RemoveNodeById);
-            send_or_error_print(signal_sender, AColorSignal::RemoveNodeById(node_id));
+            send_or_warn_print(signal_sender, AColorSignal::RemoveNodeById(node_id));
         }
         Err(e) => {
             debug!("Remove node By ID Failed : {}", e);
@@ -165,7 +165,7 @@ fn append_group_reply(
         Ok(_) => {
             debug!("Append group");
             try_send(sender, ProfileReply::AppendGroup);
-            send_or_error_print(signal_sender, AColorSignal::AppendGroup);
+            send_or_warn_print(signal_sender, AColorSignal::AppendGroup);
         }
         Err(e) => {
             debug!("Append group Failed : {}", e);
@@ -195,7 +195,7 @@ fn append_node_reply(
         Ok(_) => {
             debug!("Append node");
             try_send(sender, ProfileReply::AppendNode);
-            send_or_error_print(signal_sender, AColorSignal::AppendNode(group_id));
+            send_or_warn_print(signal_sender, AColorSignal::AppendNode(group_id));
         }
         Err(e) => {
             debug!("Append node Failed : {}", e);
@@ -216,7 +216,7 @@ fn set_group_by_id_reply(
         Ok(_) => {
             debug!("Set group By ID : {}", group_id);
             try_send(sender, ProfileReply::SetGroupById);
-            send_or_error_print(signal_sender, AColorSignal::SetGroupById(group_id));
+            send_or_warn_print(signal_sender, AColorSignal::SetGroupById(group_id));
         }
         Err(e) => {
             debug!("Set group By ID Failed : {}", e);
@@ -239,7 +239,7 @@ fn set_node_by_id_reply(
         Ok(_) => {
             debug!("Set node By ID : {}", node_id);
             try_send(sender, ProfileReply::SetNodeById);
-            send_or_error_print(signal_sender, AColorSignal::SetNodeById(node_id));
+            send_or_warn_print(signal_sender, AColorSignal::SetNodeById(node_id));
         }
         Err(e) => {
             debug!("Set node By ID Failed : {}", e);

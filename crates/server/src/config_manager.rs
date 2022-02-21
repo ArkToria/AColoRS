@@ -21,7 +21,7 @@ pub struct AColoRSConfig {
 }
 
 impl AColoRSConfig {
-    pub async fn new<P: AsRef<Path>>(
+    pub fn new<P: AsRef<Path>>(
         path: P,
         inbounds: Arc<RwLock<config_manager::Inbounds>>,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,

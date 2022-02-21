@@ -9,7 +9,7 @@ use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetIsRunningReply, GetIsRunningRequest, RestartReply,
     RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest,
-    StopReply, StopRequest,
+    SetCoreByTagReply, SetCoreByTagRequest, StopReply, StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::ProfileTaskProducer;
@@ -45,15 +45,15 @@ impl AColoRSCore {
         }
     }
 
-    pub async fn set_core(&mut self, core_name: &str) -> Result<()> {
+    pub async fn set_core(&self, core_tag: &str) -> Result<()> {
         let mut core_guard = self.current_core.lock().await;
 
-        let (core_type, path) = self
+        let (core_name, path) = self
             .core_map
-            .get(core_name)
+            .get(core_tag)
             .ok_or_else(|| anyhow!("Core Not Added"))?;
 
-        let core = create_core_by_path(path, core_type).map_err(|e| {
+        let core = create_core_by_path(path, core_name).map_err(|e| {
             error!("Core not found : {}", e);
             e
         })?;
@@ -69,14 +69,14 @@ impl AColoRSCore {
     }
     pub async fn add_core<S: AsRef<OsStr>>(
         &mut self,
-        core_type: &str,
-        name: &str,
+        core_name: &str,
+        tag: &str,
         core_path: S,
     ) -> Result<()> {
-        let name = name.to_string();
+        let tag = tag.to_string();
         let core_path = core_path.as_ref().to_os_string();
-        let core_type = core_type.to_string();
-        self.core_map.insert(name, (core_type, core_path));
+        let core_name = core_name.to_string();
+        self.core_map.insert(tag, (core_name, core_path));
         Ok(())
     }
 }
@@ -181,6 +181,24 @@ impl CoreManager for AColoRSCore {
         send_or_error_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
 
         let reply = SetConfigByNodeIdReply {};
+        Ok(Response::new(reply))
+    }
+
+    async fn set_core_by_tag(
+        &self,
+        request: Request<SetCoreByTagRequest>,
+    ) -> Result<Response<SetCoreByTagReply>, Status> {
+        info!("Set core by tag id from {:?}", request.remote_addr());
+
+        let tag = request.into_inner().tag;
+
+        self.set_core(&tag)
+            .await
+            .map_err(|e| Status::not_found(format!("Core not found: \"{}\"", e)))?;
+
+        send_or_error_print(&self.signal_sender, AColorSignal::CoreChanged);
+
+        let reply = SetCoreByTagReply {};
         Ok(Response::new(reply))
     }
 }

@@ -21,6 +21,7 @@ pub fn serve(args: &Args) -> Result<bool> {
     let database_path = value_of_or(matches, "dbpath", "./config/acolors.db");
     let config_path = value_of_or(matches, "config", "./config/acolors.json");
     let core_path = value_of_or(matches, "corepath", "v2ray");
+    let core_name = matches.value_of("corename").unwrap_or("v2ray");
 
     print_file_path(&database_path, &config_path, &core_path);
 
@@ -28,7 +29,7 @@ pub fn serve(args: &Args) -> Result<bool> {
 
     let address = format!("{}:{}", interface, port);
     let address = address_from_string(&address)?;
-    match server::serve(address, database_path, core_path, config_path) {
+    match server::serve(address, database_path, core_path, core_name, config_path) {
         Ok(()) => Ok(true),
         Err(e) => {
             error!("unravel error: {:?}", &e);
@@ -38,11 +39,11 @@ pub fn serve(args: &Args) -> Result<bool> {
 }
 
 fn value_of_or(matches: &ArgMatches, value: &str, default_path: &str) -> PathBuf {
-    let database_path = matches
+    let path = matches
         .value_of(value)
         .map_or_else(|| PathBuf::from(default_path), PathBuf::from);
 
-    database_path
+    path
 }
 
 fn print_file_path(database_path: &Path, config_path: &Path, core_path: &Path) {

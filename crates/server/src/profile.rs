@@ -14,7 +14,7 @@ pub struct AColoRSProfile {
     manager: Arc<ProfileTaskProducer>,
 }
 impl AColoRSProfile {
-    pub async fn new(manager: Arc<ProfileTaskProducer>) -> Self {
+    pub fn new(manager: Arc<ProfileTaskProducer>) -> Self {
         Self { manager }
     }
 }

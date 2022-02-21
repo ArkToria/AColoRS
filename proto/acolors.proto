@@ -16,6 +16,7 @@ message AColorSignal {
   message UpdateCoreStatus {}
   message UpdateInbounds {}
   message CoreConfigChanged {}
+  message CoreChanged {}
   message RemoveGroupByID { int32 group_id = 1; }
   message RemoveNodeByID { int32 node_id = 1; }
   message SetGroupByID { int32 group_id = 1; }
@@ -34,6 +35,7 @@ message AColorSignal {
     SetNodeByID set_node_by_id = 9;
     AppendNode append_node = 10;
     UpdateGroup update_group = 11;
+    CoreChanged core_changed = 12;
   }
 }
 
@@ -213,6 +215,7 @@ service CoreManager {
   rpc GetIsRunning(GetIsRunningRequest) returns (GetIsRunningReply);
   rpc SetConfigByNodeID(SetConfigByNodeIDRequest)
       returns (SetConfigByNodeIDReply);
+  rpc SetCoreByTag(SetCoreByTagRequest) returns (SetCoreByTagReply);
 }
 
 message RunRequest {}
@@ -225,3 +228,5 @@ message GetIsRunningRequest {}
 message GetIsRunningReply { bool is_running = 1; }
 message SetConfigByNodeIDRequest { int32 node_id = 1; }
 message SetConfigByNodeIDReply {}
+message SetCoreByTagRequest { string tag = 1; }
+message SetCoreByTagReply {}

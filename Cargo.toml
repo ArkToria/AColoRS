@@ -19,8 +19,6 @@ members = [
     "crates/latency_test",
     "crates/profile_manager",
     "crates/server",
-    "crates/plugin",
-    "crates/cli",
     "crates/config_manager",
     "components/core_protobuf",
     "components/core_data",

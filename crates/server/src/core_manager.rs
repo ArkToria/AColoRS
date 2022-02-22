@@ -7,9 +7,10 @@ use std::{
 use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
-    core_manager_server::CoreManager, GetIsRunningReply, GetIsRunningRequest, RestartReply,
-    RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest,
-    SetCoreByTagReply, SetCoreByTagRequest, StopReply, StopRequest,
+    core_manager_server::CoreManager, GetCurrentNodeRequest, GetIsRunningReply,
+    GetIsRunningRequest, NodeData, RestartReply, RestartRequest, RunReply, RunRequest,
+    SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
+    StopReply, StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::ProfileTaskProducer;
@@ -43,6 +44,15 @@ impl AColoRSCore {
             signal_sender,
             core_map,
         }
+    }
+
+    pub async fn get_current_node(&self) -> Result<NodeData, Status> {
+        self.current_node
+            .lock()
+            .await
+            .clone()
+            .ok_or_else(|| Status::not_found("Node not found"))
+            .map(|node| node.into())
     }
 
     pub async fn restart(&self) -> Result<(), Status> {
@@ -131,6 +141,13 @@ impl AColoRSCore {
 
 #[tonic::async_trait]
 impl CoreManager for AColoRSCore {
+    async fn get_current_node(
+        &self,
+        request: Request<GetCurrentNodeRequest>,
+    ) -> Result<Response<NodeData>, Status> {
+        info!("Get current node from {:?}", request.remote_addr());
+        Ok(Response::new(self.get_current_node().await?))
+    }
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<RunReply>, Status> {
         info!("Run from {:?}", request.remote_addr());
 

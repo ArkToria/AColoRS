@@ -213,11 +213,13 @@ service CoreManager {
   rpc Stop(StopRequest) returns (StopReply);
   rpc Restart(RestartRequest) returns (RestartReply);
   rpc GetIsRunning(GetIsRunningRequest) returns (GetIsRunningReply);
+  rpc GetCurrentNode(GetCurrentNodeRequest) returns (NodeData);
   rpc SetConfigByNodeID(SetConfigByNodeIDRequest)
       returns (SetConfigByNodeIDReply);
   rpc SetCoreByTag(SetCoreByTagRequest) returns (SetCoreByTagReply);
 }
 
+message GetCurrentNodeRequest {}
 message RunRequest {}
 message RunReply {}
 message StopRequest {}

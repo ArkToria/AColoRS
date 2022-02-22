@@ -1,11 +1,12 @@
 mod core;
 pub mod shadowsocks;
-//pub mod trojan_go;
+pub mod trojan_go;
 pub mod v2ray;
 
 use std::ffi::OsStr;
 
 use shadowsocks::coretool::Shadowsocks;
+use trojan_go::coretool::TrojanGo;
 use v2ray::coretool::V2RayCore;
 
 pub use crate::core::CoreTool;
@@ -18,8 +19,7 @@ pub fn create_core_by_path<S: AsRef<OsStr> + ?Sized>(
     match core_type.to_ascii_lowercase().as_str() {
         "v2ray" => Ok(Box::new(V2RayCore::new(path)?) as Box<Core>),
         "shadowsocks" => Ok(Box::new(Shadowsocks::new(path)?) as Box<Core>),
-        _ => {
-            todo!()
-        }
+        "trojan-go" => Ok(Box::new(TrojanGo::new(path)?) as Box<Core>),
+        _ => Err(anyhow::anyhow!("Core Not Implemented")),
     }
 }

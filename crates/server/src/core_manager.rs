@@ -45,8 +45,56 @@ impl AColoRSCore {
         }
     }
 
+    pub async fn restart(&self) -> Result<(), Status> {
+        let mut core_guard = self.current_core.lock().await;
+        let core = &mut *core_guard;
+        let core = core
+            .as_mut()
+            .ok_or_else(|| Status::not_found("Core Not Found"))?;
+
+        regenerate_config(&self.current_node, &self.inbounds, core).await?;
+
+        core.restart()
+            .map_err(|e| Status::aborted(format!("Core restart Error: {}", e)))?;
+        Ok(())
+    }
+
+    pub async fn stop(&self) -> Result<(), Status> {
+        let mut core_guard = self.current_core.lock().await;
+        let core = &mut *core_guard;
+        let core = core
+            .as_mut()
+            .ok_or_else(|| Status::not_found("Core Not Found"))?;
+
+        core.stop()
+            .map_err(|e| Status::aborted(format!("Core stop Error: {}", e)))?;
+        Ok(())
+    }
+
+    pub async fn run(&self) -> Result<(), Status> {
+        let mut core_guard = self.current_core.lock().await;
+        let core = &mut *core_guard;
+        let core = core
+            .as_mut()
+            .ok_or_else(|| Status::not_found("Core Not Found"))?;
+
+        regenerate_config(&self.current_node, &self.inbounds, core).await?;
+
+        core.run()
+            .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
+
+        Ok(())
+    }
+
     pub async fn set_core(&self, core_tag: &str) -> Result<()> {
         let mut core_guard = self.current_core.lock().await;
+
+        let core = &mut *core_guard;
+        if let Some(core) = core {
+            if core.is_running() {
+                core.stop()?
+            }
+        }
 
         let (core_name, path) = self
             .core_map
@@ -86,16 +134,7 @@ impl CoreManager for AColoRSCore {
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<RunReply>, Status> {
         info!("Run from {:?}", request.remote_addr());
 
-        let mut core_guard = self.current_core.lock().await;
-        let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
-
-        regenerate_config(&self.current_node, &self.inbounds, core).await?;
-
-        core.run()
-            .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
+        self.run().await?;
 
         send_or_warn_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
@@ -105,14 +144,7 @@ impl CoreManager for AColoRSCore {
     async fn stop(&self, request: Request<StopRequest>) -> Result<Response<StopReply>, Status> {
         info!("Stop from {:?}", request.remote_addr());
 
-        let mut core_guard = self.current_core.lock().await;
-        let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
-
-        core.stop()
-            .map_err(|e| Status::aborted(format!("Core stop Error: {}", e)))?;
+        self.stop().await?;
 
         send_or_warn_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 
@@ -126,16 +158,7 @@ impl CoreManager for AColoRSCore {
     ) -> Result<Response<RestartReply>, Status> {
         info!("Restart from {:?}", request.remote_addr());
 
-        let mut core_guard = self.current_core.lock().await;
-        let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
-
-        regenerate_config(&self.current_node, &self.inbounds, core).await?;
-
-        core.restart()
-            .map_err(|e| Status::aborted(format!("Core restart Error: {}", e)))?;
+        self.restart().await?;
 
         send_or_warn_print(&self.signal_sender, AColorSignal::UpdateCoreStatus);
 

@@ -225,7 +225,7 @@ fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<ser
         let outbound = serde_json::Value::from_str(outbound_raw)?;
 
         if !outbound.is_null() {
-            root["outbounds"][0] = outbound;
+            root["outbounds"] = serde_json::Value::Array(vec![outbound]);
         }
     }
 

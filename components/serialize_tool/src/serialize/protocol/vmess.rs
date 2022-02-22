@@ -63,8 +63,8 @@ fn vmess_base64_decode(url_str: &str) -> Result<URLMetaObject> {
     //     "sni": "www.ccc.com"
     //  }
     let mut info = url_str.split("://").last().unwrap_or("");
-    if info.ends_with('@') {
-        info = &info[0..info.len() - 1];
+    if info.contains('@') {
+        info = info.split('@').next().unwrap_or("");
     }
     if info.is_empty() {
         return Err(anyhow!("No Content"));

@@ -17,6 +17,7 @@ spdlog-rs = { version = "0.2.2", features = [
     "release-level-info",
     "source-location",
 ] }
+urlencoding = "2.1.0"
 
 
 config_manager = { path = "../config_manager/" }

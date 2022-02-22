@@ -10,8 +10,6 @@ use spdlog::warn;
 
 use crate::core::CoreTool;
 
-use core_protobuf::v2ray_proto::{OutboundObject, V2RayConfig};
-
 #[derive(Debug)]
 pub struct Shadowsocks {
     config: String,
@@ -84,17 +82,17 @@ impl Shadowsocks {
         }
         Self::set_inbounds(inbounds, &mut config)?;
 
-        let json = serialize_value(node_data)?;
-
-        match node_data.url.split("://").next() {
-            Some(protocol) => {
-                if protocol != "ss" {
-                    return Err(anyhow!("Protocol Error:"));
-                }
+        let protocol = node_data.url.split("://").next().unwrap_or("");
+        match protocol {
+            "ss" => {
                 config.push_str(&format!(" --server-url {}", node_data.url));
             }
-            None => {
-                add_outbound(json, &mut config)?;
+            "" => {
+                let json = serde_json::Value::from_str(&node_data.raw)?;
+                add_outbound(&json, &mut config)?;
+            }
+            _ => {
+                return Err(anyhow!("Protocol Error: {}", protocol));
             }
         };
 
@@ -113,13 +111,12 @@ impl Shadowsocks {
     }
 }
 
-fn add_outbound(json: serde_json::Value, config: &mut String) -> Result<(), anyhow::Error> {
-    let outbound = get_outbound(&json)?;
-    let protocol = protocol_str(&outbound)?;
+fn add_outbound(json: &serde_json::Value, config: &mut String) -> Result<(), anyhow::Error> {
+    let protocol = protocol_str(&json)?;
     if protocol != "shadowsocks" {
-        warn!("Protocol Error:")
+        warn!("Protocol Error: {}", protocol)
     };
-    let server = get_server(&outbound)?;
+    let server = get_server(&json)?;
     let address = server
         .get("address")
         .ok_or_else(|| anyhow!("No Address"))?
@@ -151,22 +148,14 @@ fn get_server(outbound: &serde_json::Value) -> Result<&serde_json::Value, anyhow
     Ok(outbound
         .get("settings")
         .ok_or_else(|| anyhow!("No shadowsocks settings"))?
+        .get("shadowsocks")
+        .ok_or_else(|| anyhow!("No shadowsocks settings"))?
         .get("servers")
         .ok_or_else(|| anyhow!("No shadowsocks servers"))?
         .as_array()
         .ok_or_else(|| anyhow!("Servers should be an array"))?
         .get(0)
         .ok_or_else(|| anyhow!("Servers array is empty"))?)
-}
-
-fn get_outbound(json: &serde_json::Value) -> Result<&serde_json::Value, anyhow::Error> {
-    Ok(json
-        .get("outbounds")
-        .ok_or_else(|| anyhow!("No Outbounds"))?
-        .as_array()
-        .ok_or_else(|| anyhow!("Outbounds should be an array"))?
-        .get(0)
-        .ok_or_else(|| anyhow!("Outbounds empty"))?)
 }
 
 fn protocol_str(outbound: &serde_json::Value) -> Result<&str, anyhow::Error> {
@@ -258,59 +247,6 @@ impl CoreTool for Shadowsocks {
 
         self.set_config(config)
     }
-}
-
-fn serialize_value(node_data: &core_data::NodeData) -> Result<serde_json::Value, anyhow::Error> {
-    let mut node_config = V2RayConfig::default();
-    Ok(if node_data.url.contains("://") {
-        let mut outbound = json_to_outbound(&node_data.raw)?;
-
-        if outbound.tag.is_empty() {
-            outbound.tag = "PROXY".to_string();
-        }
-
-        node_config.outbounds.push(outbound);
-
-        config_to_json(&node_config, "")?
-    } else {
-        config_to_json(&node_config, &node_data.raw)?
-    })
-}
-
-fn json_to_outbound(json_str: &str) -> Result<OutboundObject, serde_json::Error> {
-    serde_json::from_str(json_str)
-}
-
-fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<serde_json::Value> {
-    let mut root = serde_json::to_value(&origin_config)?;
-
-    let fix_format = |root: &mut serde_json::Value, keys: Vec<&'static str>| {
-        keys.into_iter().for_each(|key| {
-            if let serde_json::Value::Array(xbounds) = &mut root[key] {
-                xbounds.iter_mut().for_each(|xbound| {
-                    let protocol = xbound["protocol"]
-                        .as_str()
-                        .unwrap_or("null")
-                        .replace('-', "_");
-
-                    let setting = &mut xbound["settings"][&protocol];
-                    xbound["settings"] = setting.clone();
-                });
-            }
-        });
-    };
-
-    if outbound_raw.is_empty() {
-        fix_format(&mut root, vec!["outbounds"]);
-    } else {
-        let outbound = serde_json::Value::from_str(outbound_raw)?;
-
-        if !outbound.is_null() {
-            root["outbounds"][0] = outbound;
-        }
-    }
-
-    Ok(root)
 }
 
 #[cfg(test)]

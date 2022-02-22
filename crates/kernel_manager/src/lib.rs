@@ -1,5 +1,6 @@
 mod core;
 pub mod shadowsocks;
+//pub mod trojan_go;
 pub mod v2ray;
 
 use std::ffi::OsStr;

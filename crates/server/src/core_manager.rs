@@ -10,7 +10,7 @@ use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetCurrentNodeRequest, GetIsRunningReply,
     GetIsRunningRequest, NodeData, RestartReply, RestartRequest, RunReply, RunRequest,
     SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
-    StopReply, StopRequest,
+    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::ProfileTaskProducer;
@@ -268,6 +268,26 @@ impl CoreManager for AColoRSCore {
         send_or_warn_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
 
         let reply = SetConfigByNodeIdReply {};
+        Ok(Response::new(reply))
+    }
+
+    async fn set_default_config_by_node_id(
+        &self,
+        request: Request<SetDefaultConfigByNodeIdRequest>,
+    ) -> Result<Response<SetDefaultConfigByNodeIdReply>, Status> {
+        info!(
+            "Set default config by node id from {:?}",
+            request.remote_addr()
+        );
+
+        let node_id = request.into_inner().node_id;
+
+        self.profile
+            .set_runtime_value("DEFAULT_NODE_ID", node_id.to_string())
+            .await
+            .unwrap_or_else(|e| error!("Set Config Error: {}", e));
+
+        let reply = SetDefaultConfigByNodeIdReply {};
         Ok(Response::new(reply))
     }
 

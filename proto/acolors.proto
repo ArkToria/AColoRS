@@ -219,6 +219,8 @@ service CoreManager {
   rpc SetConfigByNodeID(SetConfigByNodeIDRequest)
       returns (SetConfigByNodeIDReply);
   rpc SetCoreByTag(SetCoreByTagRequest) returns (SetCoreByTagReply);
+  rpc SetDefaultConfigByNodeID(SetDefaultConfigByNodeIDRequest)
+      returns (SetDefaultConfigByNodeIDReply);
 }
 
 message GetCurrentNodeRequest {}
@@ -232,5 +234,7 @@ message GetIsRunningRequest {}
 message GetIsRunningReply { bool is_running = 1; }
 message SetConfigByNodeIDRequest { int32 node_id = 1; }
 message SetConfigByNodeIDReply {}
+message SetDefaultConfigByNodeIDRequest { int32 node_id = 1; }
+message SetDefaultConfigByNodeIDReply {}
 message SetCoreByTagRequest { string tag = 1; }
 message SetCoreByTagReply {}

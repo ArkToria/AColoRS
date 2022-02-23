@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 anyhow ="1.0.53"
-spdlog-rs = { version = "0.2.2", features = [
+spdlog-rs = { version = "0.2.3", features = [
     "level-debug",
     "release-level-info",
     "source-location",

@@ -126,6 +126,7 @@ pub async fn config_read_to_json<P: AsRef<Path>>(
     if content.is_empty() {
         file.write_all(DEFAULT_CONFIG_FILE_CONTENT.as_bytes())
             .await?;
+        content = DEFAULT_CONFIG_FILE_CONTENT.to_string();
     }
 
     let v = serde_json::from_str(&content)?;

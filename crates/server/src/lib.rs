@@ -91,6 +91,7 @@ async fn create_services<P: AsRef<Path>>(
     AColoRSConfig,
     AColoRSCore,
 )> {
+    let mut config = config_read_to_json(&config_path).await?;
     let (signal_sender, _) = broadcast::channel(BUFFER_SIZE);
     let acolors_notifications = AColoRSNotifications::new(signal_sender.clone());
     let profile_task_producer = Arc::new(
@@ -102,7 +103,6 @@ async fn create_services<P: AsRef<Path>>(
         .await?,
     );
     let acolors_profile = AColoRSProfile::new(profile_task_producer.clone());
-    let mut config = config_read_to_json(&config_path).await?;
     let config_inbounds = config
         .get_mut("inbounds")
         .map(|v| serde_json::from_value(v.take()))

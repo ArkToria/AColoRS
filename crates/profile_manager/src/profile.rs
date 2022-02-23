@@ -11,11 +11,11 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn new(connection: Connection) -> Profile {
+    pub fn new(connection: Connection) -> rusqlite::Result<Profile> {
         let connection = Rc::new(connection);
-        Profile {
-            group_list: GroupList::new(connection.clone()),
-            runtime_value: RuntimeValue::new(connection),
-        }
+        Ok(Profile {
+            group_list: GroupList::create(connection.clone())?,
+            runtime_value: RuntimeValue::create(connection)?,
+        })
     }
 }

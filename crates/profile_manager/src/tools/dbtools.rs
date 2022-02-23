@@ -1,6 +1,5 @@
 use std::{process, rc::Rc};
 
-use anyhow::Result;
 use rusqlite::Connection;
 use spdlog::error;
 
@@ -8,22 +7,22 @@ use crate::table_member::traits::AttachedToTable;
 
 use super::schema::{GROUP_SCHEMA, NODE_SCHEMA, RUNTIME_SCHEMA};
 
-pub fn test_and_create_node_table(conn: &Connection) -> Result<()> {
+pub fn test_and_create_node_table(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute(NODE_SCHEMA, [])?;
     Ok(())
 }
 
-pub fn test_and_create_group_table(conn: &Connection) -> Result<()> {
+pub fn test_and_create_group_table(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute(GROUP_SCHEMA, [])?;
     Ok(())
 }
 
-pub fn test_and_create_runtime_table(conn: &Connection) -> Result<()> {
+pub fn test_and_create_runtime_table(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute(RUNTIME_SCHEMA, [])?;
     Ok(())
 }
 
-pub fn count_table(connection: &Connection, name: &str) -> Result<usize> {
+pub fn count_table(connection: &Connection, name: &str) -> rusqlite::Result<usize> {
     let sql = format!("SELECT COUNT(*) FROM {}", name);
     let mut statement = connection.prepare(&sql)?;
     let mut rows = statement.query([])?;
@@ -39,7 +38,7 @@ pub fn count_table(connection: &Connection, name: &str) -> Result<usize> {
     }
     Ok(size)
 }
-pub fn insert_into_table<T, D>(connection: &Connection, item: &D) -> Result<()>
+pub fn insert_into_table<T, D>(connection: &Connection, item: &D) -> rusqlite::Result<()>
 where
     T: AttachedToTable<D>,
     D: Clone,
@@ -49,7 +48,7 @@ where
     T::execute_statement(item, &mut statement)?;
     Ok(())
 }
-pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> Result<()>
+pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> rusqlite::Result<()>
 where
     T: AttachedToTable<D>,
     D: Clone,
@@ -59,7 +58,7 @@ where
     T::execute_statement_with_id(item, id, &mut statement)?;
     Ok(())
 }
-pub fn remove_from_table<T, D>(connection: &Connection, id: usize) -> Result<()>
+pub fn remove_from_table<T, D>(connection: &Connection, id: usize) -> rusqlite::Result<()>
 where
     T: AttachedToTable<D>,
     D: Clone,
@@ -69,7 +68,7 @@ where
     statement.execute(&[&id])?;
     Ok(())
 }
-pub fn query_from_table<T, D>(connection: Rc<Connection>, id: usize) -> Result<T>
+pub fn query_from_table<T, D>(connection: Rc<Connection>, id: usize) -> anyhow::Result<T>
 where
     T: AttachedToTable<D>,
     D: Clone,

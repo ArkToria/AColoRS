@@ -16,4 +16,6 @@ pub enum ProfileReply {
     AppendGroup,
     AppendNode,
     UpdateGroup,
+    GetRuntimeValue(String),
+    SetRuntimeValue,
 }

@@ -14,6 +14,7 @@ pub enum AColorSignal {
     SetNodeById(i32),
     AppendNode(i32),
     UpdateGroup(i32),
+    RuntimeValueChanged(String),
 }
 
 impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
@@ -55,6 +56,9 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::CoreChanged => Self {
                 signal: Some(Signal::CoreChanged(CoreChanged {})),
             },
+            AColorSignal::RuntimeValueChanged(key) => Self {
+                signal: Some(Signal::RuntimeValueChanged(RuntimeValueChanged { key })),
+            },
         }
     }
 }
@@ -75,6 +79,7 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
                 Signal::AppendNode(m) => Self::AppendNode(m.group_id),
                 Signal::UpdateGroup(m) => Self::UpdateGroup(m.group_id),
                 Signal::CoreChanged(_) => Self::CoreChanged,
+                Signal::RuntimeValueChanged(m) => Self::RuntimeValueChanged(m.key),
             })
             .unwrap_or(Self::Empty)
     }

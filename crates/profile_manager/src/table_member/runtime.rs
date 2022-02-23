@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use spdlog::error;
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use rusqlite::{params, Connection};
 
@@ -10,14 +10,57 @@ use core_data::data_type::runtimevalue::*;
 
 #[derive(Debug, Clone)]
 pub struct RuntimeValue {
+    map: HashMap<String, ValueData>,
     connection: Rc<Connection>,
 }
 impl RuntimeValue {
-    pub fn new(connection: Rc<Connection>) -> Self {
+    pub fn create(connection: Rc<Connection>) -> rusqlite::Result<Self> {
         if let Err(e) = test_and_create_runtime_table(&connection) {
             error!("{}", e);
         }
-        RuntimeValue { connection }
+        let mut map = HashMap::new();
+        let sql = "SELECT * FROM runtime;";
+        let mut statement = connection.prepare(sql)?;
+        let mut rows = statement.query([])?;
+        while let Some(row) = rows.next()? {
+            let value_data = ValueData {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                value_type: row.get(2)?,
+                value: row.get(3)?,
+            };
+            map.insert(value_data.name.clone(), value_data);
+        }
+        let connection = connection.clone();
+        Ok(RuntimeValue { map, connection })
+    }
+    pub fn set_by_key(&mut self, key: &str, value: String) -> rusqlite::Result<()> {
+        match self.map.get_mut(key) {
+            Some(v) => {
+                v.value = value;
+            }
+            None => {
+                let value_data = ValueData {
+                    id: 0,
+                    name: key.to_string(),
+                    value_type: 2,
+                    value,
+                };
+                self.append(&value_data)?;
+                self.map.insert(value_data.name.clone(), value_data);
+
+                return Ok(());
+            }
+        }
+
+        let value = self.map.get(key).unwrap().clone();
+
+        self.set(value.id as usize, &value)?;
+
+        Ok(())
+    }
+    pub fn get_by_key(&self, key: &str) -> Option<String> {
+        self.map.get(key).map(|v| v.value.clone())
     }
 }
 impl WithConnection for RuntimeValue {
@@ -136,7 +179,7 @@ pub mod tests {
     fn test_insert_into_runtime_value_and_query() -> Result<()> {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_runtime_table(&conn)?;
-        let mut runtime_value = RuntimeValue::new(conn);
+        let mut runtime_value = RuntimeValue::create(conn)?;
         for i in 1..15 {
             let runtime_value_data = generate_test_runtime_value(i);
             runtime_value.append(&runtime_value_data)?;
@@ -153,7 +196,7 @@ pub mod tests {
     fn test_update_runtime_value_and_query() -> Result<()> {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_runtime_table(&conn)?;
-        let mut runtime_value = RuntimeValue::new(conn);
+        let mut runtime_value = RuntimeValue::create(conn)?;
         for i in 1..15 {
             let runtime_value_data = generate_test_runtime_value(i);
             runtime_value.append(&runtime_value_data)?;
@@ -181,7 +224,7 @@ pub mod tests {
     fn test_remove_runtime_value_and_query() -> Result<()> {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_runtime_table(&conn)?;
-        let mut runtime_value = RuntimeValue::new(conn);
+        let mut runtime_value = RuntimeValue::create(conn)?;
         for i in 1..15 {
             let runtime_value_data = generate_test_runtime_value(i);
             runtime_value.append(&runtime_value_data)?;
@@ -220,5 +263,26 @@ pub mod tests {
             value: test_string,
         };
         result
+    }
+    #[test]
+    fn test_set_and_get_runtime_value() -> Result<()> {
+        let conn = Rc::new(Connection::open_in_memory()?);
+        let mut runtime_value = RuntimeValue::create(conn)?;
+        for i in 1..15 {
+            let key = format!("key{}", i);
+            let value = format!("value{}", i);
+            runtime_value.set_by_key(&key, value.clone())?;
+            let fetch_runtime_value = runtime_value.get_by_key(&key).unwrap();
+            println!("Before: {:?}", &fetch_runtime_value);
+            assert_eq!(value, fetch_runtime_value);
+
+            let value = format!("value{}", i);
+            runtime_value.set_by_key(&key, value.clone())?;
+            let fetch_runtime_value = runtime_value.get_by_key(&key).unwrap();
+
+            println!("After: {:?}", &fetch_runtime_value);
+            assert_eq!(value, fetch_runtime_value);
+        }
+        Ok(())
     }
 }

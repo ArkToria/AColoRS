@@ -29,18 +29,32 @@ pub struct AColoRSCore {
 }
 
 impl AColoRSCore {
-    pub fn new(
+    pub async fn create(
         profile: Arc<ProfileTaskProducer>,
         inbounds: Arc<RwLock<config_manager::Inbounds>>,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let core = Arc::new(Mutex::new(None));
         let core_map = HashMap::new();
+        let current_node = Mutex::new(None);
+        let current_node_id = profile.get_runtime_value("CURRENT_NODE_ID").await.ok();
+        let default_node_id = profile.get_runtime_value("DEFAULT_NODE_ID").await.ok();
+
+        let mut receiver = signal_sender.subscribe();
+        let node_selected =
+            Self::check_id_string_and_set_config(default_node_id, &profile, &current_node).await
+                || Self::check_id_string_and_set_config(current_node_id, &profile, &current_node)
+                    .await;
+        let signal = receiver.try_recv().ok();
+        if node_selected & signal.is_some() {
+            info!("Default Node Selected");
+        }
+
         Self {
             current_core: core,
             profile,
             inbounds,
-            current_node: Mutex::new(None),
+            current_node,
             signal_sender,
             core_map,
         }
@@ -94,6 +108,46 @@ impl AColoRSCore {
             .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
 
         Ok(())
+    }
+    pub async fn set_config(
+        profile: &Arc<ProfileTaskProducer>,
+        current_node: &Mutex<Option<core_data::NodeData>>,
+        node_id: i32,
+    ) -> Result<(), Status> {
+        let node_data = profile
+            .get_node_by_id(node_id)
+            .await
+            .map_err(|e| Status::not_found(format!("Node unavailable: \"{}\"", e)))?;
+
+        {
+            let mut data_guard = current_node.lock().await;
+            *data_guard = Some(node_data);
+        }
+
+        profile
+            .set_runtime_value("CURRENT_NODE_ID", node_id.to_string())
+            .await
+            .unwrap_or_else(|e| error!("Set Config Error: {}", e));
+
+        Ok(())
+    }
+    async fn check_id_string_and_set_config(
+        node_id_string: Option<String>,
+        profile: &Arc<ProfileTaskProducer>,
+        current_node: &Mutex<Option<core_data::NodeData>>,
+    ) -> bool {
+        if let Some(node_id_string) = node_id_string {
+            match node_id_string.parse() {
+                Ok(node_id) => {
+                    let result = Self::set_config(profile, current_node, node_id).await.ok();
+                    return result.is_some();
+                }
+                Err(e) => {
+                    error!("Current Node Id Parsing Error:{}", e);
+                }
+            }
+        }
+        false
     }
 
     pub async fn set_core(&self, core_tag: &str) -> Result<()> {
@@ -209,14 +263,7 @@ impl CoreManager for AColoRSCore {
 
         let node_id = request.into_inner().node_id;
 
-        let node_data = self
-            .profile
-            .get_node_by_id(node_id)
-            .await
-            .map_err(|e| Status::not_found(format!("Node unavailable: \"{}\"", e)))?;
-
-        let mut data_guard = self.current_node.lock().await;
-        *data_guard = Some(node_data);
+        Self::set_config(&self.profile, &self.current_node, node_id).await?;
 
         send_or_warn_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
 

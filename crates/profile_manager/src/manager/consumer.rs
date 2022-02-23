@@ -22,7 +22,7 @@ pub async fn create_consumer<P: AsRef<Path>>(
         let receiver = rx;
         let connection = create_connection(path)?;
         let signal_sender = signal_sender;
-        let mut profile = Profile::new(connection);
+        let mut profile = Profile::new(connection)?;
 
         while let Ok(request) = receiver.recv() {
             try_reply(request, &signal_sender, &mut profile);
@@ -68,6 +68,48 @@ fn try_reply(
         ProfileRequest::UpdateGroup(group_id, nodes) => {
             update_group_by_id_reply(profile, signal_sender, sender, group_id, nodes);
         }
+        ProfileRequest::GetRuntimeValue(key) => {
+            get_runtime_value_reply(profile, sender, key);
+        }
+        ProfileRequest::SetRuntimeValue(key, value) => {
+            set_runtime_value_reply(profile, signal_sender, sender, key, value);
+        }
+    }
+}
+
+fn set_runtime_value_reply(
+    profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
+    sender: oneshot::Sender<ProfileReply>,
+    key: String,
+    value: String,
+) {
+    debug!("Updating Runtime Value:{}", value);
+    let result = profile.runtime_value.set_by_key(&key, value);
+    match result {
+        Ok(_) => {
+            try_send(sender, ProfileReply::SetRuntimeValue);
+            send_or_warn_print(signal_sender, AColorSignal::RuntimeValueChanged(key));
+        }
+        Err(e) => {
+            debug!("Set Runtime Value Error:{}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
+    }
+}
+
+fn get_runtime_value_reply(profile: &Profile, sender: oneshot::Sender<ProfileReply>, key: String) {
+    let value = profile.runtime_value.get_by_key(&key);
+    match value {
+        Some(value) => {
+            debug!("Get Runtime Value:{}", value);
+            try_send(sender, ProfileReply::GetRuntimeValue(value));
+        }
+        None => {
+            let e = "Value Not Found";
+            debug!("Get Runtime Value Error:{}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+        }
     }
 }
 
@@ -81,7 +123,7 @@ fn update_group_by_id_reply(
     let mut group = match profile.group_list.query(group_id as usize) {
         Ok(g) => g,
         Err(e) => {
-            debug!("Append node Failed : {}", e);
+            debug!("GroupList query Failed : {}", e);
             try_send(sender, ProfileReply::Error(e.to_string()));
             return;
         }

@@ -154,6 +154,22 @@ impl ProfileTaskProducer {
             ProfileReply::UpdateGroup
         )
     }
+    pub async fn get_runtime_value(&self, key: &str) -> Result<String> {
+        let key = key.to_string();
+        send_request!(
+            self,
+            ProfileRequest::GetRuntimeValue(key),
+            ProfileReply::GetRuntimeValue(value)
+        )
+    }
+    pub async fn set_runtime_value(&self, key: &str, value: String) -> Result<()> {
+        let key = key.to_string();
+        send_request!(
+            self,
+            ProfileRequest::SetRuntimeValue(key, value),
+            ProfileReply::SetRuntimeValue
+        )
+    }
 }
 
 #[derive(Debug)]

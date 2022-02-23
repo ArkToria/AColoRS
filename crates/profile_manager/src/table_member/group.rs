@@ -31,7 +31,7 @@ impl Group {
         self.data
     }
 
-    pub fn remove_all_nodes(&self) -> anyhow::Result<()> {
+    pub fn remove_all_nodes(&self) -> rusqlite::Result<()> {
         let node_list = self.list_all_nodes()?;
         for node in node_list {
             crate::tools::dbtools::remove_from_table::<Node, NodeData>(
@@ -42,7 +42,7 @@ impl Group {
         Ok(())
     }
 
-    pub fn list_all_nodes(&self) -> anyhow::Result<Vec<Node>> {
+    pub fn list_all_nodes(&self) -> rusqlite::Result<Vec<Node>> {
         let group_id = self.data().id;
         let sql = "SELECT * FROM nodes WHERE GroupID = ?";
         let mut statement = self.connection.prepare(sql)?;
@@ -167,7 +167,7 @@ impl WithConnection for Group {
 }
 
 impl AColoRSListModel<Node, NodeData> for Group {
-    fn append(&mut self, item: &NodeData) -> anyhow::Result<()> {
+    fn append(&mut self, item: &NodeData) -> rusqlite::Result<()> {
         let mut item = item.clone();
         item.group_id = self.data().id;
         item.group_name = self.data().name.clone();
@@ -181,7 +181,7 @@ impl AColoRSListModel<Node, NodeData> for Group {
 
         insert_into_table::<Node, NodeData>(&self.connection(), &item)
     }
-    fn set(&mut self, id: usize, item: &NodeData) -> anyhow::Result<()> {
+    fn set(&mut self, id: usize, item: &NodeData) -> rusqlite::Result<()> {
         let mut item = item.clone();
         item.group_id = self.data().id;
         item.update_modified_at();
@@ -207,7 +207,7 @@ pub mod tests {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_group_table(&conn)?;
         test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::new(conn);
+        let mut group_list = GroupList::create(conn)?;
         group_list.append(&generate_test_group(1))?;
         group_list.append(&generate_test_group(2))?;
         group_list.append(&generate_test_group(3))?;
@@ -226,7 +226,7 @@ pub mod tests {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_group_table(&conn)?;
         test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::new(conn);
+        let mut group_list = GroupList::create(conn)?;
         group_list.append(&generate_test_group(1))?;
         group_list.append(&generate_test_group(2))?;
         group_list.append(&generate_test_group(3))?;
@@ -252,7 +252,7 @@ pub mod tests {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_group_table(&conn)?;
         test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::new(conn);
+        let mut group_list = GroupList::create(conn)?;
         group_list.append(&generate_test_group(1))?;
         group_list.append(&generate_test_group(2))?;
         group_list.append(&generate_test_group(3))?;
@@ -281,7 +281,7 @@ pub mod tests {
         let conn = Rc::new(Connection::open_in_memory()?);
         test_and_create_group_table(&conn)?;
         test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::new(conn);
+        let mut group_list = GroupList::create(conn)?;
         group_list.append(&generate_test_group(1))?;
         group_list.append(&generate_test_group(2))?;
         group_list.append(&generate_test_group(3))?;

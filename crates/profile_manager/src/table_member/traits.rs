@@ -13,19 +13,20 @@ where
     T: Clone + AttachedToTable<D>,
     D: Clone,
 {
-    fn size(&self) -> Result<usize> {
+    fn size(&self) -> rusqlite::Result<usize> {
         count_table(&self.connection(), Self::has_table_name())
     }
-    fn append(&mut self, item: &D) -> Result<()> {
+    fn append(&mut self, item: &D) -> rusqlite::Result<()> {
         insert_into_table::<T, D>(&self.connection(), item)
     }
-    fn set(&mut self, id: usize, item: &D) -> Result<()> {
+    fn set(&mut self, id: usize, item: &D) -> rusqlite::Result<()> {
         update_table::<T, D>(&self.connection(), id, item)
     }
-    fn remove(&mut self, id: usize) -> Result<()> {
-        remove_from_table::<T, D>(&self.connection(), id)
+    fn remove(&mut self, id: usize) -> anyhow::Result<()> {
+        remove_from_table::<T, D>(&self.connection(), id)?;
+        Ok(())
     }
-    fn query(&self, id: usize) -> Result<T> {
+    fn query(&self, id: usize) -> anyhow::Result<T> {
         query_from_table::<T, D>(self.connection(), id)
     }
 }

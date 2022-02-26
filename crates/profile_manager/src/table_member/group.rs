@@ -188,6 +188,21 @@ impl AColoRSListModel<Node, NodeData> for Group {
 
         update_table::<Node, NodeData>(&self.connection(), id, &item)
     }
+    fn size(&self) -> rusqlite::Result<usize> {
+        let sql = format!("SELECT COUNT(*) FROM nodes WHERE GroupID = ?",);
+        let mut statement = self.connection.prepare(&sql)?;
+        let mut rows = statement.query([self.data.id])?;
+        let size;
+        match rows.next()? {
+            Some(row) => {
+                size = row.get(0)?;
+            }
+            None => {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
+            }
+        }
+        Ok(size)
+    }
 }
 
 #[cfg(test)]

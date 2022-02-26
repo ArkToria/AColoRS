@@ -1,7 +1,6 @@
-use std::{process, rc::Rc};
+use std::rc::Rc;
 
 use rusqlite::Connection;
-use spdlog::error;
 
 use crate::table_member::traits::AttachedToTable;
 
@@ -32,8 +31,7 @@ pub fn count_table(connection: &Connection, name: &str) -> rusqlite::Result<usiz
             size = row.get(0)?;
         }
         None => {
-            error!("SQLite Count Error");
-            process::exit(1);
+            return Err(rusqlite::Error::QueryReturnedNoRows);
         }
     }
     Ok(size)

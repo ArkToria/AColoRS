@@ -301,7 +301,15 @@ fn set_node_by_id_reply(
     node_id: i32,
     node_data: NodeData,
 ) {
-    let mut group = profile.group_list.default_group();
+    let group = profile.group_list.query(node_data.group_id as usize);
+    let mut group = match group {
+        Ok(g) => g,
+        Err(e) => {
+            debug!("Set node By ID Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    };
 
     let node = group.set(node_id as usize, &node_data);
 

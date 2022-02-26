@@ -32,13 +32,9 @@ impl Group {
     }
 
     pub fn remove_all_nodes(&self) -> rusqlite::Result<()> {
-        let node_list = self.list_all_nodes()?;
-        for node in node_list {
-            crate::tools::dbtools::remove_from_table::<Node, NodeData>(
-                &self.connection(),
-                node.data().id as usize,
-            )?
-        }
+        let sql = "DELETE FROM nodes WHERE GroupID = ?";
+        let mut statement = self.connection.prepare(sql)?;
+        statement.execute(&[&self.data.id])?;
         Ok(())
     }
 

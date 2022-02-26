@@ -24,6 +24,7 @@ message AColorSignal {
   message AppendNode { int32 group_id = 1; }
   message UpdateGroup { int32 group_id = 1; }
   message RuntimeValueChanged { string key = 1; }
+  message EmptyGroup { int32 group_id = 1; }
   oneof signal {
     Empty empty = 1;
     AppendGroup append_group = 2;
@@ -38,6 +39,7 @@ message AColorSignal {
     UpdateGroup update_group = 11;
     CoreChanged core_changed = 12;
     RuntimeValueChanged runtime_value_changed = 13;
+    EmptyGroup empty_group = 14;
   }
 }
 
@@ -65,6 +67,8 @@ service ProfileManager {
   rpc AppendNodeByUrl(AppendNodeByUrlRequest) returns (AppendNodeByUrlReply) {}
 
   rpc UpdateGroupByID(UpdateGroupByIDRequest) returns (UpdateGroupByIDReply) {}
+
+  rpc EmptyGroupByID(EmptyGroupByIDRequest) returns (EmptyGroupByIDReply);
 }
 
 message CountGroupsRequest {}
@@ -102,6 +106,8 @@ message RemoveNodeByIDRequest { int32 node_id = 1; }
 message AppendGroupRequest { GroupData data = 1; }
 
 message UpdateGroupByIDRequest { int32 group_id = 1; }
+message EmptyGroupByIDRequest { int32 group_id = 1; }
+message EmptyGroupByIDReply {}
 
 message AppendNodeRequest {
   int32 group_id = 1;

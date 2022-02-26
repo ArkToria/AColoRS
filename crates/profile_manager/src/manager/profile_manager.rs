@@ -170,6 +170,13 @@ impl ProfileTaskProducer {
             ProfileReply::SetRuntimeValue
         )
     }
+    pub async fn empty_group_by_id(&self, group_id: i32) -> Result<()> {
+        send_request!(
+            self,
+            ProfileRequest::EmptyGroup(group_id),
+            ProfileReply::EmptyGroup
+        )
+    }
 }
 
 #[derive(Debug)]

@@ -19,11 +19,15 @@ use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
 type Core = dyn CoreTool + Sync + Send;
+
+type CurrentCore = Arc<Mutex<Option<Box<Core>>>>;
+type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
+type CurrentNodeLock = Mutex<Option<core_data::NodeData>>;
 pub struct AColoRSCore {
-    current_core: Arc<Mutex<Option<Box<Core>>>>,
+    current_core: CurrentCore,
     profile: Arc<ProfileTaskProducer>,
-    inbounds: Arc<RwLock<config_manager::Inbounds>>,
-    current_node: Mutex<Option<core_data::NodeData>>,
+    inbounds: InboundsLock,
+    current_node: CurrentNodeLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     core_map: HashMap<String, (String, OsString)>,
 }
@@ -31,7 +35,7 @@ pub struct AColoRSCore {
 impl AColoRSCore {
     pub async fn create(
         profile: Arc<ProfileTaskProducer>,
-        inbounds: Arc<RwLock<config_manager::Inbounds>>,
+        inbounds: InboundsLock,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let core = Arc::new(Mutex::new(None));
@@ -41,10 +45,9 @@ impl AColoRSCore {
         let default_node_id = profile.get_runtime_value("DEFAULT_NODE_ID").await.ok();
 
         let mut receiver = signal_sender.subscribe();
-        let node_selected =
-            Self::check_id_string_and_set_config(default_node_id, &profile, &current_node).await
-                || Self::check_id_string_and_set_config(current_node_id, &profile, &current_node)
-                    .await;
+        let node_selected = Self::check_and_set_config(default_node_id, &profile, &current_node)
+            .await
+            || Self::check_and_set_config(current_node_id, &profile, &current_node).await;
         let signal = receiver.try_recv().ok();
         if node_selected & signal.is_some() {
             info!("Default Node Selected");
@@ -111,7 +114,7 @@ impl AColoRSCore {
     }
     pub async fn set_config(
         profile: &Arc<ProfileTaskProducer>,
-        current_node: &Mutex<Option<core_data::NodeData>>,
+        current_node: &CurrentNodeLock,
         node_id: i32,
     ) -> Result<(), Status> {
         let node_data = profile
@@ -131,10 +134,10 @@ impl AColoRSCore {
 
         Ok(())
     }
-    async fn check_id_string_and_set_config(
+    async fn check_and_set_config(
         node_id_string: Option<String>,
         profile: &Arc<ProfileTaskProducer>,
-        current_node: &Mutex<Option<core_data::NodeData>>,
+        current_node: &CurrentNodeLock,
     ) -> bool {
         if let Some(node_id_string) = node_id_string {
             match node_id_string.parse() {
@@ -311,8 +314,8 @@ impl CoreManager for AColoRSCore {
 }
 
 async fn regenerate_config(
-    current_node: &Mutex<Option<core_data::NodeData>>,
-    inbounds: &Arc<RwLock<config_manager::Inbounds>>,
+    current_node: &CurrentNodeLock,
+    inbounds: &InboundsLock,
     core: &mut Box<Core>,
 ) -> Result<(), Status> {
     let current_node_guard = &*current_node.lock().await;

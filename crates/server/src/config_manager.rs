@@ -13,9 +13,10 @@ use tokio::{
 };
 use tonic::{Request, Response, Status};
 
+type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 #[derive(Debug)]
 pub struct AColoRSConfig {
-    inbounds: Arc<RwLock<config_manager::Inbounds>>,
+    inbounds: InboundsLock,
     path: PathBuf,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
@@ -23,7 +24,7 @@ pub struct AColoRSConfig {
 impl AColoRSConfig {
     pub fn new<P: AsRef<Path>>(
         path: P,
-        inbounds: Arc<RwLock<config_manager::Inbounds>>,
+        inbounds: InboundsLock,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let path = path.as_ref().to_path_buf();

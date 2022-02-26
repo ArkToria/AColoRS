@@ -353,4 +353,22 @@ impl ProfileManager for AColoRSProfile {
 
         Ok(Response::new(reply))
     }
+    async fn empty_group_by_id(
+        &self,
+        request: Request<EmptyGroupByIdRequest>,
+    ) -> Result<Response<EmptyGroupByIdReply>, Status> {
+        info!("Request empty group by Id from {:?}", request.remote_addr());
+
+        let inner = request.into_inner();
+        let group_id = inner.group_id;
+
+        self.manager
+            .empty_group_by_id(group_id)
+            .await
+            .map_err(|e| Status::unavailable(format!("Group unavailable: \"{}\"", e)))?;
+
+        let reply = EmptyGroupByIdReply {};
+
+        Ok(Response::new(reply))
+    }
 }

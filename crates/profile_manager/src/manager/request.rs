@@ -17,4 +17,5 @@ pub enum ProfileRequest {
     UpdateGroup(i32, Vec<NodeData>),
     GetRuntimeValue(String),
     SetRuntimeValue(String, String),
+    EmptyGroup(i32),
 }

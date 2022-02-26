@@ -18,4 +18,5 @@ pub enum ProfileReply {
     UpdateGroup,
     GetRuntimeValue(String),
     SetRuntimeValue,
+    EmptyGroup,
 }

@@ -68,6 +68,9 @@ fn try_reply(
         ProfileRequest::UpdateGroup(group_id, nodes) => {
             update_group_by_id_reply(profile, signal_sender, sender, group_id, nodes);
         }
+        ProfileRequest::EmptyGroup(group_id) => {
+            empty_group_by_id_reply(profile, signal_sender, sender, group_id);
+        }
         ProfileRequest::GetRuntimeValue(key) => {
             get_runtime_value_reply(profile, sender, key);
         }
@@ -134,6 +137,7 @@ fn update_group_by_id_reply(
         try_send(sender, ProfileReply::Error(e.to_string()));
         return;
     }
+    send_or_warn_print(signal_sender, AColorSignal::EmptyGroup(group_id));
 
     debug!("Updating group");
 
@@ -151,6 +155,30 @@ fn update_group_by_id_reply(
     }
     try_send(sender, ProfileReply::UpdateGroup);
     send_or_warn_print(signal_sender, AColorSignal::UpdateGroup(group_id));
+}
+fn empty_group_by_id_reply(
+    profile: &mut Profile,
+    signal_sender: &tokio::sync::broadcast::Sender<AColorSignal>,
+    sender: oneshot::Sender<ProfileReply>,
+    group_id: i32,
+) {
+    let group = match profile.group_list.query(group_id as usize) {
+        Ok(g) => g,
+        Err(e) => {
+            debug!("GroupList query Failed : {}", e);
+            try_send(sender, ProfileReply::Error(e.to_string()));
+            return;
+        }
+    };
+
+    if let Err(e) = group.remove_all_nodes() {
+        debug!("Clear group Failed : {}", e);
+        try_send(sender, ProfileReply::Error(e.to_string()));
+        return;
+    }
+
+    try_send(sender, ProfileReply::EmptyGroup);
+    send_or_warn_print(signal_sender, AColorSignal::EmptyGroup(group_id));
 }
 fn remove_group_by_id_reply(
     profile: &mut Profile,

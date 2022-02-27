@@ -225,10 +225,12 @@ service CoreManager {
   rpc SetConfigByNodeID(SetConfigByNodeIDRequest)
       returns (SetConfigByNodeIDReply);
   rpc SetCoreByTag(SetCoreByTagRequest) returns (SetCoreByTagReply);
+  rpc GetCoreTag(GetCoreTagRequest) returns (GetCoreTagReply);
   rpc SetDefaultConfigByNodeID(SetDefaultConfigByNodeIDRequest)
       returns (SetDefaultConfigByNodeIDReply);
 }
 
+message GetCoreTagRequest {}
 message GetCurrentNodeRequest {}
 message RunRequest {}
 message RunReply {}
@@ -243,4 +245,5 @@ message SetConfigByNodeIDReply {}
 message SetDefaultConfigByNodeIDRequest { int32 node_id = 1; }
 message SetDefaultConfigByNodeIDReply {}
 message SetCoreByTagRequest { string tag = 1; }
+message GetCoreTagReply { string tag = 1; }
 message SetCoreByTagReply {}

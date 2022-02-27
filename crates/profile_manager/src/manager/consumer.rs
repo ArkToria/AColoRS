@@ -141,10 +141,7 @@ fn update_group_by_id_reply(
 
     debug!("Updating group");
 
-    for mut node_data in nodes {
-        node_data.update_create_at();
-        node_data.update_modified_at();
-
+    for node_data in nodes {
         let result = group.append(&node_data);
 
         if let Err(e) = result {

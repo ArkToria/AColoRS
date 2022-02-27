@@ -172,8 +172,7 @@ impl AColoRSListModel<Node, NodeData> for Group {
         item.routing_name = "default_routings".to_string();
         item.routing_id = 0;
 
-        item.update_create_at();
-        item.update_modified_at();
+        item.initialize();
 
         insert_into_table::<Node, NodeData>(&self.connection(), &item)
     }

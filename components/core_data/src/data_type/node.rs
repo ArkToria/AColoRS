@@ -52,4 +52,9 @@ impl NodeData {
     pub fn update_create_at(&mut self) {
         self.create_at = get_current_time() as i64;
     }
+    pub fn initialize(&mut self) {
+        self.update_create_at();
+        self.update_modified_at();
+        self.latency = -1;
+    }
 }

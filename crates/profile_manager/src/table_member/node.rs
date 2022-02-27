@@ -156,6 +156,8 @@ pub mod tests {
         // TODO: routing
         ac.routing_id = 0;
         bc.routing_id = 0;
+        ac.latency = -1;
+        bc.latency = -1;
         ac.routing_name = String::new();
         bc.routing_name = String::new();
 

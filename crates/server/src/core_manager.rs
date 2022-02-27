@@ -7,10 +7,11 @@ use std::{
 use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
-    core_manager_server::CoreManager, GetCurrentNodeRequest, GetIsRunningReply,
-    GetIsRunningRequest, NodeData, RestartReply, RestartRequest, RunReply, RunRequest,
-    SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
-    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
+    core_manager_server::CoreManager, GetCoreTagReply, GetCoreTagRequest, GetCurrentNodeRequest,
+    GetIsRunningReply, GetIsRunningRequest, NodeData, RestartReply, RestartRequest, RunReply,
+    RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply,
+    SetCoreByTagRequest, SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply,
+    StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::ProfileTaskProducer;
@@ -20,10 +21,12 @@ use tonic::{Request, Response, Status};
 
 type Core = dyn CoreTool + Sync + Send;
 
-type CurrentCore = Arc<Mutex<Option<Box<Core>>>>;
+type CurrentCore = Mutex<Option<Box<Core>>>;
 type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 type CurrentNodeLock = Mutex<Option<core_data::NodeData>>;
+type CoreTag = Mutex<String>;
 pub struct AColoRSCore {
+    core_tag: CoreTag,
     current_core: CurrentCore,
     profile: Arc<ProfileTaskProducer>,
     inbounds: InboundsLock,
@@ -38,7 +41,7 @@ impl AColoRSCore {
         inbounds: InboundsLock,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
-        let core = Arc::new(Mutex::new(None));
+        let core = Mutex::new(None);
         let core_map = HashMap::new();
         let current_node = Mutex::new(None);
         let current_node_id = profile.get_runtime_value("CURRENT_NODE_ID").await.ok();
@@ -60,6 +63,7 @@ impl AColoRSCore {
             current_node,
             signal_sender,
             core_map,
+            core_tag: Mutex::new(String::new()),
         }
     }
 
@@ -154,6 +158,7 @@ impl AColoRSCore {
     }
 
     pub async fn set_core(&self, core_tag: &str) -> Result<()> {
+        self.set_core_tag(core_tag).await;
         let mut core_guard = self.current_core.lock().await;
 
         let core = &mut *core_guard;
@@ -181,6 +186,11 @@ impl AColoRSCore {
 
         *core_guard = Some(core);
         Ok(())
+    }
+
+    async fn set_core_tag(&self, core_tag: &str) {
+        let mut tag_guard = self.core_tag.lock().await;
+        *tag_guard = core_tag.to_string();
     }
     pub async fn add_core<S: AsRef<OsStr>>(
         &mut self,
@@ -309,6 +319,16 @@ impl CoreManager for AColoRSCore {
         send_or_warn_print(&self.signal_sender, AColorSignal::CoreChanged);
 
         let reply = SetCoreByTagReply {};
+        Ok(Response::new(reply))
+    }
+    async fn get_core_tag(
+        &self,
+        request: Request<GetCoreTagRequest>,
+    ) -> Result<Response<GetCoreTagReply>, Status> {
+        info!("Get core tag from {:?}", request.remote_addr());
+
+        let tag = self.core_tag.lock().await.clone();
+        let reply = GetCoreTagReply { tag };
         Ok(Response::new(reply))
     }
 }

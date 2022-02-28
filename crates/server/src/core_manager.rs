@@ -7,11 +7,11 @@ use std::{
 use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
-    core_manager_server::CoreManager, GetCoreTagReply, GetCoreTagRequest, GetCurrentNodeRequest,
-    GetIsRunningReply, GetIsRunningRequest, NodeData, RestartReply, RestartRequest, RunReply,
-    RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply,
-    SetCoreByTagRequest, SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply,
-    StopRequest,
+    core_manager_server::CoreManager, GetCoreInfoReply, GetCoreInfoRequest, GetCoreTagReply,
+    GetCoreTagRequest, GetCurrentNodeRequest, GetIsRunningReply, GetIsRunningRequest, NodeData,
+    RestartReply, RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply,
+    SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
+    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::ProfileTaskProducer;
@@ -329,6 +329,23 @@ impl CoreManager for AColoRSCore {
 
         let tag = self.core_tag.lock().await.clone();
         let reply = GetCoreTagReply { tag };
+        Ok(Response::new(reply))
+    }
+    async fn get_core_info(
+        &self,
+        request: Request<GetCoreInfoRequest>,
+    ) -> Result<Response<GetCoreInfoReply>, Status> {
+        info!("Get core info from {:?}", request.remote_addr());
+
+        let (name, version) = {
+            let core = &*self.current_core.lock().await;
+            match core {
+                Some(core) => (core.get_name().to_string(), core.get_version().to_string()),
+                None => return Err(Status::not_found("Core Not Found")),
+            }
+        };
+
+        let reply = GetCoreInfoReply { name, version };
         Ok(Response::new(reply))
     }
 }

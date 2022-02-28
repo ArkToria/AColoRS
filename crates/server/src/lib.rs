@@ -102,15 +102,20 @@ async fn create_services<P: AsRef<Path>>(
         )
         .await?,
     );
-    let acolors_profile = AColoRSProfile::new(profile_task_producer.clone());
     let config_inbounds = config
         .get_mut("inbounds")
         .map(|v| serde_json::from_value(v.take()))
         .transpose()?;
     let inbounds = Arc::new(RwLock::new(config_inbounds.unwrap_or_default()));
     let acolors_config = AColoRSConfig::new(config_path, inbounds.clone(), signal_sender.clone());
-    let mut acolors_core =
-        AColoRSCore::create(profile_task_producer, inbounds, signal_sender).await;
+    let mut acolors_core = AColoRSCore::create(
+        profile_task_producer.clone(),
+        inbounds.clone(),
+        signal_sender,
+    )
+    .await;
+
+    let acolors_profile = AColoRSProfile::new(profile_task_producer, inbounds);
 
     let cores_value = config.get_mut("cores");
     add_cores(cores_value, &mut acolors_core, core_name, core_path).await?;

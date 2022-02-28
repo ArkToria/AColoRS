@@ -8,8 +8,16 @@ pub fn tcp_port_is_available(port: u16) -> bool {
     TcpListener::bind(("127.0.0.1", port)).is_ok()
 }
 
-pub async fn get_http_content<T: reqwest::IntoUrl>(url: T) -> anyhow::Result<String> {
-    let response = reqwest::get(url).await?;
+pub async fn get_http_content<T>(url: T, proxy: &str) -> anyhow::Result<String>
+where
+    T: reqwest::IntoUrl,
+{
+    let mut client_builder = reqwest::Client::builder();
+    if !proxy.is_empty() {
+        client_builder = client_builder.proxy(reqwest::Proxy::all(proxy)?);
+    }
+    let client = client_builder.build()?;
+    let response = client.get(url).send().await?;
     let result = response.text().await?;
 
     Ok(result)
@@ -21,7 +29,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get() -> anyhow::Result<()> {
-        println!("{}", get_http_content("https://example.com/").await?);
+        println!("{}", get_http_content("http://example.com/", "").await?);
         Ok(())
     }
 }

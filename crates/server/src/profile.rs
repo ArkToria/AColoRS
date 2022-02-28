@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use spdlog::info;
 
+use tokio::sync::RwLock;
 use tonic::{Request, Response, Status};
 
 use core_protobuf::acolors_proto::{profile_manager_server::ProfileManager, *};
@@ -9,13 +10,16 @@ use profile_manager::{self, ProfileTaskProducer};
 use serialize_tool::serialize::serializetool::{decode_outbound_from_url, get_nodes_from_base64};
 use utils::net::get_http_content;
 
+type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
+
 #[derive(Debug)]
 pub struct AColoRSProfile {
     manager: Arc<ProfileTaskProducer>,
+    inbounds: InboundsLock,
 }
 impl AColoRSProfile {
-    pub fn new(manager: Arc<ProfileTaskProducer>) -> Self {
-        Self { manager }
+    pub fn new(manager: Arc<ProfileTaskProducer>, inbounds: InboundsLock) -> Self {
+        Self { manager, inbounds }
     }
 }
 
@@ -329,6 +333,18 @@ impl ProfileManager for AColoRSProfile {
 
         let inner = request.into_inner();
         let group_id = inner.group_id;
+        let use_proxy = inner.use_proxy;
+
+        let proxy = if use_proxy {
+            let inbounds = &*self.inbounds.read().await;
+            let http_inbound = &inbounds.http;
+            http_inbound
+                .as_ref()
+                .map(|inbound| format!("http://{}:{}", inbound.listen, inbound.port))
+                .unwrap_or(String::new())
+        } else {
+            String::new()
+        };
 
         let group_data = self
             .manager
@@ -336,7 +352,7 @@ impl ProfileManager for AColoRSProfile {
             .await
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
 
-        let base64: String = get_http_content(group_data.url)
+        let base64: String = get_http_content(group_data.url, &proxy)
             .await
             .map(|s| s.lines().map(|line| line.trim()).collect())
             .map_err(|e| Status::invalid_argument(format!("Url unavailable: \"{}\"", e)))?;

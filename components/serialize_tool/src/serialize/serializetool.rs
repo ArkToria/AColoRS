@@ -111,12 +111,12 @@ mod tests {
     }
     #[test]
     fn test_regex() -> Result<()> {
-        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:#]*)#([^#]*)"#)?;
+        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:#]*)#([^#]*)"#)?;
         let ss = "ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1";
         let list = re.captures(ss).unwrap();
         println!("{:?}", list);
 
-        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:]*)\?([^%]*)%0A([^#]*)#([^#]*)"#)?;
+        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:]*)\?([^%]*)%0A([^#]*)#([^#]*)"#)?;
         let trojan =
             "trojan://password@host:756?sni=servername&allowinsecure=false&alpn=h2%0Ahttp/1.1#name";
         let list = re.captures(trojan).unwrap();

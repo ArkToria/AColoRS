@@ -47,10 +47,10 @@ pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
 fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // trojan://<password>@<host>:<port>?sni=<server_name>&allowinsecure=<allow_insecure>&alpn=h2%0Ahttp/1.1#<name>
-    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@:]*):([^:]*)\?([^#]*)#([^#]*)"#)?;
+    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:]*)\?([^#]*)#([^#]*)"#)?;
     let caps = re
         .captures(url_str)
-        .ok_or_else(|| anyhow!("Failed to parse sip002 url"))?;
+        .ok_or_else(|| anyhow!("Failed to parse trojan url"))?;
 
     let mut meta = URLMetaObject {
         name: caps[6].to_string(),

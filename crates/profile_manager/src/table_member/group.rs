@@ -106,7 +106,10 @@ impl Group {
         Ok(result)
     }
     pub async fn set(&self, id: i64, mut item: NodeData) -> sqlx::Result<()> {
-        item.group_id = self.data().id;
+        if self.data().id != 0 {
+            item.group_id = self.data().id;
+        }
+
         item.update_modified_at();
 
         let query = sqlx::query(NODE_UPDATE_SQL)

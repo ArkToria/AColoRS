@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use spdlog::info;
+use acolors_signal::send_or_warn_print;
+use spdlog::{error, info};
 
-use tokio::sync::RwLock;
+use tokio::sync::{broadcast, RwLock};
 use tonic::{Request, Response, Status};
 
 use core_protobuf::acolors_proto::{profile_manager_server::ProfileManager, *};
-use profile_manager::{self, ProfileTaskProducer};
+use profile_manager::{self, Profile};
 use serialize_tool::serialize::serializetool::{decode_outbound_from_url, get_nodes_from_base64};
 use utils::net::get_http_content;
 
@@ -14,12 +15,21 @@ type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 
 #[derive(Debug)]
 pub struct AColoRSProfile {
-    manager: Arc<ProfileTaskProducer>,
+    profile: Arc<Profile>,
     inbounds: InboundsLock,
+    signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
 impl AColoRSProfile {
-    pub fn new(manager: Arc<ProfileTaskProducer>, inbounds: InboundsLock) -> Self {
-        Self { manager, inbounds }
+    pub fn new(
+        profile: Arc<Profile>,
+        inbounds: InboundsLock,
+        signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
+    ) -> Self {
+        Self {
+            profile,
+            inbounds,
+            signal_sender,
+        }
     }
 }
 
@@ -32,8 +42,9 @@ impl ProfileManager for AColoRSProfile {
         info!("Request count groups from {:?}", request.remote_addr());
 
         let count = self
-            .manager
-            .count_groups()
+            .profile
+            .group_list
+            .size()
             .await
             .map_err(|e| Status::not_found(format!("Count unavailable: \"{}\"", e)))?;
 
@@ -50,10 +61,11 @@ impl ProfileManager for AColoRSProfile {
         info!("Request list all groups from {:?}", request.remote_addr());
 
         let group_list: Vec<core_protobuf::acolors_proto::GroupData> = self
-            .manager
+            .profile
+            .group_list
             .list_all_groups()
             .await
-            .map(|c| c.into_iter().map(|group| group.into()).collect())
+            .map(|c| c.into_iter().map(|group| group.to_data().into()).collect())
             .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?;
 
         let length = group_list.len();
@@ -73,10 +85,14 @@ impl ProfileManager for AColoRSProfile {
         let group_id = request.into_inner().group_id;
 
         let count = self
-            .manager
-            .count_nodes(group_id)
+            .profile
+            .group_list
+            .query(group_id as i64)
             .await
-            .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?;
+            .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
+            .size()
+            .await
+            .map_err(|e| Status::aborted(format!("Count Nodes Failed: \"{}\"", e)))?;
 
         let reply = CountNodesReply {
             count: count as u64,
@@ -93,10 +109,14 @@ impl ProfileManager for AColoRSProfile {
         let group_id = request.into_inner().group_id;
 
         let group_list: Vec<core_protobuf::acolors_proto::NodeData> = self
-            .manager
-            .list_all_nodes(group_id)
+            .profile
+            .group_list
+            .query(group_id as i64)
             .await
-            .map(|c| c.into_iter().map(|group| group.into()).collect())
+            .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
+            .list_all_nodes()
+            .await
+            .map(|c| c.into_iter().map(|group| group.to_data().into()).collect())
             .map_err(|e| Status::not_found(format!("Nodes unavailable: \"{}\"", e)))?;
 
         let length = group_list.len();
@@ -116,10 +136,11 @@ impl ProfileManager for AColoRSProfile {
         let group_id = request.into_inner().group_id;
 
         let group_data: core_protobuf::acolors_proto::GroupData = self
-            .manager
-            .get_group_by_id(group_id)
+            .profile
+            .group_list
+            .query(group_id as i64)
             .await
-            .map(|c| c.into())
+            .map(|c| c.to_data().into())
             .map_err(|e| Status::not_found(format!("Group unavailable: \"{}\"", e)))?;
 
         let reply = group_data;
@@ -135,10 +156,12 @@ impl ProfileManager for AColoRSProfile {
         let node_id = request.into_inner().node_id;
 
         let node_data: core_protobuf::acolors_proto::NodeData = self
-            .manager
-            .get_node_by_id(node_id)
+            .profile
+            .group_list
+            .default_group()
+            .query(node_id as i64)
             .await
-            .map(|c| c.into())
+            .map(|c| c.to_data().into())
             .map_err(|e| Status::not_found(format!("Node unavailable: \"{}\"", e)))?;
 
         let reply = node_data;
@@ -158,10 +181,15 @@ impl ProfileManager for AColoRSProfile {
             .data
             .ok_or_else(|| Status::invalid_argument("No group data"))?;
 
-        self.manager
-            .set_group_by_id(group_id, data.into())
+        self.profile
+            .group_list
+            .set(group_id as i64, data.into())
             .await
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::SetGroupById(group_id),
+        );
 
         let reply = SetGroupByIdReply {};
 
@@ -179,10 +207,16 @@ impl ProfileManager for AColoRSProfile {
             .data
             .ok_or_else(|| Status::invalid_argument("No node data"))?;
 
-        self.manager
-            .set_node_by_id(node_id, data.into())
+        self.profile
+            .group_list
+            .default_group()
+            .set(node_id as i64, data.into())
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::SetNodeById(node_id),
+        );
 
         let reply = SetNodeByIdReply {};
 
@@ -202,10 +236,16 @@ impl ProfileManager for AColoRSProfile {
         let node_data = decode_outbound_from_url(url)
             .map_err(|e| Status::invalid_argument(format!("Decode error: \"{}\"", e)))?;
 
-        self.manager
-            .set_node_by_id(node_id, node_data)
+        self.profile
+            .group_list
+            .default_group()
+            .set(node_id as i64, node_data.into())
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::SetNodeById(node_id),
+        );
 
         let reply = SetNodeByUrlReply {};
 
@@ -223,10 +263,15 @@ impl ProfileManager for AColoRSProfile {
             .data
             .ok_or_else(|| Status::invalid_argument("No group data"))?;
 
-        self.manager
-            .append_group(data.into())
+        self.profile
+            .group_list
+            .append(data.into())
             .await
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::AppendGroup,
+        );
 
         let reply = AppendGroupReply {};
 
@@ -248,10 +293,18 @@ impl ProfileManager for AColoRSProfile {
             .data
             .ok_or_else(|| Status::invalid_argument("No node data"))?;
 
-        self.manager
-            .append_node(group_id, data.into())
+        self.profile
+            .group_list
+            .query(group_id as i64)
+            .await
+            .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
+            .append(data.into())
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::AppendNode(group_id),
+        );
 
         let reply = AppendNodeReply {};
 
@@ -274,10 +327,18 @@ impl ProfileManager for AColoRSProfile {
         let node_data = decode_outbound_from_url(url)
             .map_err(|e| Status::invalid_argument(format!("Decode error: \"{}\"", e)))?;
 
-        self.manager
-            .append_node(group_id, node_data)
+        self.profile
+            .group_list
+            .query(group_id as i64)
+            .await
+            .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
+            .append(node_data.into())
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::AppendNode(group_id),
+        );
 
         let reply = AppendNodeByUrlReply {};
 
@@ -295,10 +356,16 @@ impl ProfileManager for AColoRSProfile {
 
         let group_id = request.into_inner().group_id;
 
-        self.manager
-            .remove_group_by_id(group_id)
+        self.profile
+            .group_list
+            .remove(group_id as i64)
             .await
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
+
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::RemoveGroupById(group_id),
+        );
 
         let reply = RemoveGroupByIdReply {};
 
@@ -312,10 +379,16 @@ impl ProfileManager for AColoRSProfile {
 
         let node_id = request.into_inner().node_id;
 
-        self.manager
-            .remove_node_by_id(node_id)
+        self.profile
+            .group_list
+            .default_group()
+            .remove(node_id as i64)
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::RemoveNodeById(node_id),
+        );
 
         let reply = RemoveNodeByIdReply {};
 
@@ -346,13 +419,14 @@ impl ProfileManager for AColoRSProfile {
             String::new()
         };
 
-        let group_data = self
-            .manager
-            .get_group_by_id(group_id)
+        let group = self
+            .profile
+            .group_list
+            .query(group_id as i64)
             .await
-            .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
+            .map_err(|e| Status::not_found(format!("Group unavailable: \"{}\"", e)))?;
 
-        let base64: String = get_http_content(group_data.url, &proxy)
+        let base64: String = get_http_content(group.data().url.clone(), &proxy)
             .await
             .map(|s| s.lines().map(|line| line.trim()).collect())
             .map_err(|e| Status::invalid_argument(format!("Url unavailable: \"{}\"", e)))?;
@@ -360,10 +434,24 @@ impl ProfileManager for AColoRSProfile {
         let nodes = get_nodes_from_base64(&base64)
             .map_err(|e| Status::aborted(format!("Nodes url parsing error\"{}\"", e)))?;
 
-        self.manager
-            .update_group_by_id(group_id, nodes)
+        group
+            .remove_all_nodes()
             .await
-            .map_err(|e| Status::unavailable(format!("Group unavailable: \"{}\"", e)))?;
+            .map_err(|e| Status::aborted(&format!("Empty Group Error: {}",e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::EmptyGroup(group.data().id),
+        );
+        for node in nodes {
+            group.append(node).await.unwrap_or_else(|e| {
+                error!("Insert Node Failed: {}", e);
+                0
+            });
+        }
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::UpdateGroup(group.data().id),
+        );
 
         let reply = UpdateGroupByIdReply {};
 
@@ -378,10 +466,19 @@ impl ProfileManager for AColoRSProfile {
         let inner = request.into_inner();
         let group_id = inner.group_id;
 
-        self.manager
-            .empty_group_by_id(group_id)
+        let group = self
+            .profile
+            .group_list
+            .query(group_id as i64)
             .await
-            .map_err(|e| Status::unavailable(format!("Group unavailable: \"{}\"", e)))?;
+            .map_err(|e| Status::not_found(format!("Group unavailable: \"{}\"", e)))?;
+
+        group.remove_all_nodes().await
+            .map_err(|e| Status::aborted(&format!("Empty Group Error: {}",e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            acolors_signal::AColorSignal::EmptyGroup(group_id),
+        );
 
         let reply = EmptyGroupByIdReply {};
 

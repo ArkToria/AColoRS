@@ -8,7 +8,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rusqlite = {version = "0.26.3",features =["bundled"]}
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls","sqlite","macros","migrate" ] }
 anyhow = "1.0.53"
 spdlog-rs = { version = "0.2.3", features = [
     "level-debug",
@@ -17,6 +17,7 @@ spdlog-rs = { version = "0.2.3", features = [
 ] }
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros", "sync"] }
 reqwest = "0.11.9"
+futures = {version = "0.3.21", default-features = false, features = ["alloc"]}
 
 core_protobuf = {path = "../../components/core_protobuf"}
 core_data = {path = "../../components/core_data"}

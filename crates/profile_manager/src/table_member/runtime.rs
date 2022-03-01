@@ -1,41 +1,46 @@
-use anyhow::anyhow;
+use futures::TryStreamExt;
 use spdlog::error;
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 
-use rusqlite::{params, Connection};
+use sqlx::{Database, Row};
 
-use super::traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection};
+use super::traits::{AttachedToTable, HasTable, WithConnection};
 use crate::tools::dbtools::test_and_create_runtime_table;
 use core_data::data_type::runtimevalue::*;
 
-#[derive(Debug, Clone)]
+type DatabaseDriver = sqlx::Sqlite;
+type SharedConnection = Arc<Mutex<<DatabaseDriver as Database>::Connection>>;
+#[derive(Debug)]
 pub struct RuntimeValue {
-    map: HashMap<String, ValueData>,
-    connection: Rc<Connection>,
+    map: Mutex<HashMap<String, ValueData>>,
+    connection: SharedConnection,
 }
 impl RuntimeValue {
-    pub fn create(connection: Rc<Connection>) -> rusqlite::Result<Self> {
-        if let Err(e) = test_and_create_runtime_table(&connection) {
+    pub async fn create(connection: SharedConnection) -> sqlx::Result<Self> {
+        if let Err(e) = test_and_create_runtime_table(&connection).await {
             error!("{}", e);
         }
+
         let mut map = HashMap::new();
-        let sql = "SELECT * FROM runtime;";
-        let mut statement = connection.prepare(sql)?;
-        let mut rows = statement.query([])?;
-        while let Some(row) = rows.next()? {
+        let conn_mut = &mut *connection.lock().await;
+        let mut rows = sqlx::query("SELECT * FROM runtime;").fetch(conn_mut);
+        while let Some(row) = rows.try_next().await? {
             let value_data = ValueData {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                value_type: row.get(2)?,
-                value: row.get(3)?,
+                id: row.try_get(0)?,
+                name: row.try_get(1)?,
+                value_type: row.try_get(2)?,
+                value: row.try_get(3)?,
             };
             map.insert(value_data.name.clone(), value_data);
         }
+        let map = Mutex::new(map);
         let connection = connection.clone();
         Ok(RuntimeValue { map, connection })
     }
-    pub fn set_by_key(&mut self, key: &str, value: String) -> rusqlite::Result<()> {
-        match self.map.get_mut(key) {
+    pub async fn set_by_key(&self, key: &str, value: String) -> sqlx::Result<()> {
+        let map_mut = &mut *self.map.lock().await;
+        match map_mut.get_mut(key) {
             Some(v) => {
                 v.value = value;
             }
@@ -46,25 +51,71 @@ impl RuntimeValue {
                     value_type: 2,
                     value,
                 };
-                self.append(&value_data)?;
-                self.map.insert(value_data.name.clone(), value_data);
+                self.append(value_data.clone()).await?;
+                map_mut.insert(value_data.name.clone(), value_data);
 
                 return Ok(());
             }
         }
 
-        let value = self.map.get(key).unwrap().clone();
+        let value = map_mut.get(key).unwrap().clone();
 
-        self.set(value.id as usize, &value)?;
+        self.set(value.id as i64, value).await?;
 
         Ok(())
     }
-    pub fn get_by_key(&self, key: &str) -> Option<String> {
-        self.map.get(key).map(|v| v.value.clone())
+    pub async fn get_by_key(&self, key: &str) -> Option<String> {
+        let map = &*self.map.lock().await;
+        map.get(key).map(|v| v.value.clone())
+    }
+
+    async fn append(&self, item: ValueData) -> sqlx::Result<i64> {
+        let query = sqlx::query(RUNTIME_INSERT_SQL)
+            .bind(item.name)
+            .bind(item.value_type)
+            .bind(item.value);
+        let conn_mut = &mut *self.connection.lock().await;
+
+        let result = query.execute(conn_mut).await?.last_insert_rowid();
+        Ok(result)
+    }
+    async fn set(&self, id: i64, item: ValueData) -> sqlx::Result<()> {
+        let query = sqlx::query(RUNTIME_UPDATE_SQL)
+            .bind(item.name)
+            .bind(item.value_type)
+            .bind(item.value)
+            .bind(id);
+
+        let conn_mut = &mut *self.connection.lock().await;
+
+        query.execute(conn_mut).await?;
+        Ok(())
+    }
+    pub async fn query(&self, id: i64) -> sqlx::Result<Value> {
+        let query = sqlx::query(RUNTIME_QUERY_SQL).bind(id);
+        let conn_mut = &mut *self.connection.lock().await;
+        let mut rows = query.fetch(conn_mut);
+        let data = match rows.try_next().await? {
+            Some(row) => ValueData {
+                id: row.try_get(0)?,
+                name: row.try_get(1)?,
+                value_type: row.try_get(2)?,
+                value: row.try_get(3)?,
+            },
+            None => return Err(sqlx::Error::RowNotFound),
+        };
+        Ok(Value::new(data, self.connection.clone()))
+    }
+    pub async fn remove(&self, id: i64) -> sqlx::Result<()> {
+        let query = sqlx::query(RUNTIME_REMOVE_SQL).bind(id);
+        let conn_mut = &mut *self.connection.lock().await;
+
+        query.execute(conn_mut).await?;
+        Ok(())
     }
 }
 impl WithConnection for RuntimeValue {
-    fn connection(&self) -> Rc<Connection> {
+    fn connection(&self) -> SharedConnection {
         self.connection.clone()
     }
 }
@@ -73,15 +124,17 @@ impl HasTable for RuntimeValue {
         RUNTIME_TABLE_NAME
     }
 }
-impl AColoRSListModel<Value, ValueData> for RuntimeValue {}
 
 #[derive(Debug, Clone)]
 pub struct Value {
     data: ValueData,
-    connection: Rc<Connection>,
+    connection: SharedConnection,
 }
 
 impl Value {
+    pub fn new(data: ValueData, connection: SharedConnection) -> Value {
+        Value { data, connection }
+    }
     /// Get a reference to the value's data.
     pub fn data(&self) -> &ValueData {
         &self.data
@@ -89,7 +142,7 @@ impl Value {
 }
 
 impl WithConnection for Value {
-    fn connection(&self) -> Rc<Connection> {
+    fn connection(&self) -> SharedConnection {
         self.connection.clone()
     }
 }
@@ -118,72 +171,26 @@ impl AttachedToTable<ValueData> for Value {
     fn get_query_sql() -> &'static str {
         RUNTIME_QUERY_SQL
     }
-
-    fn execute_statement(
-        item_data: &ValueData,
-        statement: &mut rusqlite::Statement,
-    ) -> rusqlite::Result<usize> {
-        statement.execute(params![
-            item_data.name,
-            item_data.value_type,
-            item_data.value,
-        ])
-    }
-
-    fn execute_statement_with_id(
-        item_data: &ValueData,
-        id: usize,
-        statement: &mut rusqlite::Statement,
-    ) -> rusqlite::Result<usize> {
-        statement.execute(params![
-            item_data.name,
-            item_data.value_type,
-            item_data.value,
-            id,
-        ])
-    }
-
-    fn query_map(
-        connection: Rc<Connection>,
-        statement: &mut rusqlite::Statement,
-        id: usize,
-    ) -> anyhow::Result<Self>
-    where
-        Self: Sized,
-    {
-        let mut iter = statement.query_map(&[&id], |row| {
-            Ok(ValueData {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                value_type: row.get(2)?,
-                value: row.get(3)?,
-            })
-        })?;
-        if let Some(data) = iter.next() {
-            return Ok(Value {
-                data: data?,
-                connection,
-            });
-        }
-        Err(anyhow!("RuntimeValue Not Found"))
-    }
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
     use crate::tools::dbtools::test_and_create_runtime_table;
-    use anyhow::{anyhow, Result};
+    use anyhow::Result;
+    use sqlx::{Connection, SqliteConnection};
 
-    #[test]
-    fn test_insert_into_runtime_value_and_query() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_runtime_table(&conn)?;
-        let mut runtime_value = RuntimeValue::create(conn)?;
+    #[tokio::test]
+    async fn test_insert_into_runtime_value_and_query() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_runtime_table(&conn).await?;
+        let runtime_value = RuntimeValue::create(conn).await?;
         for i in 1..15 {
             let runtime_value_data = generate_test_runtime_value(i);
-            runtime_value.append(&runtime_value_data)?;
-            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            runtime_value.append(runtime_value_data.clone()).await?;
+            let fetch_runtime_value = runtime_value.query(i as i64).await?;
             println!("{:?}", fetch_runtime_value);
             assert!(compare_runtime_value(
                 fetch_runtime_value.data(),
@@ -192,15 +199,17 @@ pub mod tests {
         }
         Ok(())
     }
-    #[test]
-    fn test_update_runtime_value_and_query() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_runtime_table(&conn)?;
-        let mut runtime_value = RuntimeValue::create(conn)?;
+    #[tokio::test]
+    async fn test_update_runtime_value_and_query() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_runtime_table(&conn).await?;
+        let runtime_value = RuntimeValue::create(conn).await?;
         for i in 1..15 {
             let runtime_value_data = generate_test_runtime_value(i);
-            runtime_value.append(&runtime_value_data)?;
-            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            runtime_value.append(runtime_value_data.clone()).await?;
+            let fetch_runtime_value = runtime_value.query(i as i64).await?;
             println!("Before: {:?}", fetch_runtime_value);
             assert!(compare_runtime_value(
                 fetch_runtime_value.data(),
@@ -208,8 +217,13 @@ pub mod tests {
             ));
 
             let new_runtime_value = generate_test_runtime_value(i + 200);
-            runtime_value.set(fetch_runtime_value.data().id as usize, &new_runtime_value)?;
-            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            runtime_value
+                .set(
+                    fetch_runtime_value.data().id as i64,
+                    new_runtime_value.clone(),
+                )
+                .await?;
+            let fetch_runtime_value = runtime_value.query(i as i64).await?;
 
             println!("After: {:?}", fetch_runtime_value);
             assert!(compare_runtime_value(
@@ -220,24 +234,28 @@ pub mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_remove_runtime_value_and_query() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_runtime_table(&conn)?;
-        let mut runtime_value = RuntimeValue::create(conn)?;
+    #[tokio::test]
+    async fn test_remove_runtime_value_and_query() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_runtime_table(&conn).await?;
+        let runtime_value = RuntimeValue::create(conn).await?;
         for i in 1..15 {
             let runtime_value_data = generate_test_runtime_value(i);
-            runtime_value.append(&runtime_value_data)?;
-            let fetch_runtime_value = runtime_value.query(i as usize)?;
+            runtime_value.append(runtime_value_data.clone()).await?;
+            let fetch_runtime_value = runtime_value.query(i as i64).await?;
             println!("Before: {:?}", fetch_runtime_value);
             assert!(compare_runtime_value(
                 fetch_runtime_value.data(),
                 &runtime_value_data
             ));
 
-            runtime_value.remove(fetch_runtime_value.data().id as usize)?;
-            let fetch_runtime_value = runtime_value.query(i as usize);
-            let error_expected = anyhow!("RuntimeValue Not Found");
+            runtime_value
+                .remove(fetch_runtime_value.data().id as i64)
+                .await?;
+            let fetch_runtime_value = runtime_value.query(i as i64).await;
+            let error_expected = sqlx::Error::RowNotFound;
 
             if let Err(e) = fetch_runtime_value {
                 assert_eq!(error_expected.to_string(), e.to_string());
@@ -264,21 +282,24 @@ pub mod tests {
         };
         result
     }
-    #[test]
-    fn test_set_and_get_runtime_value() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        let mut runtime_value = RuntimeValue::create(conn)?;
+    #[tokio::test]
+    async fn test_set_and_get_runtime_value() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_runtime_table(&conn).await?;
+        let runtime_value = RuntimeValue::create(conn).await?;
         for i in 1..15 {
             let key = format!("key{}", i);
             let value = format!("value{}", i);
-            runtime_value.set_by_key(&key, value.clone())?;
-            let fetch_runtime_value = runtime_value.get_by_key(&key).unwrap();
+            runtime_value.set_by_key(&key, value.clone()).await?;
+            let fetch_runtime_value = runtime_value.get_by_key(&key).await.unwrap();
             println!("Before: {:?}", &fetch_runtime_value);
             assert_eq!(value, fetch_runtime_value);
 
             let value = format!("value{}", i);
-            runtime_value.set_by_key(&key, value.clone())?;
-            let fetch_runtime_value = runtime_value.get_by_key(&key).unwrap();
+            runtime_value.set_by_key(&key, value.clone()).await?;
+            let fetch_runtime_value = runtime_value.get_by_key(&key).await.unwrap();
 
             println!("After: {:?}", &fetch_runtime_value);
             assert_eq!(value, fetch_runtime_value);

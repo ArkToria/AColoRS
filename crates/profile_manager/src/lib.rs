@@ -1,4 +1,3 @@
-mod manager;
 pub mod profile;
 
 pub mod table_member;
@@ -12,4 +11,3 @@ pub use table_member::runtime::RuntimeValue;
 pub use profile::Profile;
 
 pub use acolors_signal::AColorSignal;
-pub use manager::profile_manager::ProfileTaskProducer;

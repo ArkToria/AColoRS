@@ -1,16 +1,16 @@
-use std::rc::Rc;
-
-use anyhow::anyhow;
-use rusqlite::{params, Connection};
+use std::sync::Arc;
 
 use core_data::data_type::node::*;
+use sqlx::SqliteConnection;
+use tokio::sync::Mutex;
 
 use super::traits::{AttachedToTable, WithConnection};
 
+type Connection = Arc<Mutex<SqliteConnection>>;
 #[derive(Debug, Clone)]
 pub struct Node {
     data: NodeData,
-    connection: Rc<Connection>,
+    connection: Connection,
 }
 
 impl Node {
@@ -23,7 +23,7 @@ impl Node {
         self.data
     }
 
-    pub fn new(data: NodeData, connection: Rc<Connection>) -> Node {
+    pub fn new(data: NodeData, connection: Connection) -> Node {
         Node { data, connection }
     }
 }
@@ -50,92 +50,9 @@ impl AttachedToTable<NodeData> for Node {
     fn get_query_sql() -> &'static str {
         NODE_QUERY_SQL
     }
-
-    fn execute_statement(
-        item_data: &NodeData,
-        statement: &mut rusqlite::Statement,
-    ) -> rusqlite::Result<usize> {
-        statement.execute(params![
-            item_data.name,
-            item_data.group_id,
-            item_data.group_name,
-            item_data.routing_id,
-            item_data.routing_name,
-            item_data.protocol,
-            item_data.address,
-            item_data.port,
-            item_data.password,
-            item_data.raw,
-            item_data.url,
-            item_data.latency,
-            item_data.upload,
-            item_data.download,
-            item_data.create_at,
-            item_data.modified_at,
-        ])
-    }
-    fn execute_statement_with_id(
-        item_data: &NodeData,
-        id: usize,
-        statement: &mut rusqlite::Statement,
-    ) -> rusqlite::Result<usize> {
-        statement.execute(params![
-            item_data.name,
-            item_data.group_id,
-            item_data.group_name,
-            item_data.routing_id,
-            item_data.routing_name,
-            item_data.protocol,
-            item_data.address,
-            item_data.port,
-            item_data.password,
-            item_data.raw,
-            item_data.url,
-            item_data.latency,
-            item_data.upload,
-            item_data.download,
-            item_data.create_at,
-            item_data.modified_at,
-            id,
-        ])
-    }
-    fn query_map(
-        connection: Rc<Connection>,
-        statement: &mut rusqlite::Statement,
-        id: usize,
-    ) -> anyhow::Result<Node> {
-        let mut iter = statement.query_map(&[&id], |row| {
-            Ok(NodeData {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                group_id: row.get(2)?,
-                group_name: row.get(3)?,
-                routing_id: row.get(4)?,
-                routing_name: row.get(5)?,
-                protocol: row.get(6)?,
-                address: row.get(7)?,
-                port: row.get(8)?,
-                password: row.get(9)?,
-                raw: row.get(10)?,
-                url: row.get(11)?,
-                latency: row.get(12)?,
-                upload: row.get(13)?,
-                download: row.get(14)?,
-                create_at: row.get(15)?,
-                modified_at: row.get(16)?,
-            })
-        })?;
-        if let Some(data) = iter.next() {
-            return Ok(Node {
-                data: data?,
-                connection,
-            });
-        }
-        Err(anyhow!("Node Not Found"))
-    }
 }
 impl WithConnection for Node {
-    fn connection(&self) -> Rc<Connection> {
+    fn connection(&self) -> Connection {
         self.connection.clone()
     }
 }

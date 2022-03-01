@@ -9,6 +9,7 @@ use core_protobuf::acolors_proto::config_manager_server::ConfigManagerServer;
 use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
 use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
 use spdlog::{error, info};
+use sqlx::{Connection, SqliteConnection};
 use tokio::sync::{broadcast, RwLock};
 use tonic::transport::Server;
 
@@ -94,11 +95,13 @@ async fn create_services<P: AsRef<Path>>(
     let mut config = config_read_to_json(&config_path).await?;
     let (signal_sender, _) = broadcast::channel(BUFFER_SIZE);
     let acolors_notifications = AColoRSNotifications::new(signal_sender.clone());
-    let profile_task_producer = Arc::new(
-        profile_manager::ProfileTaskProducer::new(
-            database_path,
-            signal_sender.clone(),
-            BUFFER_SIZE,
+    let profile = Arc::new(
+        profile_manager::Profile::create(
+            SqliteConnection::connect(&format!(
+                "sqlite://{}",
+                database_path.as_ref().as_os_str().to_string_lossy()
+            ))
+            .await?,
         )
         .await?,
     );
@@ -108,14 +111,10 @@ async fn create_services<P: AsRef<Path>>(
         .transpose()?;
     let inbounds = Arc::new(RwLock::new(config_inbounds.unwrap_or_default()));
     let acolors_config = AColoRSConfig::new(config_path, inbounds.clone(), signal_sender.clone());
-    let mut acolors_core = AColoRSCore::create(
-        profile_task_producer.clone(),
-        inbounds.clone(),
-        signal_sender,
-    )
-    .await;
+    let mut acolors_core =
+        AColoRSCore::create(profile.clone(), inbounds.clone(), signal_sender.clone()).await;
 
-    let acolors_profile = AColoRSProfile::new(profile_task_producer, inbounds);
+    let acolors_profile = AColoRSProfile::new(profile, inbounds, signal_sender);
 
     let cores_value = config.get_mut("cores");
     add_cores(cores_value, &mut acolors_core, core_name, core_path).await?;

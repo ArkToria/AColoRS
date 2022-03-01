@@ -1,6 +1,7 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
-use rusqlite::Connection;
+use sqlx::SqliteConnection;
+use tokio::sync::Mutex;
 
 use crate::table_member::{grouplist::GroupList, runtime::RuntimeValue};
 
@@ -11,11 +12,11 @@ pub struct Profile {
 }
 
 impl Profile {
-    pub fn new(connection: Connection) -> rusqlite::Result<Profile> {
-        let connection = Rc::new(connection);
+    pub async fn create(connection: SqliteConnection) -> sqlx::Result<Profile> {
+        let connection = Arc::new(Mutex::new(connection));
         Ok(Profile {
-            group_list: GroupList::create(connection.clone())?,
-            runtime_value: RuntimeValue::create(connection)?,
+            group_list: GroupList::create(connection.clone()).await?,
+            runtime_value: RuntimeValue::create(connection).await?,
         })
     }
 }

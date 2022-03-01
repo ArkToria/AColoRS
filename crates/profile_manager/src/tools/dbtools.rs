@@ -1,103 +1,56 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
-use rusqlite::Connection;
+use sqlx::Database;
+use tokio::sync::Mutex;
 
-use crate::table_member::traits::AttachedToTable;
+type DatabaseDriver = sqlx::Sqlite;
+type SharedConnection = Arc<Mutex<<DatabaseDriver as Database>::Connection>>;
 
 use super::schema::{GROUP_SCHEMA, NODE_SCHEMA, RUNTIME_SCHEMA};
 
-pub fn test_and_create_node_table(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute(NODE_SCHEMA, [])?;
+pub async fn test_and_create_node_table(conn: &SharedConnection) -> sqlx::Result<()> {
+    let query = sqlx::query(NODE_SCHEMA);
+    let conn_mut = &mut *conn.lock().await;
+    query.execute(conn_mut).await?;
     Ok(())
 }
 
-pub fn test_and_create_group_table(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute(GROUP_SCHEMA, [])?;
+pub async fn test_and_create_group_table(conn: &SharedConnection) -> sqlx::Result<()> {
+    let query = sqlx::query(GROUP_SCHEMA);
+    let conn_mut = &mut *conn.lock().await;
+    query.execute(conn_mut).await?;
     Ok(())
 }
 
-pub fn test_and_create_runtime_table(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute(RUNTIME_SCHEMA, [])?;
+pub async fn test_and_create_runtime_table(conn: &SharedConnection) -> sqlx::Result<()> {
+    let query = sqlx::query(RUNTIME_SCHEMA);
+    let conn_mut = &mut *conn.lock().await;
+    query.execute(conn_mut).await?;
     Ok(())
-}
-
-pub fn count_table(connection: &Connection, name: &str) -> rusqlite::Result<usize> {
-    let sql = format!("SELECT COUNT(*) FROM {}", name);
-    let mut statement = connection.prepare(&sql)?;
-    let mut rows = statement.query([])?;
-    let size;
-    match rows.next()? {
-        Some(row) => {
-            size = row.get(0)?;
-        }
-        None => {
-            return Err(rusqlite::Error::QueryReturnedNoRows);
-        }
-    }
-    Ok(size)
-}
-pub fn insert_into_table<T, D>(connection: &Connection, item: &D) -> rusqlite::Result<()>
-where
-    T: AttachedToTable<D>,
-    D: Clone,
-{
-    let sql = T::get_insert_sql();
-    let mut statement = connection.prepare(sql)?;
-    T::execute_statement(item, &mut statement)?;
-    Ok(())
-}
-pub fn update_table<T, D>(connection: &Connection, id: usize, item: &D) -> rusqlite::Result<()>
-where
-    T: AttachedToTable<D>,
-    D: Clone,
-{
-    let sql = T::get_update_sql();
-    let mut statement = connection.prepare(sql)?;
-    T::execute_statement_with_id(item, id, &mut statement)?;
-    Ok(())
-}
-pub fn remove_from_table<T, D>(connection: &Connection, id: usize) -> rusqlite::Result<()>
-where
-    T: AttachedToTable<D>,
-    D: Clone,
-{
-    let sql = T::get_remove_sql();
-    let mut statement = connection.prepare(sql)?;
-    statement.execute(&[&id])?;
-    Ok(())
-}
-pub fn query_from_table<T, D>(connection: Rc<Connection>, id: usize) -> anyhow::Result<T>
-where
-    T: AttachedToTable<D>,
-    D: Clone,
-{
-    let sql = T::get_query_sql();
-    let mut statement = connection.prepare(sql)?;
-    let item_data = T::query_map(connection.clone(), &mut statement, id)?;
-    Ok(item_data)
 }
 
 #[cfg(test)]
 mod tests {
 
     use anyhow::Result;
-    use rusqlite::{params, Connection};
+    use sqlx::{Connection, SqliteConnection};
 
-    use crate::tools::dbtools::count_table;
     #[test]
     fn test_sth() -> Result<()> {
         Ok(())
     }
-    #[test]
-    fn test_count_table() -> Result<()> {
-        let conn = Connection::open_in_memory()?;
-        conn.execute(
+    #[tokio::test]
+    async fn test_count_table() -> Result<()> {
+        let mut conn = SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::query(
             "CREATE TABLE testtable (
                   id              INTEGER PRIMARY KEY,
                   name            TEXT NOT NULL
                   )",
-            [],
-        )?;
+        )
+        .execute(&mut conn)
+        .await?;
+        /*
         assert_eq!(0, count_table(&conn, "testtable")?);
         for i in 1..15 {
             println!("{}!", i);
@@ -105,6 +58,7 @@ mod tests {
             conn.execute("INSERT INTO testtable (name) VALUES (?1)", params![name])?;
             assert_eq!(i, count_table(&conn, "testtable")?);
         }
+        */
         Ok(())
     }
 }

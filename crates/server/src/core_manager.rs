@@ -14,7 +14,7 @@ use core_protobuf::acolors_proto::{
     SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
-use profile_manager::ProfileTaskProducer;
+use profile_manager::Profile;
 use spdlog::{error, info};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
@@ -28,7 +28,7 @@ type CoreTag = Mutex<String>;
 pub struct AColoRSCore {
     core_tag: CoreTag,
     current_core: CurrentCore,
-    profile: Arc<ProfileTaskProducer>,
+    profile: Arc<Profile>,
     inbounds: InboundsLock,
     current_node: CurrentNodeLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
@@ -37,20 +37,27 @@ pub struct AColoRSCore {
 
 impl AColoRSCore {
     pub async fn create(
-        profile: Arc<ProfileTaskProducer>,
+        profile: Arc<Profile>,
         inbounds: InboundsLock,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let core = Mutex::new(None);
         let core_map = HashMap::new();
         let current_node = Mutex::new(None);
-        let current_node_id = profile.get_runtime_value("CURRENT_NODE_ID").await.ok();
-        let default_node_id = profile.get_runtime_value("DEFAULT_NODE_ID").await.ok();
+        let current_node_id = profile.runtime_value.get_by_key("CURRENT_NODE_ID").await;
+        let default_node_id = profile.runtime_value.get_by_key("DEFAULT_NODE_ID").await;
 
         let mut receiver = signal_sender.subscribe();
-        let node_selected = Self::check_and_set_config(default_node_id, &profile, &current_node)
-            .await
-            || Self::check_and_set_config(current_node_id, &profile, &current_node).await;
+        let node_selected =
+            Self::check_and_set_config(default_node_id, &profile, &current_node, &signal_sender)
+                .await
+                || Self::check_and_set_config(
+                    current_node_id,
+                    &profile,
+                    &current_node,
+                    &signal_sender,
+                )
+                .await;
         let signal = receiver.try_recv().ok();
         if node_selected & signal.is_some() {
             info!("Default Node Selected");
@@ -117,36 +124,49 @@ impl AColoRSCore {
         Ok(())
     }
     pub async fn set_config(
-        profile: &Arc<ProfileTaskProducer>,
+        profile: &Arc<Profile>,
         current_node: &CurrentNodeLock,
-        node_id: i32,
+        node_id: i64,
+        signal_sender: &broadcast::Sender<AColorSignal>,
     ) -> Result<(), Status> {
         let node_data = profile
-            .get_node_by_id(node_id)
+            .group_list
+            .default_group()
+            .query(node_id)
             .await
-            .map_err(|e| Status::not_found(format!("Node unavailable: \"{}\"", e)))?;
+            .map_err(|e| Status::not_found(format!("Node unavailable: \"{}\"", e)))?
+            .to_data();
 
         {
             let mut data_guard = current_node.lock().await;
             *data_guard = Some(node_data);
         }
+        send_or_warn_print(signal_sender, AColorSignal::CoreConfigChanged);
 
         profile
-            .set_runtime_value("CURRENT_NODE_ID", node_id.to_string())
+            .runtime_value
+            .set_by_key("CURRENT_NODE_ID", node_id.to_string())
             .await
             .unwrap_or_else(|e| error!("Set Config Error: {}", e));
+        send_or_warn_print(
+            signal_sender,
+            AColorSignal::RuntimeValueChanged("CURRENT_NODE_ID".to_string()),
+        );
 
         Ok(())
     }
     async fn check_and_set_config(
         node_id_string: Option<String>,
-        profile: &Arc<ProfileTaskProducer>,
+        profile: &Arc<Profile>,
         current_node: &CurrentNodeLock,
+        signal_sender: &broadcast::Sender<AColorSignal>,
     ) -> bool {
         if let Some(node_id_string) = node_id_string {
             match node_id_string.parse() {
                 Ok(node_id) => {
-                    let result = Self::set_config(profile, current_node, node_id).await.ok();
+                    let result = Self::set_config(profile, current_node, node_id, signal_sender)
+                        .await
+                        .ok();
                     return result.is_some();
                 }
                 Err(e) => {
@@ -276,7 +296,13 @@ impl CoreManager for AColoRSCore {
 
         let node_id = request.into_inner().node_id;
 
-        Self::set_config(&self.profile, &self.current_node, node_id).await?;
+        Self::set_config(
+            &self.profile,
+            &self.current_node,
+            node_id as i64,
+            &self.signal_sender,
+        )
+        .await?;
 
         send_or_warn_print(&self.signal_sender, AColorSignal::CoreConfigChanged);
 
@@ -296,9 +322,14 @@ impl CoreManager for AColoRSCore {
         let node_id = request.into_inner().node_id;
 
         self.profile
-            .set_runtime_value("DEFAULT_NODE_ID", node_id.to_string())
+            .runtime_value
+            .set_by_key("DEFAULT_NODE_ID", node_id.to_string())
             .await
-            .unwrap_or_else(|e| error!("Set Config Error: {}", e));
+            .map_err(|e| Status::cancelled(format!("Set Config Error: {}", e)))?;
+        send_or_warn_print(
+            &self.signal_sender,
+            AColorSignal::RuntimeValueChanged("DEFAULT_NODE_ID".to_string()),
+        );
 
         let reply = SetDefaultConfigByNodeIdReply {};
         Ok(Response::new(reply))

@@ -1,24 +1,26 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
-use anyhow::anyhow;
-use rusqlite::{params, Connection};
-
-use crate::tools::dbtools::{insert_into_table, update_table};
 use core_data::data_type::{group::*, node::*};
+use futures::TryStreamExt;
+use sqlx::{Database, Executor, Row};
+use tokio::sync::Mutex;
 
 use super::{
     node::Node,
-    traits::{AColoRSListModel, AttachedToTable, HasTable, WithConnection},
+    traits::{AttachedToTable, HasTable, WithConnection},
 };
 
+type DatabaseDriver = sqlx::Sqlite;
+type SharedConnection = Arc<Mutex<<DatabaseDriver as Database>::Connection>>;
+type TRow = <DatabaseDriver as Database>::Row;
 #[derive(Debug, Clone)]
 pub struct Group {
     data: GroupData,
-    connection: Rc<Connection>,
+    connection: SharedConnection,
 }
 
 impl Group {
-    pub fn new(data: GroupData, connection: Rc<Connection>) -> Group {
+    pub fn new(data: GroupData, connection: SharedConnection) -> Group {
         Group { data, connection }
     }
 
@@ -31,42 +33,155 @@ impl Group {
         self.data
     }
 
-    pub fn remove_all_nodes(&self) -> rusqlite::Result<()> {
-        let sql = "DELETE FROM nodes WHERE GroupID = ?";
-        let mut statement = self.connection.prepare(sql)?;
-        statement.execute(&[&self.data.id])?;
+    pub async fn remove_all_nodes(&self) -> sqlx::Result<()> {
+        let query = sqlx::query("DELETE FROM nodes WHERE GroupID = ?").bind(self.data.id);
+        let conn_mut = &mut *self.connection.lock().await;
+        conn_mut.execute(query).await?;
         Ok(())
     }
 
-    pub fn list_all_nodes(&self) -> rusqlite::Result<Vec<Node>> {
-        let group_id = self.data().id;
-        let sql = "SELECT * FROM nodes WHERE GroupID = ?";
-        let mut statement = self.connection.prepare(sql)?;
-        let mut result: Vec<Node> = Vec::new();
-        let mut rows = statement.query(&[&group_id])?;
-        while let Some(row) = rows.next()? {
-            let node_data = NodeData {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                group_id: row.get(2)?,
-                group_name: row.get(3)?,
-                routing_id: row.get(4)?,
-                routing_name: row.get(5)?,
-                protocol: row.get(6)?,
-                address: row.get(7)?,
-                port: row.get(8)?,
-                password: row.get(9)?,
-                raw: row.get(10)?,
-                url: row.get(11)?,
-                latency: row.get(12)?,
-                upload: row.get(13)?,
-                download: row.get(14)?,
-                create_at: row.get(15)?,
-                modified_at: row.get(16)?,
-            };
-            result.push(Node::new(node_data, self.connection.clone()));
+    pub async fn list_all_nodes(&self) -> sqlx::Result<Vec<Node>> {
+        let rows: Vec<TRow>;
+        {
+            let conn_mut = &mut *self.connection.lock().await;
+            rows = sqlx::query("SELECT * FROM nodes WHERE GroupID = ?")
+                .bind(self.data.id)
+                .fetch_all(conn_mut)
+                .await?;
         }
+        let result = rows
+            .into_iter()
+            .map(|row| {
+                let data = NodeData {
+                    id: row.get(0),
+                    name: row.get(1),
+                    group_id: row.get(2),
+                    group_name: row.get(3),
+                    routing_id: row.get(4),
+                    routing_name: row.get(5),
+                    protocol: row.get(6),
+                    address: row.get(7),
+                    port: row.get(8),
+                    password: row.get(9),
+                    raw: row.get(10),
+                    url: row.get(11),
+                    latency: row.get(12),
+                    upload: row.get(13),
+                    download: row.get(14),
+                    create_at: row.get(15),
+                    modified_at: row.get(16),
+                };
+                Node::new(data, self.connection.clone())
+            })
+            .collect();
         Ok(result)
+    }
+    pub async fn append(&self, mut item: NodeData) -> sqlx::Result<i64> {
+        item.group_id = self.data().id;
+        item.group_name = self.data().name.clone();
+
+        // TODO: routing
+        item.routing_name = "default_routings".to_string();
+        item.routing_id = 0;
+
+        item.initialize();
+
+        let query = sqlx::query(NODE_INSERT_SQL)
+            .bind(item.name)
+            .bind(item.group_id)
+            .bind(item.group_name)
+            .bind(item.routing_id)
+            .bind(item.routing_name)
+            .bind(item.protocol)
+            .bind(item.address)
+            .bind(item.port)
+            .bind(item.password)
+            .bind(item.raw)
+            .bind(item.url)
+            .bind(item.latency)
+            .bind(item.upload)
+            .bind(item.download)
+            .bind(item.create_at)
+            .bind(item.modified_at);
+        let conn_mut = &mut *self.connection.lock().await;
+
+        let result = query.execute(conn_mut).await?.last_insert_rowid();
+        Ok(result)
+    }
+    pub async fn set(&self, id: i64, mut item: NodeData) -> sqlx::Result<()> {
+        item.group_id = self.data().id;
+        item.update_modified_at();
+
+        let query = sqlx::query(NODE_UPDATE_SQL)
+            .bind(item.name)
+            .bind(item.group_id)
+            .bind(item.group_name)
+            .bind(item.routing_id)
+            .bind(item.routing_name)
+            .bind(item.protocol)
+            .bind(item.address)
+            .bind(item.port)
+            .bind(item.password)
+            .bind(item.raw)
+            .bind(item.url)
+            .bind(item.latency)
+            .bind(item.upload)
+            .bind(item.download)
+            .bind(item.create_at)
+            .bind(item.modified_at)
+            .bind(id);
+        let conn_mut = &mut *self.connection.lock().await;
+
+        query.execute(conn_mut).await?;
+        Ok(())
+    }
+    pub async fn size(&self) -> sqlx::Result<i64> {
+        let query = sqlx::query("SELECT COUNT(*) FROM nodes WHERE GroupID = ?").bind(self.data.id);
+        let conn_mut = &mut *self.connection.lock().await;
+        let mut rows = query.fetch(conn_mut);
+        let size;
+        match rows.try_next().await? {
+            Some(row) => size = row.try_get(0)?,
+            None => return Err(sqlx::Error::RowNotFound),
+        }
+        Ok(size)
+    }
+
+    pub async fn remove(&self, id: i64) -> sqlx::Result<()> {
+        let query = sqlx::query(NODE_REMOVE_SQL).bind(id);
+        let conn_mut = &mut *self.connection.lock().await;
+
+        query.execute(conn_mut).await?;
+        Ok(())
+    }
+
+    pub async fn query(&self, id: i64) -> sqlx::Result<Node> {
+        let query = sqlx::query(NODE_QUERY_SQL).bind(id);
+        let conn_mut = &mut *self.connection.lock().await;
+        let mut rows = query.fetch(conn_mut);
+        let data = match rows.try_next().await? {
+            Some(row) => NodeData {
+                id: row.try_get(0)?,
+                name: row.try_get(1)?,
+                group_id: row.try_get(2)?,
+                group_name: row.try_get(3)?,
+                routing_id: row.try_get(4)?,
+                routing_name: row.try_get(5)?,
+                protocol: row.try_get(6)?,
+                address: row.try_get(7)?,
+                port: row.try_get(8)?,
+                password: row.try_get(9)?,
+                raw: row.try_get(10)?,
+                url: row.try_get(11)?,
+                latency: row.try_get(12)?,
+                upload: row.try_get(13)?,
+                download: row.try_get(14)?,
+                create_at: row.try_get(15)?,
+                modified_at: row.try_get(16)?,
+            },
+            None => return Err(sqlx::Error::RowNotFound),
+        };
+        Ok(Node::new(data, self.connection.clone()))
     }
 }
 
@@ -92,63 +207,6 @@ impl AttachedToTable<GroupData> for Group {
     fn get_query_sql() -> &'static str {
         GROUP_QUERY_SQL
     }
-
-    fn execute_statement(
-        item_data: &GroupData,
-        statement: &mut rusqlite::Statement,
-    ) -> rusqlite::Result<usize> {
-        statement.execute(params![
-            item_data.name,
-            item_data.is_subscription,
-            item_data.group_type,
-            item_data.url,
-            item_data.cycle_time,
-            item_data.create_at,
-            item_data.modified_at,
-        ])
-    }
-    fn execute_statement_with_id(
-        item_data: &GroupData,
-        id: usize,
-        statement: &mut rusqlite::Statement,
-    ) -> rusqlite::Result<usize> {
-        statement.execute(params![
-            item_data.name,
-            item_data.is_subscription,
-            item_data.group_type,
-            item_data.url,
-            item_data.cycle_time,
-            item_data.create_at,
-            item_data.modified_at,
-            id,
-        ])
-    }
-
-    fn query_map(
-        connection: Rc<Connection>,
-        statement: &mut rusqlite::Statement,
-        id: usize,
-    ) -> anyhow::Result<Group> {
-        let mut iter = statement.query_map(&[&id], |row| {
-            Ok(GroupData {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                is_subscription: row.get(2)?,
-                group_type: row.get(3)?,
-                url: row.get(4)?,
-                cycle_time: row.get(5)?,
-                create_at: row.get(6)?,
-                modified_at: row.get(7)?,
-            })
-        })?;
-        if let Some(data) = iter.next() {
-            return Ok(Group {
-                data: data?,
-                connection,
-            });
-        }
-        Err(anyhow!("Group Not Found"))
-    }
 }
 impl HasTable for Group {
     fn has_table_name() -> &'static str {
@@ -157,46 +215,8 @@ impl HasTable for Group {
 }
 
 impl WithConnection for Group {
-    fn connection(&self) -> Rc<Connection> {
+    fn connection(&self) -> SharedConnection {
         self.connection.clone()
-    }
-}
-
-impl AColoRSListModel<Node, NodeData> for Group {
-    fn append(&mut self, item: &NodeData) -> rusqlite::Result<()> {
-        let mut item = item.clone();
-        item.group_id = self.data().id;
-        item.group_name = self.data().name.clone();
-
-        // TODO: routing
-        item.routing_name = "default_routings".to_string();
-        item.routing_id = 0;
-
-        item.initialize();
-
-        insert_into_table::<Node, NodeData>(&self.connection(), &item)
-    }
-    fn set(&mut self, id: usize, item: &NodeData) -> rusqlite::Result<()> {
-        let mut item = item.clone();
-        item.group_id = self.data().id;
-        item.update_modified_at();
-
-        update_table::<Node, NodeData>(&self.connection(), id, &item)
-    }
-    fn size(&self) -> rusqlite::Result<usize> {
-        let sql = format!("SELECT COUNT(*) FROM nodes WHERE GroupID = ?",);
-        let mut statement = self.connection.prepare(&sql)?;
-        let mut rows = statement.query([self.data.id])?;
-        let size;
-        match rows.next()? {
-            Some(row) => {
-                size = row.get(0)?;
-            }
-            None => {
-                return Err(rusqlite::Error::QueryReturnedNoRows);
-            }
-        }
-        Ok(size)
     }
 }
 
@@ -212,71 +232,80 @@ pub mod tests {
 
     use super::*;
     use anyhow::Result;
-    #[test]
-    fn test_insert_into_node_and_query() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_group_table(&conn)?;
-        test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::create(conn)?;
-        group_list.append(&generate_test_group(1))?;
-        group_list.append(&generate_test_group(2))?;
-        group_list.append(&generate_test_group(3))?;
-        let mut group = group_list.query(2)?;
+    use sqlx::{Connection, SqliteConnection};
+    #[tokio::test]
+    async fn test_insert_into_node_and_query() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_group_table(&conn).await?;
+        test_and_create_node_table(&conn).await?;
+        let group_list = GroupList::create(conn).await?;
+        group_list.append(generate_test_group(1)).await?;
+        group_list.append(generate_test_group(2)).await?;
+        group_list.append(generate_test_group(3)).await?;
+        let group = group_list.query(2).await?;
         for i in 1..15 {
             let node_data = generate_test_node(i);
-            group.append(&node_data)?;
-            let fetch_node = group.query(i as usize)?;
+            group.append(node_data.clone()).await?;
+            let fetch_node = group.query(i as i64).await?;
             println!("{:?}", fetch_node);
             assert!(compare_node(fetch_node.data(), &node_data));
         }
         Ok(())
     }
-    #[test]
-    fn test_update_node_and_query() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_group_table(&conn)?;
-        test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::create(conn)?;
-        group_list.append(&generate_test_group(1))?;
-        group_list.append(&generate_test_group(2))?;
-        group_list.append(&generate_test_group(3))?;
-        let mut group = group_list.query(2)?;
+    #[tokio::test]
+    async fn test_update_node_and_query() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_group_table(&conn).await?;
+        test_and_create_node_table(&conn).await?;
+        let group_list = GroupList::create(conn).await?;
+        group_list.append(generate_test_group(1)).await?;
+        group_list.append(generate_test_group(2)).await?;
+        group_list.append(generate_test_group(3)).await?;
+        let group = group_list.query(2).await?;
         for i in 1..15 {
             let node_data = generate_test_node(i);
-            group.append(&node_data)?;
-            let fetch_node = group.query(i as usize)?;
+            group.append(node_data.clone()).await?;
+            let fetch_node = group.query(i as i64).await?;
             assert!(compare_node(fetch_node.data(), &node_data));
             println!("Before: {:?}", fetch_node);
 
             let new_node = generate_test_node(i + 200);
-            group.set(fetch_node.data().id as usize, &new_node)?;
-            let fetch_node = group.query(i as usize)?;
+            group
+                .set(fetch_node.data().id as i64, new_node.clone())
+                .await?;
+            let fetch_node = group.query(i as i64).await?;
 
             println!("After: {:?}", fetch_node);
             assert!(compare_node(fetch_node.data(), &new_node));
         }
         Ok(())
     }
-    #[test]
-    fn test_remove_node_and_query() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_group_table(&conn)?;
-        test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::create(conn)?;
-        group_list.append(&generate_test_group(1))?;
-        group_list.append(&generate_test_group(2))?;
-        group_list.append(&generate_test_group(3))?;
-        let mut group = group_list.query(2)?;
+    #[tokio::test]
+    async fn test_remove_node_and_query() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_group_table(&conn).await?;
+        test_and_create_node_table(&conn).await?;
+        let group_list = GroupList::create(conn).await?;
+        group_list.append(generate_test_group(1)).await?;
+        group_list.append(generate_test_group(2)).await?;
+        group_list.append(generate_test_group(3)).await?;
+        let group = group_list.query(2).await?;
         for i in 1..15 {
             let node_data = generate_test_node(i);
-            group.append(&node_data)?;
-            let fetch_node = group.query(i as usize)?;
+            group.append(node_data.clone()).await?;
+            let fetch_node = group.query(i as i64).await?;
             assert!(compare_node(fetch_node.data(), &node_data));
             println!("Before: {:?}", fetch_node);
 
-            group.remove(fetch_node.data().id as usize)?;
-            let fetch_node = group.query(i as usize);
-            let error_expected = anyhow!("Node Not Found");
+            group.remove(fetch_node.data().id as i64).await?;
+            let fetch_node = group.query(i as i64).await;
+            let error_expected = sqlx::Error::RowNotFound;
 
             if let Err(e) = fetch_node {
                 assert_eq!(error_expected.to_string(), e.to_string());
@@ -286,25 +315,27 @@ pub mod tests {
         }
         Ok(())
     }
-    #[test]
-    fn test_insert_into_node_and_list_all() -> Result<()> {
-        let conn = Rc::new(Connection::open_in_memory()?);
-        test_and_create_group_table(&conn)?;
-        test_and_create_node_table(&conn)?;
-        let mut group_list = GroupList::create(conn)?;
-        group_list.append(&generate_test_group(1))?;
-        group_list.append(&generate_test_group(2))?;
-        group_list.append(&generate_test_group(3))?;
-        let mut group = group_list.query(2)?;
+    #[tokio::test]
+    async fn test_insert_into_node_and_list_all() -> Result<()> {
+        let conn = Arc::new(Mutex::new(
+            SqliteConnection::connect("sqlite::memory:").await?,
+        ));
+        test_and_create_group_table(&conn).await?;
+        test_and_create_node_table(&conn).await?;
+        let group_list = GroupList::create(conn).await?;
+        group_list.append(generate_test_group(1)).await?;
+        group_list.append(generate_test_group(2)).await?;
+        group_list.append(generate_test_group(3)).await?;
+        let group = group_list.query(2).await?;
         let mut node_list: Vec<Node> = Vec::new();
         for i in 1..15 {
             let node_data = generate_test_node(i);
-            group.append(&node_data)?;
-            let fetch_node = group.query(i as usize)?;
+            group.append(node_data.clone()).await?;
+            let fetch_node = group.query(i as i64).await?;
             node_list.push(fetch_node.clone());
             assert!(compare_node(fetch_node.data(), &node_data));
         }
-        let nodes = group.list_all_nodes()?;
+        let nodes = group.list_all_nodes().await?;
         for i in 0..14 {
             let q_node = node_list[i].data();
             println!("{}: \n{:?}", i, q_node);

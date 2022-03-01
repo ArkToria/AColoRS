@@ -71,4 +71,4 @@ OPTIONS:
 }
 ```
 ## API
-AColoRS/proto/acolors.proto
+[AColoRS/proto/acolors.proto](https://github.com/ArkToria/AColoRS/blob/master/proto/acolors.proto)

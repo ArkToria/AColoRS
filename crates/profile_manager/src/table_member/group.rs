@@ -5,10 +5,7 @@ use futures::TryStreamExt;
 use sqlx::{Database, Executor, Row};
 use tokio::sync::Mutex;
 
-use super::{
-    node::Node,
-    traits::{AttachedToTable, HasTable, WithConnection},
-};
+use super::node::Node;
 
 type DatabaseDriver = sqlx::Sqlite;
 type SharedConnection = Arc<Mutex<<DatabaseDriver as Database>::Connection>>;
@@ -184,42 +181,6 @@ impl Group {
         Ok(Node::new(data, self.connection.clone()))
     }
 }
-
-const NODE_TABLE_NAME: &str = "nodes";
-
-impl AttachedToTable<GroupData> for Group {
-    fn attached_to_table_name() -> &'static str {
-        GROUP_TABLE_NAME
-    }
-    fn field_names() -> &'static [&'static str] {
-        GROUP_FIELD_NAMES
-    }
-    fn get_update_sql() -> &'static str {
-        GROUP_UPDATE_SQL
-    }
-    fn get_insert_sql() -> &'static str {
-        GROUP_INSERT_SQL
-    }
-    fn get_remove_sql() -> &'static str {
-        GROUP_REMOVE_SQL
-    }
-
-    fn get_query_sql() -> &'static str {
-        GROUP_QUERY_SQL
-    }
-}
-impl HasTable for Group {
-    fn has_table_name() -> &'static str {
-        NODE_TABLE_NAME
-    }
-}
-
-impl WithConnection for Group {
-    fn connection(&self) -> SharedConnection {
-        self.connection.clone()
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
     use crate::{

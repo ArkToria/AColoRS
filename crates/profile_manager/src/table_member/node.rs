@@ -4,13 +4,11 @@ use core_data::data_type::node::*;
 use sqlx::SqliteConnection;
 use tokio::sync::Mutex;
 
-use super::traits::{AttachedToTable, WithConnection};
-
-type Connection = Arc<Mutex<SqliteConnection>>;
+type SharedConnection = Arc<Mutex<SqliteConnection>>;
 #[derive(Debug, Clone)]
 pub struct Node {
     data: NodeData,
-    connection: Connection,
+    connection: SharedConnection,
 }
 
 impl Node {
@@ -23,37 +21,8 @@ impl Node {
         self.data
     }
 
-    pub fn new(data: NodeData, connection: Connection) -> Node {
+    pub fn new(data: NodeData, connection: SharedConnection) -> Node {
         Node { data, connection }
-    }
-}
-
-impl AttachedToTable<NodeData> for Node {
-    fn attached_to_table_name() -> &'static str {
-        NODE_TABLE_NAME
-    }
-    fn field_names() -> &'static [&'static str] {
-        NODE_FIELD_NAMES
-    }
-
-    fn get_update_sql() -> &'static str {
-        NODE_UPDATE_SQL
-    }
-    fn get_insert_sql() -> &'static str {
-        NODE_INSERT_SQL
-    }
-
-    fn get_remove_sql() -> &'static str {
-        NODE_REMOVE_SQL
-    }
-
-    fn get_query_sql() -> &'static str {
-        NODE_QUERY_SQL
-    }
-}
-impl WithConnection for Node {
-    fn connection(&self) -> Connection {
-        self.connection.clone()
     }
 }
 

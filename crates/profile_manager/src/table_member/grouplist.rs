@@ -10,7 +10,6 @@ use crate::tools::dbtools::test_and_create_group_table;
 use crate::tools::dbtools::test_and_create_node_table;
 use core_data::data_type::group::*;
 
-use super::traits::{HasTable, WithConnection};
 type DatabaseDriver = sqlx::Sqlite;
 type SharedConnection = Arc<Mutex<<DatabaseDriver as Database>::Connection>>;
 type TRow = <DatabaseDriver as Database>::Row;
@@ -136,19 +135,6 @@ impl GroupList {
             None => return Err(sqlx::Error::RowNotFound),
         };
         Ok(Group::new(data, self.connection.clone()))
-    }
-}
-
-const GROUP_TABLE_NAME: &str = "groups";
-impl HasTable for GroupList {
-    fn has_table_name() -> &'static str {
-        GROUP_TABLE_NAME
-    }
-}
-
-impl WithConnection for GroupList {
-    fn connection(&self) -> SharedConnection {
-        self.connection.clone()
     }
 }
 

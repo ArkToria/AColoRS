@@ -5,7 +5,6 @@ use tokio::sync::Mutex;
 
 use sqlx::{Database, Row};
 
-use super::traits::{AttachedToTable, HasTable, WithConnection};
 use crate::tools::dbtools::test_and_create_runtime_table;
 use core_data::data_type::runtimevalue::*;
 
@@ -114,16 +113,6 @@ impl RuntimeValue {
         Ok(())
     }
 }
-impl WithConnection for RuntimeValue {
-    fn connection(&self) -> SharedConnection {
-        self.connection.clone()
-    }
-}
-impl HasTable for RuntimeValue {
-    fn has_table_name() -> &'static str {
-        RUNTIME_TABLE_NAME
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Value {
@@ -138,38 +127,6 @@ impl Value {
     /// Get a reference to the value's data.
     pub fn data(&self) -> &ValueData {
         &self.data
-    }
-}
-
-impl WithConnection for Value {
-    fn connection(&self) -> SharedConnection {
-        self.connection.clone()
-    }
-}
-
-impl AttachedToTable<ValueData> for Value {
-    fn attached_to_table_name() -> &'static str {
-        RUNTIME_TABLE_NAME
-    }
-
-    fn field_names() -> &'static [&'static str] {
-        RUNTIME_FIELD_NAMES
-    }
-
-    fn get_update_sql() -> &'static str {
-        RUNTIME_UPDATE_SQL
-    }
-
-    fn get_insert_sql() -> &'static str {
-        RUNTIME_INSERT_SQL
-    }
-
-    fn get_remove_sql() -> &'static str {
-        RUNTIME_REMOVE_SQL
-    }
-
-    fn get_query_sql() -> &'static str {
-        RUNTIME_QUERY_SQL
     }
 }
 

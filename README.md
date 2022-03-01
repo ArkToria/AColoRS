@@ -1,5 +1,5 @@
 # AColoRS [Experimental] [Read-only Mirror]
-Proxies Profile Manager Server with gRPC API
+Proxy Profile Manager Server with gRPC API
 
 ## Build
 ```

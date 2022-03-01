@@ -2,7 +2,7 @@
 name = "acolors"
 version = "0.1.0"
 authors = ["khonoka <kagiyamahonoka@pm.me>"]
-description = "Proxies Profile Manager Server with gRPC API"
+description = "Proxy Profile Manager Server with gRPC API"
 license = "AGPLv3"
 edition = "2021"
 

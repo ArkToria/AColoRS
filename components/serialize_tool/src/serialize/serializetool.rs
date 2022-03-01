@@ -3,6 +3,7 @@ use anyhow::{anyhow, Result};
 use core_data::NodeData;
 use core_protobuf::v2ray_proto::*;
 
+use super::protocol::naiveproxy::naiveproxy_outbound_from_url;
 use super::protocol::shadowsocks::shadowsocks_outbound_from_url;
 use super::protocol::trojan::trojan_outbound_from_url;
 use super::protocol::vmess::vmess_outbound_from_base64;
@@ -45,6 +46,7 @@ pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {
         "vmess" => vmess_outbound_from_base64(url_string),
         "trojan" => trojan_outbound_from_url(url_string),
         "ss" => shadowsocks_outbound_from_url(url_string),
+        "naive+https" | "naive+quic" => naiveproxy_outbound_from_url(url_string),
         _ => Err(anyhow!("Not implemented")),
     }
 }

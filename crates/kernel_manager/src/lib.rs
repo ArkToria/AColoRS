@@ -1,10 +1,12 @@
 mod core;
+pub mod naiveproxy;
 pub mod shadowsocks;
 pub mod trojan_go;
 pub mod v2ray;
 
 use std::ffi::OsStr;
 
+use naiveproxy::coretool::NaiveProxy;
 use shadowsocks::coretool::Shadowsocks;
 use trojan_go::coretool::TrojanGo;
 use v2ray::coretool::V2RayCore;
@@ -20,6 +22,7 @@ pub fn create_core_by_path<S: AsRef<OsStr> + ?Sized>(
         "v2ray" => Ok(Box::new(V2RayCore::new(path)?) as Box<Core>),
         "shadowsocks" => Ok(Box::new(Shadowsocks::new(path)?) as Box<Core>),
         "trojan-go" => Ok(Box::new(TrojanGo::new(path)?) as Box<Core>),
+        "naiveproxy" => Ok(Box::new(NaiveProxy::new(path)?) as Box<Core>),
         _ => Err(anyhow::anyhow!("Core Not Implemented")),
     }
 }

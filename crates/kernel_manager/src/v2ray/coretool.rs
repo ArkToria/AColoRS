@@ -19,7 +19,7 @@ pub struct V2RayCore {
     child_process: Option<Child>,
     path: OsString,
     name: String,
-    version: semver::Version,
+    version: String,
 }
 
 impl V2RayCore {
@@ -28,13 +28,11 @@ impl V2RayCore {
 
         let (name, version) = Self::get_name_and_version(output)?;
 
-        let semver_version = semver::Version::parse(&version)?;
-
         let path = path.into();
 
         Ok(Self {
             name,
-            version: semver_version,
+            version,
             path,
             config: String::new(),
             child_process: None,
@@ -167,8 +165,8 @@ impl CoreTool for V2RayCore {
             .and_then(|child| child.stdout.take())
     }
 
-    fn get_version(&self) -> semver::Version {
-        self.version.clone()
+    fn get_version(&self) -> &str {
+        &self.version
     }
 
     fn get_name(&self) -> &str {

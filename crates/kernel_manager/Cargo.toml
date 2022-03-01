@@ -9,7 +9,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.53"
-semver = "1.0.5"
 serde_json = "1.0.79"
 serde = {version = "1.0.136", features=["derive"]}
 spdlog-rs = { version = "0.2.3", features = [

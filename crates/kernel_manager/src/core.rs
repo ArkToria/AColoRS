@@ -27,7 +27,7 @@ pub trait CoreTool {
     }
 
     fn get_stdout(&mut self) -> Option<ChildStdout>;
-    fn get_version(&self) -> semver::Version;
+    fn get_version(&self) -> &str;
     fn get_name(&self) -> &str;
     fn get_config(&self) -> &str;
 }

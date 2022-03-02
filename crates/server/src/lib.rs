@@ -1,5 +1,6 @@
 use std::net::{SocketAddr, TcpListener};
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use ::config_manager::CoreList;
@@ -13,7 +14,8 @@ use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
 use futures::{FutureExt, TryFutureExt};
 use server_manager::AColoRSManager;
 use spdlog::{error, info};
-use sqlx::{Connection, SqliteConnection};
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::ConnectOptions;
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tokio::{join, select};
 use tonic::transport::Server;
@@ -131,11 +133,10 @@ async fn create_services<P: AsRef<Path>>(
     let acolors_notifications = AColoRSNotifications::new(signal_sender.clone());
     let profile = Arc::new(
         profile_manager::Profile::create(
-            SqliteConnection::connect(&format!(
-                "sqlite://{}",
-                database_path.as_ref().as_os_str().to_string_lossy()
-            ))
-            .await?,
+            SqliteConnectOptions::from_str(&database_path.as_ref().as_os_str().to_string_lossy())?
+                .create_if_missing(true)
+                .connect()
+                .await?,
         )
         .await?,
     );

@@ -120,7 +120,7 @@ fn add_outbound(
     config: &mut String,
     name: &str,
 ) -> Result<(), anyhow::Error> {
-    let protocol = protocol_str(&json)?;
+    let protocol = protocol_str(json)?;
     match protocol {
         "trojan" => add_trojan_outbound(json, protocol, config, name),
         "trojan-go" => add_trojan_go_outbound(),
@@ -138,7 +138,7 @@ fn add_trojan_outbound(
     config: &mut String,
     name: &str,
 ) -> Result<(), anyhow::Error> {
-    let server = get_server(&outbound, protocol)?;
+    let server = get_server(outbound, protocol)?;
     let address = get_address(server)?;
     let port = get_port(server)?;
     let password = get_password(server)?;
@@ -220,9 +220,9 @@ fn get_h2_hosts(settings: &serde_json::Value) -> Result<Vec<&str>, anyhow::Error
 fn get_h2_settings(
     stream_settings: &serde_json::Value,
 ) -> Result<&serde_json::Value, anyhow::Error> {
-    Ok(stream_settings
+    stream_settings
         .get("httpSettings")
-        .ok_or_else(|| anyhow!("No httpSettings"))?)
+        .ok_or_else(|| anyhow!("No httpSettings"))
 }
 fn get_ws_host(settings: &serde_json::Value) -> Result<&str, anyhow::Error> {
     Ok(settings
@@ -244,23 +244,23 @@ fn get_path(settings: &serde_json::Value) -> Result<&str, anyhow::Error> {
 fn get_ws_settings(
     stream_settings: &serde_json::Value,
 ) -> Result<&serde_json::Value, anyhow::Error> {
-    Ok(stream_settings
+    stream_settings
         .get("wsSettings")
-        .ok_or_else(|| anyhow!("No wsSettings"))?)
+        .ok_or_else(|| anyhow!("No wsSettings"))
 }
 fn get_sni(settings: &serde_json::Value) -> Result<&str, anyhow::Error> {
-    Ok(settings
+    settings
         .get("serverName")
         .ok_or_else(|| anyhow!("No sni"))?
         .as_str()
-        .ok_or_else(|| anyhow!("sni should be a String"))?)
+        .ok_or_else(|| anyhow!("sni should be a String"))
 }
 fn get_tls_settings(
     stream_settings: &serde_json::Value,
 ) -> Result<&serde_json::Value, anyhow::Error> {
-    Ok(stream_settings
+    stream_settings
         .get("tlsSettings")
-        .ok_or_else(|| anyhow!("No tlsSettings"))?)
+        .ok_or_else(|| anyhow!("No tlsSettings"))
 }
 fn get_network(settings: &serde_json::Value) -> Result<&str, anyhow::Error> {
     Ok(
@@ -279,40 +279,40 @@ fn get_network(settings: &serde_json::Value) -> Result<&str, anyhow::Error> {
 }
 
 fn get_stream_settings(outbound: &serde_json::Value) -> Result<&serde_json::Value, anyhow::Error> {
-    Ok(outbound
+    outbound
         .get("streamSettings")
-        .ok_or_else(|| anyhow!("No streamSettings"))?)
+        .ok_or_else(|| anyhow!("No streamSettings"))
 }
 
 fn get_password(server: &serde_json::Value) -> Result<&str, anyhow::Error> {
-    Ok(server
+    server
         .get("password")
         .ok_or_else(|| anyhow!("No Password"))?
         .as_str()
-        .ok_or_else(|| anyhow!("Password should be a String"))?)
+        .ok_or_else(|| anyhow!("Password should be a String"))
 }
 
 fn get_port(server: &serde_json::Value) -> Result<u64, anyhow::Error> {
-    Ok(server
+    server
         .get("port")
         .ok_or_else(|| anyhow!("No Port"))?
         .as_u64()
-        .ok_or_else(|| anyhow!("Port should be an integer"))?)
+        .ok_or_else(|| anyhow!("Port should be an integer"))
 }
 
 fn get_address(server: &serde_json::Value) -> Result<&str, anyhow::Error> {
-    Ok(server
+    server
         .get("address")
         .ok_or_else(|| anyhow!("No Address"))?
         .as_str()
-        .ok_or_else(|| anyhow!("Address should be a String"))?)
+        .ok_or_else(|| anyhow!("Address should be a String"))
 }
 
 fn get_server<'a>(
     outbound: &'a serde_json::Value,
     trojan: &str,
 ) -> Result<&'a serde_json::Value, anyhow::Error> {
-    Ok(outbound
+    outbound
         .get("settings")
         .ok_or_else(|| anyhow!("No trojan-go settings"))?
         .get(trojan)
@@ -322,15 +322,15 @@ fn get_server<'a>(
         .as_array()
         .ok_or_else(|| anyhow!("Servers should be an array"))?
         .get(0)
-        .ok_or_else(|| anyhow!("Servers array is empty"))?)
+        .ok_or_else(|| anyhow!("Servers array is empty"))
 }
 
 fn protocol_str(outbound: &serde_json::Value) -> Result<&str, anyhow::Error> {
-    Ok(outbound
+    outbound
         .get("protocol")
         .ok_or_else(|| anyhow!("No protocol specified"))?
         .as_str()
-        .ok_or_else(|| anyhow!("Protocol should be a string"))?)
+        .ok_or_else(|| anyhow!("Protocol should be a string"))
 }
 
 impl CoreTool for TrojanGo {

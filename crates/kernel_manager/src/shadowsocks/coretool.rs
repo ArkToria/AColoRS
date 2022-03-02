@@ -110,11 +110,11 @@ impl Shadowsocks {
 }
 
 fn add_outbound(json: &serde_json::Value, config: &mut String) -> Result<(), anyhow::Error> {
-    let protocol = protocol_str(&json)?;
+    let protocol = protocol_str(json)?;
     if protocol != "shadowsocks" {
         warn!("Protocol Error: {}", protocol)
     };
-    let server = get_server(&json)?;
+    let server = get_server(json)?;
     let address = server
         .get("address")
         .ok_or_else(|| anyhow!("No Address"))?
@@ -143,7 +143,7 @@ fn add_outbound(json: &serde_json::Value, config: &mut String) -> Result<(), any
 }
 
 fn get_server(outbound: &serde_json::Value) -> Result<&serde_json::Value, anyhow::Error> {
-    Ok(outbound
+    outbound
         .get("settings")
         .ok_or_else(|| anyhow!("No shadowsocks settings"))?
         .get("shadowsocks")
@@ -153,15 +153,15 @@ fn get_server(outbound: &serde_json::Value) -> Result<&serde_json::Value, anyhow
         .as_array()
         .ok_or_else(|| anyhow!("Servers should be an array"))?
         .get(0)
-        .ok_or_else(|| anyhow!("Servers array is empty"))?)
+        .ok_or_else(|| anyhow!("Servers array is empty"))
 }
 
 fn protocol_str(outbound: &serde_json::Value) -> Result<&str, anyhow::Error> {
-    Ok(outbound
+    outbound
         .get("protocol")
         .ok_or_else(|| anyhow!("No protocol specified"))?
         .as_str()
-        .ok_or_else(|| anyhow!("Protocol should be a string"))?)
+        .ok_or_else(|| anyhow!("Protocol should be a string"))
 }
 
 impl CoreTool for Shadowsocks {

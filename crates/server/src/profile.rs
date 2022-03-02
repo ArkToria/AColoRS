@@ -239,7 +239,7 @@ impl ProfileManager for AColoRSProfile {
         self.profile
             .group_list
             .default_group()
-            .set(node_id as i64, node_data.into())
+            .set(node_id as i64, node_data)
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
@@ -414,7 +414,7 @@ impl ProfileManager for AColoRSProfile {
             http_inbound
                 .as_ref()
                 .map(|inbound| format!("http://{}:{}", inbound.listen, inbound.port))
-                .unwrap_or(String::new())
+                .unwrap_or_default()
         } else {
             String::new()
         };
@@ -437,7 +437,7 @@ impl ProfileManager for AColoRSProfile {
         group
             .remove_all_nodes()
             .await
-            .map_err(|e| Status::aborted(&format!("Empty Group Error: {}",e)))?;
+            .map_err(|e| Status::aborted(&format!("Empty Group Error: {}", e)))?;
         send_or_warn_print(
             &self.signal_sender,
             acolors_signal::AColorSignal::EmptyGroup(group.data().id),
@@ -473,8 +473,10 @@ impl ProfileManager for AColoRSProfile {
             .await
             .map_err(|e| Status::not_found(format!("Group unavailable: \"{}\"", e)))?;
 
-        group.remove_all_nodes().await
-            .map_err(|e| Status::aborted(&format!("Empty Group Error: {}",e)))?;
+        group
+            .remove_all_nodes()
+            .await
+            .map_err(|e| Status::aborted(&format!("Empty Group Error: {}", e)))?;
         send_or_warn_print(
             &self.signal_sender,
             acolors_signal::AColorSignal::EmptyGroup(group_id),

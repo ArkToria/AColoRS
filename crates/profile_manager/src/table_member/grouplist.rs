@@ -109,11 +109,10 @@ impl GroupList {
         let query = sqlx::query("SELECT COUNT(*) FROM groups");
         let conn_mut = &mut *self.connection.lock().await;
         let mut rows = query.fetch(conn_mut);
-        let size;
-        match rows.try_next().await? {
-            Some(row) => size = row.try_get(0)?,
+        let size = match rows.try_next().await? {
+            Some(row) => row.try_get(0)?,
             None => return Err(sqlx::Error::RowNotFound),
-        }
+        };
         Ok(size)
     }
 

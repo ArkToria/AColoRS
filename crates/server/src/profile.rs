@@ -332,7 +332,7 @@ impl ProfileManager for AColoRSProfile {
             .query(group_id as i64)
             .await
             .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
-            .append(node_data.into())
+            .append(node_data)
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(

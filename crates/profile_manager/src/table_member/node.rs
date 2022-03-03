@@ -8,7 +8,7 @@ type SharedConnection = Arc<Mutex<SqliteConnection>>;
 #[derive(Debug, Clone)]
 pub struct Node {
     data: NodeData,
-    connection: SharedConnection,
+    _connection: SharedConnection,
 }
 
 impl Node {
@@ -22,7 +22,10 @@ impl Node {
     }
 
     pub fn new(data: NodeData, connection: SharedConnection) -> Node {
-        Node { data, connection }
+        Node {
+            data,
+            _connection: connection,
+        }
     }
 }
 

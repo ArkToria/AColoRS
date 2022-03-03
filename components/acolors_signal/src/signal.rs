@@ -16,6 +16,7 @@ pub enum AColorSignal {
     UpdateGroup(i32),
     RuntimeValueChanged(String),
     EmptyGroup(i32),
+    Shutdown,
 }
 
 impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
@@ -63,6 +64,9 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::RuntimeValueChanged(key) => Self {
                 signal: Some(Signal::RuntimeValueChanged(RuntimeValueChanged { key })),
             },
+            AColorSignal::Shutdown => Self {
+                signal: Some(Signal::Shutdown(Shutdown {})),
+            },
         }
     }
 }
@@ -85,6 +89,7 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
                 Signal::EmptyGroup(m) => Self::EmptyGroup(m.group_id),
                 Signal::CoreChanged(_) => Self::CoreChanged,
                 Signal::RuntimeValueChanged(m) => Self::RuntimeValueChanged(m.key),
+                Signal::Shutdown(_) => Self::Shutdown,
             })
             .unwrap_or(Self::Empty)
     }

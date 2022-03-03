@@ -117,12 +117,15 @@ impl RuntimeValue {
 #[derive(Debug, Clone)]
 pub struct Value {
     data: ValueData,
-    connection: SharedConnection,
+    _connection: SharedConnection,
 }
 
 impl Value {
     pub fn new(data: ValueData, connection: SharedConnection) -> Value {
-        Value { data, connection }
+        Value {
+            data,
+            _connection: connection,
+        }
     }
     /// Get a reference to the value's data.
     pub fn data(&self) -> &ValueData {

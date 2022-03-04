@@ -1,6 +1,7 @@
 use std::net::{SocketAddr, TcpListener};
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use ::config_manager::CoreList;
@@ -16,8 +17,8 @@ use server_manager::AColoRSManager;
 use spdlog::{error, info};
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::ConnectOptions;
+use tokio::join;
 use tokio::sync::{broadcast, mpsc, RwLock};
-use tokio::{join, select};
 use tonic::transport::Server;
 
 use crate::config_manager::{config_read_to_json, AColoRSConfig};
@@ -72,6 +73,7 @@ struct AColoRSServices {
     pub core: AColoRSCore,
     pub manager: AColoRSManager,
 }
+pub static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 const BUFFER_SIZE: usize = 16;
 async fn start_server<P: AsRef<Path>>(
     addr: SocketAddr,
@@ -88,7 +90,7 @@ async fn start_server<P: AsRef<Path>>(
         config_path,
         core_name,
         core_path,
-        notify_shutdown,
+        notify_shutdown.clone(),
         signal_sender.clone(),
     )
     .await?;
@@ -105,12 +107,19 @@ async fn start_server<P: AsRef<Path>>(
             shutdown_complete_rx.recv().map(|x| x.unwrap_or_default()),
         )
         .unwrap_or_else(|e| error!("Failed to start gRPC server: {}", e));
+    let ctrl_c = tokio::spawn(async move {
+        let _ = tokio::signal::ctrl_c()
+            .unwrap_or_else(|e| error!("Failed to listen for Ctrl+C: {}", e))
+            .await;
+        info!("Ctrl+C Received");
+        if let Err(err) = notify_shutdown.send(()) {
+            error!("Shutdown Error: {}", err);
+        }
+    });
     let shutdown = async {
-        select! {
-            _ = tokio::signal::ctrl_c()
-            .unwrap_or_else(|e| error!("Failed to listen for Ctrl+C: {}", e)) => info!("Ctrl+C Received"),
-            _ = notify_shutdown_rx.recv() => info!("Shutting down"),
-        };
+        let _ = notify_shutdown_rx.recv().await;
+        info!("Shutting down");
+        SHUTDOWN.store(true, std::sync::atomic::Ordering::Relaxed);
         send_or_warn_print(&signal_sender, acolors_signal::AColorSignal::Shutdown);
         shutdown_complete_tx
             .send(())
@@ -118,6 +127,7 @@ async fn start_server<P: AsRef<Path>>(
             .unwrap_or_else(|e| error!("Shutdown Error: {}", e));
     };
     join!(server, shutdown);
+    ctrl_c.abort();
     Ok(())
 }
 

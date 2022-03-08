@@ -47,7 +47,7 @@ pub fn decode_outbound_from_url<T: Into<String>>(url: T) -> Result<NodeData> {
         "trojan" => trojan_outbound_from_url(url_string),
         "ss" => shadowsocks_outbound_from_url(url_string),
         "naive+https" | "naive+quic" => naiveproxy_outbound_from_url(url_string),
-        _ => Err(anyhow!("Not implemented")),
+        _ => Err(anyhow!("{} Not implemented", scheme)),
     }
 }
 
@@ -113,7 +113,7 @@ mod tests {
     }
     #[test]
     fn test_regex() -> Result<()> {
-        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:#]*)#([^#]*)"#)?;
+        let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:/]*)((/\?)*[^#]*)#([^#]*)"#)?;
         let ss = "ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1";
         let list = re.captures(ss).unwrap();
         println!("{:?}", list);

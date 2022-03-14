@@ -9,8 +9,8 @@ edition = "2018"
 
 [dependencies]
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls","sqlite","macros","migrate" ] }
-anyhow = "1.0.53"
-spdlog-rs = { version = "0.2.3", features = [
+anyhow = "1.0.56"
+spdlog-rs = { version = "0.2.4", features = [
     "level-debug",
     "release-level-info",
     "source-location",

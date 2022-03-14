@@ -1,6 +1,9 @@
 use std::{net::TcpListener, time::Duration};
 
-use tokio::{net::TcpStream, time::Instant};
+use tokio::{
+    net::{TcpStream, ToSocketAddrs},
+    time::Instant,
+};
 
 pub fn tcp_get_available_port(mut range: std::ops::Range<u16>) -> Option<u16> {
     range.find(|port| tcp_port_is_available(*port))
@@ -24,7 +27,10 @@ where
 
     Ok(result)
 }
-pub async fn tcping(address: &str, timeout: Duration) -> tokio::io::Result<Duration> {
+pub async fn tcping<A>(address: A, timeout: Duration) -> tokio::io::Result<Duration>
+where
+    A: ToSocketAddrs,
+{
     let start = Instant::now();
     tokio::time::timeout(timeout, TcpStream::connect(address)).await??;
     Ok(Instant::now().duration_since(start))
@@ -42,11 +48,15 @@ mod tests {
         Ok(())
     }
 
-    async fn test_ping(address: &'static str, count: i32) -> Option<tokio::io::Result<Duration>> {
+    async fn test_ping<A>(address: A, count: i32) -> Option<tokio::io::Result<Duration>>
+    where
+        A: ToSocketAddrs + Send + 'static + Clone,
+    {
         let (tx, mut rx) = tokio::sync::mpsc::channel(20000);
 
         (0..count).for_each(|i| {
             println!("Sender {}:", i);
+            let address = address.clone();
             let tx = tx.clone();
             tokio::spawn(async move {
                 let _ = tx.send(tcping(address, Duration::from_secs(2)).await).await;

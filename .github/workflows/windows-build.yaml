@@ -18,7 +18,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
 
       - name: Run tests
-        run: cargo test 
+        run: cargo test --workspace
       - name: Build Release
         run: cargo build --release
       - name: Upload a Build Artifact

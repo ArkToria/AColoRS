@@ -24,6 +24,6 @@ jobs:
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
-          name: acolors.exe
-          path: "target/release/acolors.exe"
+          name: acolors
+          path: "target/release/acolors"
           if-no-files-found: error

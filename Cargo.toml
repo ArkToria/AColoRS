@@ -16,7 +16,6 @@ path = "crates/core/main.rs"
 [workspace]
 members = [
     "crates/kernel_manager",
-    "crates/latency_test",
     "crates/profile_manager",
     "crates/server",
     "crates/config_manager",

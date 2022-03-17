@@ -318,7 +318,7 @@ pub mod tests {
     pub fn generate_test_group(number: u16) -> GroupData {
         let test_string = format!("test{}", number);
         let mut result = GroupData {
-            id: number as i32,
+            id: number as i64,
             name: format!("{} group", &test_string),
             is_subscription: false,
             group_type: 0,

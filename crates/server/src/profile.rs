@@ -263,17 +263,18 @@ impl ProfileManager for AColoRSProfile {
             .data
             .ok_or_else(|| Status::invalid_argument("No group data"))?;
 
-        self.profile
+        let group_id = self
+            .profile
             .group_list
             .append(data.into())
             .await
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::AppendGroup,
+            acolors_signal::AColorSignal::AppendGroup(group_id),
         );
 
-        let reply = AppendGroupReply {};
+        let reply = AppendGroupReply { group_id };
 
         Ok(Response::new(reply))
     }
@@ -293,7 +294,8 @@ impl ProfileManager for AColoRSProfile {
             .data
             .ok_or_else(|| Status::invalid_argument("No node data"))?;
 
-        self.profile
+        let node_id = self
+            .profile
             .group_list
             .query(group_id as i64)
             .await
@@ -303,10 +305,10 @@ impl ProfileManager for AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::AppendNode(group_id),
+            acolors_signal::AColorSignal::AppendNode(group_id, node_id),
         );
 
-        let reply = AppendNodeReply {};
+        let reply = AppendNodeReply { node_id };
 
         Ok(Response::new(reply))
     }
@@ -327,7 +329,8 @@ impl ProfileManager for AColoRSProfile {
         let node_data = decode_outbound_from_url(url)
             .map_err(|e| Status::invalid_argument(format!("Decode error: \"{}\"", e)))?;
 
-        self.profile
+        let node_id = self
+            .profile
             .group_list
             .query(group_id as i64)
             .await
@@ -337,10 +340,10 @@ impl ProfileManager for AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::AppendNode(group_id),
+            acolors_signal::AColorSignal::AppendNode(group_id, node_id),
         );
 
-        let reply = AppendNodeByUrlReply {};
+        let reply = AppendNodeByUrlReply { node_id };
 
         Ok(Response::new(reply))
     }

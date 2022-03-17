@@ -3,19 +3,19 @@ use core_protobuf::acolors_proto::a_color_signal::*;
 #[derive(Debug, Clone)]
 pub enum AColorSignal {
     Empty,
-    AppendGroup,
+    AppendGroup(i64),
     UpdateCoreStatus,
     UpdateInbounds,
     CoreConfigChanged,
     CoreChanged,
-    RemoveGroupById(i32),
-    RemoveNodeById(i32),
-    SetGroupById(i32),
-    SetNodeById(i32),
-    AppendNode(i32),
-    UpdateGroup(i32),
+    RemoveGroupById(i64),
+    RemoveNodeById(i64),
+    SetGroupById(i64),
+    SetNodeById(i64),
+    AppendNode(i64, i64),
+    UpdateGroup(i64),
     RuntimeValueChanged(String),
-    EmptyGroup(i32),
+    EmptyGroup(i64),
     Shutdown,
 }
 
@@ -25,8 +25,8 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::Empty => Self {
                 signal: Some(Signal::Empty(Empty {})),
             },
-            AColorSignal::AppendGroup => Self {
-                signal: Some(Signal::AppendGroup(AppendGroup {})),
+            AColorSignal::AppendGroup(group_id) => Self {
+                signal: Some(Signal::AppendGroup(AppendGroup { group_id })),
             },
             AColorSignal::UpdateCoreStatus => Self {
                 signal: Some(Signal::UpdateCoreStatus(UpdateCoreStatus {})),
@@ -49,8 +49,8 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::SetNodeById(node_id) => Self {
                 signal: Some(Signal::SetNodeById(SetNodeById { node_id })),
             },
-            AColorSignal::AppendNode(group_id) => Self {
-                signal: Some(Signal::AppendNode(AppendNode { group_id })),
+            AColorSignal::AppendNode(group_id, node_id) => Self {
+                signal: Some(Signal::AppendNode(AppendNode { group_id, node_id })),
             },
             AColorSignal::UpdateGroup(group_id) => Self {
                 signal: Some(Signal::UpdateGroup(UpdateGroup { group_id })),
@@ -76,7 +76,7 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
             .signal
             .map(|s| match s {
                 Signal::Empty(_) => Self::Empty,
-                Signal::AppendGroup(_) => Self::AppendGroup,
+                Signal::AppendGroup(m) => Self::AppendGroup(m.group_id),
                 Signal::UpdateCoreStatus(_) => Self::UpdateCoreStatus,
                 Signal::UpdateInbounds(_) => Self::UpdateInbounds,
                 Signal::CoreConfigChanged(_) => Self::CoreConfigChanged,
@@ -84,7 +84,7 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
                 Signal::RemoveNodeById(m) => Self::RemoveNodeById(m.node_id),
                 Signal::SetGroupById(m) => Self::SetGroupById(m.group_id),
                 Signal::SetNodeById(m) => Self::SetNodeById(m.node_id),
-                Signal::AppendNode(m) => Self::AppendNode(m.group_id),
+                Signal::AppendNode(m) => Self::AppendNode(m.group_id, m.node_id),
                 Signal::UpdateGroup(m) => Self::UpdateGroup(m.group_id),
                 Signal::EmptyGroup(m) => Self::EmptyGroup(m.group_id),
                 Signal::CoreChanged(_) => Self::CoreChanged,

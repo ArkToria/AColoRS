@@ -2,9 +2,9 @@ use utils::time::get_current_time;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct NodeData {
-    pub id: i32,
+    pub id: i64,
     pub name: String,
-    pub group_id: i32,
+    pub group_id: i64,
     pub group_name: String,
     pub routing_id: i32,
     pub routing_name: String,

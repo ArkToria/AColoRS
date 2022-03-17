@@ -16,19 +16,22 @@ service Notifications {
 
 message AColorSignal {
   message Empty {}
-  message AppendGroup {}
+  message AppendGroup { int64 group_id = 1; }
   message UpdateCoreStatus {}
   message UpdateInbounds {}
   message CoreConfigChanged {}
   message CoreChanged {}
-  message RemoveGroupByID { int32 group_id = 1; }
-  message RemoveNodeByID { int32 node_id = 1; }
-  message SetGroupByID { int32 group_id = 1; }
-  message SetNodeByID { int32 node_id = 1; }
-  message AppendNode { int32 group_id = 1; }
-  message UpdateGroup { int32 group_id = 1; }
+  message RemoveGroupByID { int64 group_id = 1; }
+  message RemoveNodeByID { int64 node_id = 1; }
+  message SetGroupByID { int64 group_id = 1; }
+  message SetNodeByID { int64 node_id = 1; }
+  message AppendNode {
+    int64 group_id = 1;
+    int64 node_id = 2;
+  }
+  message UpdateGroup { int64 group_id = 1; }
   message RuntimeValueChanged { string key = 1; }
-  message EmptyGroup { int32 group_id = 1; }
+  message EmptyGroup { int64 group_id = 1; }
   message Shutdown {}
   oneof signal {
     Empty empty = 1;
@@ -84,47 +87,47 @@ message SetNodeByIDReply {}
 message SetNodeByUrlReply {}
 message RemoveGroupByIDReply {}
 message RemoveNodeByIDReply {}
-message AppendGroupReply {}
-message AppendNodeReply {}
-message AppendNodeByUrlReply {}
+message AppendGroupReply { int64 group_id = 1; }
+message AppendNodeReply { int64 node_id = 1; }
+message AppendNodeByUrlReply { int64 node_id = 1; }
 
 message UpdateGroupByIDReply {}
-message CountNodesRequest { int32 group_id = 1; }
+message CountNodesRequest { int64 group_id = 1; }
 
-message ListAllNodesRequest { int32 group_id = 1; }
+message ListAllNodesRequest { int64 group_id = 1; }
 
-message GetGroupByIDRequest { int32 group_id = 1; }
-message GetNodeByIDRequest { int32 node_id = 1; }
+message GetGroupByIDRequest { int64 group_id = 1; }
+message GetNodeByIDRequest { int64 node_id = 1; }
 message SetGroupByIDRequest {
-  int32 group_id = 1;
+  int64 group_id = 1;
   GroupData data = 2;
 }
 message SetNodeByIDRequest {
-  int32 node_id = 1;
+  int64 node_id = 1;
   NodeData data = 2;
 }
 message SetNodeByUrlRequest {
-  int32 node_id = 1;
+  int64 node_id = 1;
   string url = 2;
 }
-message RemoveGroupByIDRequest { int32 group_id = 1; }
-message RemoveNodeByIDRequest { int32 node_id = 1; }
+message RemoveGroupByIDRequest { int64 group_id = 1; }
+message RemoveNodeByIDRequest { int64 node_id = 1; }
 message AppendGroupRequest { GroupData data = 1; }
 
 message UpdateGroupByIDRequest {
-  int32 group_id = 1;
+  int64 group_id = 1;
   bool use_proxy = 2;
 }
-message EmptyGroupByIDRequest { int32 group_id = 1; }
+message EmptyGroupByIDRequest { int64 group_id = 1; }
 message EmptyGroupByIDReply {}
 
 message AppendNodeRequest {
-  int32 group_id = 1;
+  int64 group_id = 1;
   NodeData data = 2;
 }
 
 message AppendNodeByUrlRequest {
-  int32 group_id = 1;
+  int64 group_id = 1;
   string url = 2;
 }
 
@@ -152,9 +155,9 @@ enum EntryType {
 }
 
 message NodeData {
-  int32 id = 1;
+  int64 id = 1;
   string name = 2;
-  int32 group_id = 3;
+  int64 group_id = 3;
   string group_name = 4;
   int32 routing_id = 5;
   string routing_name = 6;
@@ -177,7 +180,7 @@ enum SubscriptionType {
   JSONRAW = 2;
 }
 message GroupData {
-  int32 id = 1;
+  int64 id = 1;
   string name = 2;
   bool is_subscription = 3;
   SubscriptionType group_type = 4;
@@ -252,9 +255,9 @@ message RestartRequest {}
 message RestartReply {}
 message GetIsRunningRequest {}
 message GetIsRunningReply { bool is_running = 1; }
-message SetConfigByNodeIDRequest { int32 node_id = 1; }
+message SetConfigByNodeIDRequest { int64 node_id = 1; }
 message SetConfigByNodeIDReply {}
-message SetDefaultConfigByNodeIDRequest { int32 node_id = 1; }
+message SetDefaultConfigByNodeIDRequest { int64 node_id = 1; }
 message SetDefaultConfigByNodeIDReply {}
 message SetCoreByTagRequest { string tag = 1; }
 message GetCoreTagReply { string tag = 1; }

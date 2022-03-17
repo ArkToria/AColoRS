@@ -2,7 +2,7 @@ use utils::time::get_current_time;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct GroupData {
-    pub id: i32,
+    pub id: i64,
     pub name: String,
     pub is_subscription: bool,
     pub group_type: i32,

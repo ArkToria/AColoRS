@@ -78,25 +78,31 @@ impl ConfigManager for AColoRSConfig {
 pub async fn write_config_to_file<P: AsRef<Path>>(
     path: P,
     inbounds: &Inbounds,
-) -> Result<(), Status> {
-    let mut file = open_or_create(&path)
-        .await
-        .map_err(|e| Status::unavailable(e.to_string()))?;
+) -> std::io::Result<()> {
+    let mut config = config_read_to_json(&path).await?;
+    let mut file = tokio::fs::File::create(&path).await?;
 
     let inbounds_c = config_manager::Inbounds::from(inbounds.clone());
-    let mut config = config_read_to_json(&path).await?;
-    if let Some(v) = config.get_mut("inbounds") {
-        *v = serde_json::to_value(inbounds_c).map_err(|e| Status::unknown(e.to_string()))?;
+    match config.get_mut("inbounds") {
+        Some(v) => {
+            *v = serde_json::to_value(inbounds_c)?;
+        }
+        None => {
+            if let Some(v) = config.as_object_mut() {
+                v.insert("inbounds".to_string(), serde_json::to_value(inbounds_c)?);
+            }
+        }
     }
 
     check_is_default_and_delete(&mut config);
 
-    let content =
-        serde_json::to_string_pretty(&config).map_err(|e| Status::unknown(e.to_string()))?;
+    let content = serde_json::to_string_pretty(&config)?;
 
-    file.write_all(content.as_bytes())
-        .await
-        .map_err(|e| Status::aborted(e.to_string()))?;
+    info!("{}", &content);
+
+    file.write_all(content.as_bytes()).await?;
+    file.flush().await?;
+    file.sync_all().await?;
 
     Ok(())
 }
@@ -119,12 +125,13 @@ const DEFAULT_CONFIG_FILE_CONTENT: &str = r#"{
 pub async fn config_read_to_json<P: AsRef<Path>>(
     config_path: P,
 ) -> std::io::Result<serde_json::Value> {
-    let mut file = open_or_create(config_path).await?;
-
     let mut content = String::new();
-    file.read_to_string(&mut content).await?;
+    if let Ok(mut file) = tokio::fs::File::open(&config_path).await {
+        file.read_to_string(&mut content).await?;
+    }
 
     if content.is_empty() {
+        let mut file = open_or_create(config_path).await?;
         file.write_all(DEFAULT_CONFIG_FILE_CONTENT.as_bytes())
             .await?;
         content = DEFAULT_CONFIG_FILE_CONTENT.to_string();
@@ -144,7 +151,6 @@ async fn open_or_create<P: AsRef<Path>>(config_path: P) -> std::io::Result<tokio
 
     tokio::fs::OpenOptions::new()
         .write(true)
-        .read(true)
         .create(true)
         .open(&config_path)
         .await

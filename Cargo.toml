@@ -50,6 +50,5 @@ kernel_manager = {path = "crates/kernel_manager"}
 
 [profile.release]
 strip = "debuginfo"
-panic = "abort"
 codegen-units = 1
 lto = true

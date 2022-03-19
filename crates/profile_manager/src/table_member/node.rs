@@ -56,9 +56,9 @@ pub mod tests {
         let test_string = format!("test{}", number);
         let test_address = format!("localhost:{}", number);
         let mut result = NodeData {
-            id: number,
+            id: number as i64,
             name: format!("{} node", test_string),
-            group_id: number,
+            group_id: number as i64,
             group_name: format!("{} group", test_string),
             routing_id: number,
             routing_name: format!("{} routing", test_string),

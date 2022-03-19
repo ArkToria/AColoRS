@@ -33,7 +33,7 @@ pub fn shadowsocks_outbound_from_url(url_str: String) -> Result<NodeData> {
 
     let name = urlencoding::decode(&meta.name)?.to_string();
 
-    node.protocol = EntryType::Vmess.into();
+    node.protocol = EntryType::Shadowsocks.into();
     node.name = name;
     node.address = server.address.clone();
     node.port = server.port as i32;
@@ -48,14 +48,14 @@ fn sip002_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
 
-    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:#]*)#([^#]*)"#)?;
+    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:/]*)((/\?)*[^#]*)#([^#]*)"#)?;
     let caps = re.captures(url_str).ok_or_else(|| {
         dbg!(url_str);
         anyhow!("Failed to parse sip002 url")
     })?;
 
     let mut meta = URLMetaObject {
-        name: caps[5].to_string(),
+        name: caps[7].to_string(),
         ..Default::default()
     };
 

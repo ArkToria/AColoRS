@@ -27,7 +27,13 @@ const INBOUND_STR: &str = r#"
         "#;
 #[test]
 fn generate_vmess_config_and_print_json() -> Result<()> {
-    let mut core = V2RayCore::new("v2ray")?;
+    let mut core = match V2RayCore::new("v2ray") {
+        Ok(c) => c,
+        Err(e) => {
+            println!("Core Error :{}", e);
+            return Ok(());
+        }
+    };
 
     let inbounds = Inbounds::from_str(INBOUND_STR)?;
 

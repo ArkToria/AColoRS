@@ -1,0 +1,29 @@
+name: Windows Run Build and Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-bin:
+    runs-on: "windows-latest"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare toolchain
+        run: rustup show
+      - uses: Swatinem/rust-cache@v1
+
+      - name: Run tests
+        run: cargo test --workspace
+      - name: Build Release
+        run: cargo build --release
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          name: acolors.exe
+          path: "target/release/acolors.exe"
+          if-no-files-found: error

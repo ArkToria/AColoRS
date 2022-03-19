@@ -258,7 +258,7 @@ mod tests {
                 return Ok(());
             }
         };
-        dbg!(core.name, core.version);
+        dbg!(&core.name, &core.version);
         Ok(())
     }
     #[test]

@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use serialize_tool::serialize::serializer::check_is_default_and_delete;
+use spdlog::error;
 
 use crate::core::CoreTool;
 
@@ -98,6 +99,17 @@ impl V2RayCore {
         check_is_default_and_delete(&mut json);
 
         Ok(json.to_string())
+    }
+}
+
+impl Drop for V2RayCore {
+    fn drop(&mut self) {
+        if !self.is_running() {
+            return;
+        }
+        if let Err(e) = self.stop() {
+            error!("Drop Core Error: {}", e);
+        }
     }
 }
 

@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use spdlog::warn;
+use spdlog::{error, warn};
 
 use crate::core::CoreTool;
 
@@ -106,6 +106,16 @@ impl Shadowsocks {
             .ok_or_else(|| anyhow!("Socks inbound not found"))?;
         config.push_str(&format!(" --local-addr {}:{}", socks.listen, socks.port));
         Ok(())
+    }
+}
+impl Drop for Shadowsocks {
+    fn drop(&mut self) {
+        if !self.is_running() {
+            return;
+        }
+        if let Err(e) = self.stop() {
+            error!("Drop Core Error: {}", e);
+        }
     }
 }
 

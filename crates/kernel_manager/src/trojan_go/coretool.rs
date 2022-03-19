@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use spdlog::warn;
+use spdlog::{error, warn};
 
 use crate::core::CoreTool;
 
@@ -112,6 +112,16 @@ impl TrojanGo {
             socks.listen, socks.port
         ));
         Ok(())
+    }
+}
+impl Drop for TrojanGo {
+    fn drop(&mut self) {
+        if !self.is_running() {
+            return;
+        }
+        if let Err(e) = self.stop() {
+            error!("Drop Core Error: {}", e);
+        }
     }
 }
 

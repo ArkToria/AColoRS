@@ -386,12 +386,7 @@ impl CoreManager for AColoRSCore {
     ) -> Result<Response<ListAllTagsReply>, Status> {
         info!("List all tags from {:?}", request.remote_addr());
 
-        let tags = self
-            .core_map
-            .keys()
-            .into_iter()
-            .map(|tag| tag.clone())
-            .collect();
+        let tags = self.core_map.keys().into_iter().cloned().collect();
 
         let reply = ListAllTagsReply { tags };
         Ok(Response::new(reply))

@@ -1,0 +1,5 @@
+acolors-dev-git
+*.tar*
+*.log
+pkg
+src

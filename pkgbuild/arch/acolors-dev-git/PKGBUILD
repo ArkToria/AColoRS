@@ -1,0 +1,35 @@
+# Maintainer: DuckSoft <realducksoft@gmail.com>
+pkgname=acolors-dev-git
+_pkgname=acolors
+pkgver=193.r71cef14.
+pkgrel=1
+pkgdesc="The next GUI client for v2ray core (Development Branch)"
+arch=('x86_64')
+url='https://github.com/ArkToria/AColoRS'
+license=('GPL3')
+depends=()
+makedepends=('git' 'cmake' 'clang' 'rust' 'gcc')
+optdepends=('v2ray: use system v2ray core.')
+provides=("${_pkgname}")
+conflicts=("${_pkgname}")
+
+source=('acolors-dev-git::git+https://github.com/ArkToria/AColoRS.git')
+
+sha512sums=('SKIP')
+
+pkgver() {
+    cd "${srcdir}/${pkgname}/"
+    printf "%s.r%s.%s" $(cat ./misc/VERSION) $(git rev-list --count HEAD) $(git rev-parse --short HEAD)
+}
+
+build() {
+    cd "${srcdir}/${pkgname}/"
+
+    cargo build --release
+}
+
+package() {
+    cd "${srcdir}/${pkgname}"
+    mkdir -p "$pkgdir/usr/bin/"
+    cp target/release/acolors "$pkgdir/usr/bin/"
+}

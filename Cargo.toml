@@ -34,6 +34,7 @@ spdlog-rs = { version = "0.2.4", features = [
     "source-location",
 ] }
 anyhow = "1.0.56"
+openssl = { version = '*', optional = true }
 
 server = { path = "crates/server" }
 utils = { path = "components/utils" }
@@ -49,6 +50,9 @@ config_manager = {path = "crates/config_manager"}
 kernel_manager = {path = "crates/kernel_manager"} 
 
 [profile.release]
-strip = "debuginfo"
-codegen-units = 1
 lto = true
+codegen-units = 1
+strip = true
+
+[features]
+vendored-openssl = ["openssl/vendored"]

@@ -240,12 +240,14 @@ service CoreManager {
   rpc SetCoreByTag(SetCoreByTagRequest) returns (SetCoreByTagReply);
   rpc GetCoreTag(GetCoreTagRequest) returns (GetCoreTagReply);
   rpc GetCoreInfo(GetCoreInfoRequest) returns (GetCoreInfoReply);
+  rpc ListAllTags(ListAllTagsRequest) returns (ListAllTagsReply);
   rpc SetDefaultConfigByNodeID(SetDefaultConfigByNodeIDRequest)
       returns (SetDefaultConfigByNodeIDReply);
 }
 
 message GetCoreInfoRequest {}
 message GetCoreTagRequest {}
+message ListAllTagsRequest {}
 message GetCurrentNodeRequest {}
 message RunRequest {}
 message RunReply {}
@@ -266,3 +268,4 @@ message GetCoreInfoReply {
   string name = 1;
   string version = 2;
 }
+message ListAllTagsReply { repeated string tags = 1; }

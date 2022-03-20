@@ -8,10 +8,11 @@ use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetCoreInfoReply, GetCoreInfoRequest, GetCoreTagReply,
-    GetCoreTagRequest, GetCurrentNodeRequest, GetIsRunningReply, GetIsRunningRequest, NodeData,
-    RestartReply, RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply,
-    SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
-    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
+    GetCoreTagRequest, GetCurrentNodeRequest, GetIsRunningReply, GetIsRunningRequest,
+    ListAllTagsReply, ListAllTagsRequest, NodeData, RestartReply, RestartRequest, RunReply,
+    RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply,
+    SetCoreByTagRequest, SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply,
+    StopRequest,
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::Profile;
@@ -377,6 +378,22 @@ impl CoreManager for AColoRSCore {
         };
 
         let reply = GetCoreInfoReply { name, version };
+        Ok(Response::new(reply))
+    }
+    async fn list_all_tags(
+        &self,
+        request: Request<ListAllTagsRequest>,
+    ) -> Result<Response<ListAllTagsReply>, Status> {
+        info!("List all tags from {:?}", request.remote_addr());
+
+        let tags = self
+            .core_map
+            .keys()
+            .into_iter()
+            .map(|tag| tag.clone())
+            .collect();
+
+        let reply = ListAllTagsReply { tags };
         Ok(Response::new(reply))
     }
 }

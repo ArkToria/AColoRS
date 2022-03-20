@@ -16,7 +16,7 @@ use core_protobuf::acolors_proto::{
 };
 use kernel_manager::{create_core_by_path, CoreTool};
 use profile_manager::Profile;
-use spdlog::{error, info};
+use spdlog::{debug, error, info};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
@@ -233,11 +233,11 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<GetCurrentNodeRequest>,
     ) -> Result<Response<NodeData>, Status> {
-        info!("Get current node from {:?}", request.remote_addr());
+        debug!("Get current node from {:?}", request.remote_addr());
         Ok(Response::new(self.get_current_node().await?))
     }
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<RunReply>, Status> {
-        info!("Run from {:?}", request.remote_addr());
+        debug!("Run from {:?}", request.remote_addr());
 
         self.run().await?;
 
@@ -247,7 +247,7 @@ impl CoreManager for AColoRSCore {
         Ok(Response::new(reply))
     }
     async fn stop(&self, request: Request<StopRequest>) -> Result<Response<StopReply>, Status> {
-        info!("Stop from {:?}", request.remote_addr());
+        debug!("Stop from {:?}", request.remote_addr());
 
         self.stop().await?;
 
@@ -261,7 +261,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<RestartRequest>,
     ) -> Result<Response<RestartReply>, Status> {
-        info!("Restart from {:?}", request.remote_addr());
+        debug!("Restart from {:?}", request.remote_addr());
 
         self.restart().await?;
 
@@ -275,7 +275,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<GetIsRunningRequest>,
     ) -> Result<Response<GetIsRunningReply>, Status> {
-        info!("Get is_running from {:?}", request.remote_addr());
+        debug!("Get is_running from {:?}", request.remote_addr());
 
         let mut core_guard = self.current_core.lock().await;
         let core = &mut *core_guard;
@@ -293,7 +293,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<SetConfigByNodeIdRequest>,
     ) -> Result<Response<SetConfigByNodeIdReply>, Status> {
-        info!("Set config by node id from {:?}", request.remote_addr());
+        debug!("Set config by node id from {:?}", request.remote_addr());
 
         let node_id = request.into_inner().node_id;
 
@@ -315,7 +315,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<SetDefaultConfigByNodeIdRequest>,
     ) -> Result<Response<SetDefaultConfigByNodeIdReply>, Status> {
-        info!(
+        debug!(
             "Set default config by node id from {:?}",
             request.remote_addr()
         );
@@ -340,7 +340,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<SetCoreByTagRequest>,
     ) -> Result<Response<SetCoreByTagReply>, Status> {
-        info!("Set core by tag id from {:?}", request.remote_addr());
+        debug!("Set core by tag id from {:?}", request.remote_addr());
 
         let tag = request.into_inner().tag;
 
@@ -357,7 +357,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<GetCoreTagRequest>,
     ) -> Result<Response<GetCoreTagReply>, Status> {
-        info!("Get core tag from {:?}", request.remote_addr());
+        debug!("Get core tag from {:?}", request.remote_addr());
 
         let tag = self.core_tag.lock().await.clone();
         let reply = GetCoreTagReply { tag };
@@ -367,7 +367,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<GetCoreInfoRequest>,
     ) -> Result<Response<GetCoreInfoReply>, Status> {
-        info!("Get core info from {:?}", request.remote_addr());
+        debug!("Get core info from {:?}", request.remote_addr());
 
         let (name, version) = {
             let core = &*self.current_core.lock().await;
@@ -384,7 +384,7 @@ impl CoreManager for AColoRSCore {
         &self,
         request: Request<ListAllTagsRequest>,
     ) -> Result<Response<ListAllTagsReply>, Status> {
-        info!("List all tags from {:?}", request.remote_addr());
+        debug!("List all tags from {:?}", request.remote_addr());
 
         let tags = self.core_map.keys().into_iter().cloned().collect();
 

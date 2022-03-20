@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use acolors_signal::send_or_warn_print;
-use spdlog::{error, info};
+use spdlog::{debug, error};
 
 use tokio::sync::{broadcast, RwLock};
 use tonic::{Request, Response, Status};
@@ -229,7 +229,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<CountGroupsRequest>,
     ) -> Result<Response<CountGroupsReply>, Status> {
-        info!("Request count groups from {:?}", request.remote_addr());
+        debug!("Request count groups from {:?}", request.remote_addr());
 
         let count = self.count_groups().await?;
 
@@ -243,7 +243,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<ListAllGroupsRequest>,
     ) -> Result<Response<GroupList>, Status> {
-        info!("Request list all groups from {:?}", request.remote_addr());
+        debug!("Request list all groups from {:?}", request.remote_addr());
 
         let group_list = self.list_all_groups().await?;
 
@@ -259,7 +259,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<CountNodesRequest>,
     ) -> Result<Response<CountNodesReply>, Status> {
-        info!("Request count nodes from {:?}", request.remote_addr());
+        debug!("Request count nodes from {:?}", request.remote_addr());
 
         let group_id = request.into_inner().group_id;
 
@@ -275,7 +275,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<ListAllNodesRequest>,
     ) -> Result<Response<NodeList>, Status> {
-        info!("Request list all nodes from {:?}", request.remote_addr());
+        debug!("Request list all nodes from {:?}", request.remote_addr());
 
         let group_id = request.into_inner().group_id;
 
@@ -293,7 +293,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<GetGroupByIdRequest>,
     ) -> Result<Response<GroupData>, Status> {
-        info!("Request get group by Id from {:?}", request.remote_addr());
+        debug!("Request get group by Id from {:?}", request.remote_addr());
 
         let group_id = request.into_inner().group_id;
 
@@ -307,7 +307,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<GetNodeByIdRequest>,
     ) -> Result<Response<NodeData>, Status> {
-        info!("Request get node by Id from {:?}", request.remote_addr());
+        debug!("Request get node by Id from {:?}", request.remote_addr());
 
         let node_id = request.into_inner().node_id;
 
@@ -322,7 +322,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<SetGroupByIdRequest>,
     ) -> Result<Response<SetGroupByIdReply>, Status> {
-        info!("Request set group by Id from {:?}", request.remote_addr());
+        debug!("Request set group by Id from {:?}", request.remote_addr());
 
         let inner = request.into_inner();
         let group_id = inner.group_id;
@@ -340,7 +340,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<SetNodeByIdRequest>,
     ) -> Result<Response<SetNodeByIdReply>, Status> {
-        info!("Request set node by Id from {:?}", request.remote_addr());
+        debug!("Request set node by Id from {:?}", request.remote_addr());
 
         let inner = request.into_inner();
         let node_id = inner.node_id;
@@ -359,7 +359,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<SetNodeByUrlRequest>,
     ) -> Result<Response<SetNodeByUrlReply>, Status> {
-        info!("Request set node by url from {:?}", request.remote_addr());
+        debug!("Request set node by url from {:?}", request.remote_addr());
 
         let inner = request.into_inner();
         let node_id = inner.node_id;
@@ -379,7 +379,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<AppendGroupRequest>,
     ) -> Result<Response<AppendGroupReply>, Status> {
-        info!("Request append group from {:?}", request.remote_addr());
+        debug!("Request append group from {:?}", request.remote_addr());
 
         let inner = request.into_inner();
         let data: GroupData = inner
@@ -397,7 +397,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<AppendNodeRequest>,
     ) -> Result<Response<AppendNodeReply>, Status> {
-        info!(
+        debug!(
             "Request append node by group id from {:?}",
             request.remote_addr()
         );
@@ -419,7 +419,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<AppendNodeByUrlRequest>,
     ) -> Result<Response<AppendNodeByUrlReply>, Status> {
-        info!(
+        debug!(
             "Request append node by group id from {:?}",
             request.remote_addr()
         );
@@ -442,7 +442,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<RemoveGroupByIdRequest>,
     ) -> Result<Response<RemoveGroupByIdReply>, Status> {
-        info!(
+        debug!(
             "Request remove group by Id from {:?}",
             request.remote_addr()
         );
@@ -459,7 +459,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<RemoveNodeByIdRequest>,
     ) -> Result<Response<RemoveNodeByIdReply>, Status> {
-        info!("Request remove node by Id from {:?}", request.remote_addr());
+        debug!("Request remove node by Id from {:?}", request.remote_addr());
 
         let node_id = request.into_inner().node_id;
 
@@ -474,7 +474,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<UpdateGroupByIdRequest>,
     ) -> Result<Response<UpdateGroupByIdReply>, Status> {
-        info!(
+        debug!(
             "Request update group by Id from {:?}",
             request.remote_addr()
         );
@@ -493,7 +493,7 @@ impl ProfileManager for AColoRSProfile {
         &self,
         request: Request<EmptyGroupByIdRequest>,
     ) -> Result<Response<EmptyGroupByIdReply>, Status> {
-        info!("Request empty group by Id from {:?}", request.remote_addr());
+        debug!("Request empty group by Id from {:?}", request.remote_addr());
 
         let inner = request.into_inner();
         let group_id = inner.group_id;

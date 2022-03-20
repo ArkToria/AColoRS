@@ -6,7 +6,7 @@ use std::{
 use acolors_signal::send_or_warn_print;
 use core_protobuf::acolors_proto::{config_manager_server::ConfigManager, *};
 use serialize_tool::serialize::serializer::check_is_default_and_delete;
-use spdlog::{debug, info};
+use spdlog::debug;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     sync::{broadcast, RwLock},
@@ -42,7 +42,7 @@ impl ConfigManager for AColoRSConfig {
         &self,
         request: Request<Inbounds>,
     ) -> Result<Response<SetInboundsReply>, Status> {
-        info!("Set inbounds from {:?}", request.remote_addr());
+        debug!("Set inbounds from {:?}", request.remote_addr());
         debug!("Current inbounds: {:?}", &*self.inbounds.read().await);
         let mut inbounds_write = self.inbounds.write().await;
 
@@ -63,7 +63,7 @@ impl ConfigManager for AColoRSConfig {
         &self,
         request: Request<GetInboundsRequest>,
     ) -> Result<Response<Inbounds>, Status> {
-        info!("Set inbounds from {:?}", request.remote_addr());
+        debug!("Set inbounds from {:?}", request.remote_addr());
         let inbounds_read = self.inbounds.read().await;
 
         let inbounds = &*inbounds_read;
@@ -98,7 +98,7 @@ pub async fn write_config_to_file<P: AsRef<Path>>(
 
     let content = serde_json::to_string_pretty(&config)?;
 
-    info!("{}", &content);
+    debug!("{}", &content);
 
     file.write_all(content.as_bytes()).await?;
     file.flush().await?;

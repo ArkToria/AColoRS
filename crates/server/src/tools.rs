@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use core_protobuf::acolors_proto::{TcpingReply, TcpingRequest};
-use spdlog::info;
+use spdlog::debug;
 use tonic::{Request, Response, Status};
 use utils::net::tcping;
 
@@ -20,7 +20,7 @@ impl core_protobuf::acolors_proto::tools_server::Tools for AColoRSTools {
         &self,
         request: Request<TcpingRequest>,
     ) -> Result<Response<TcpingReply>, Status> {
-        info!("Tcping from {:?}", request.remote_addr());
+        debug!("Tcping from {:?}", request.remote_addr());
 
         let target = request.into_inner().target;
 

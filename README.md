@@ -20,6 +20,18 @@ OPTIONS:
     -p, --port <port>              Which port to use (default: 19198)
     -t, --corename <corename>      Core name (default: "v2ray")
 ```
+## Build Status
+
+### Linux
+
+[![ArchLinux Package Build Test](https://github.com/ArkToria/AColoRS/actions/workflows/arch-build.yaml/badge.svg?branch=master)](https://github.com/ArkToria/AColoRS/actions/workflows/arch-build.yaml)
+
+[![Linux Run Build and Tests](https://github.com/ArkToria/AColoRS/actions/workflows/linux-build.yaml/badge.svg)](https://github.com/ArkToria/AColoRS/actions/workflows/linux-build.yaml)
+
+### Windows
+
+[![Windows Run Build and Tests](https://github.com/ArkToria/AColoRS/actions/workflows/windows-build.yaml/badge.svg)](https://github.com/ArkToria/AColoRS/actions/workflows/windows-build.yaml)
+
 ## Config Example
 ```json
 {

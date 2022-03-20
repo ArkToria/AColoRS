@@ -4,6 +4,8 @@ option java_multiple_files = true;
 option java_package = "org.arktoria.acolors";
 option java_outer_classname = "AColoRSProto";
 
+import "google/protobuf/duration.proto";
+
 package acolors;
 
 service Manager { rpc Shutdown(ShutdownRequest) returns (ShutdownReply); }
@@ -269,3 +271,9 @@ message GetCoreInfoReply {
   string version = 2;
 }
 message ListAllTagsReply { repeated string tags = 1; }
+
+service Tools {
+  rpc Tcping(TcpingRequest) returns (TcpingReply) {}
+}
+message TcpingRequest { string target = 1; }
+message TcpingReply { google.protobuf.Duration duration = 1; }

@@ -12,6 +12,7 @@ use core_protobuf::acolors_proto::config_manager_server::ConfigManagerServer;
 use core_protobuf::acolors_proto::core_manager_server::CoreManagerServer;
 use core_protobuf::acolors_proto::manager_server::ManagerServer;
 use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
+use core_protobuf::acolors_proto::tools_server::ToolsServer;
 use futures::{FutureExt, TryFutureExt};
 use server_manager::AColoRSManager;
 use spdlog::{error, info};
@@ -20,6 +21,7 @@ use sqlx::ConnectOptions;
 use tokio::join;
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tonic::transport::Server;
+use tools::AColoRSTools;
 
 use crate::config_manager::{config_read_to_json, AColoRSConfig};
 use crate::core_manager::AColoRSCore;
@@ -33,6 +35,7 @@ mod notifications;
 mod profile;
 mod server_manager;
 mod signal_stream;
+mod tools;
 
 pub fn serve<P: AsRef<Path>>(
     address: SocketAddr,
@@ -72,6 +75,7 @@ struct AColoRSServices {
     pub config: AColoRSConfig,
     pub core: AColoRSCore,
     pub manager: AColoRSManager,
+    pub tools: AColoRSTools,
 }
 pub static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 const BUFFER_SIZE: usize = 16;
@@ -102,6 +106,7 @@ async fn start_server<P: AsRef<Path>>(
         .add_service(ConfigManagerServer::new(services.config))
         .add_service(CoreManagerServer::new(services.core))
         .add_service(ManagerServer::new(services.manager))
+        .add_service(ToolsServer::new(services.tools))
         .serve_with_shutdown(
             addr,
             shutdown_complete_rx.recv().map(|x| x.unwrap_or_default()),
@@ -173,6 +178,7 @@ async fn create_services<P: AsRef<Path>>(
         config: acolors_config,
         core: acolors_core,
         manager: acolors_manager,
+        tools: AColoRSTools::new(),
     })
 }
 

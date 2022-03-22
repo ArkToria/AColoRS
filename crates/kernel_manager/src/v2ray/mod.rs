@@ -1,2 +1,2 @@
 mod configtool;
-pub mod coretool;
+pub mod raycore;

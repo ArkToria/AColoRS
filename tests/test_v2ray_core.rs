@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use config_manager::Inbounds;
-use kernel_manager::{v2ray::coretool::V2RayCore, CoreTool};
+use kernel_manager::{v2ray::raycore::V2RayCore, CoreTool};
 use serialize_tool::serialize::serializetool::decode_outbound_from_url;
 const INBOUND_STR: &str = r#"
 {

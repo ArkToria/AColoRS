@@ -9,7 +9,7 @@ use std::ffi::OsStr;
 use naiveproxy::coretool::NaiveProxy;
 use shadowsocks::coretool::Shadowsocks;
 use trojan_go::coretool::TrojanGo;
-use v2ray::coretool::V2RayCore;
+use v2ray::raycore::V2RayCore;
 
 pub use crate::core::CoreTool;
 

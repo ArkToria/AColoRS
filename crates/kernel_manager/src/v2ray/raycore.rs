@@ -1,33 +1,65 @@
 use std::{
+    collections::HashMap,
     ffi::{OsStr, OsString},
     io::{Read, Write},
     process::{Child, Command, Stdio},
-    str::FromStr,
+    sync::Arc,
 };
 
 use anyhow::{anyhow, Result};
-use serialize_tool::serialize::serializer::check_is_default_and_delete;
 use spdlog::error;
 
 use crate::core::CoreTool;
 
-use super::configtool::set_inbound_object;
-use core_protobuf::v2ray_proto::{OutboundObject, V2RayConfig};
+use super::configtool::generate_config;
 
-#[derive(Debug)]
+type Core = Arc<dyn CoreTool + Send + Sync>;
 pub struct V2RayCore {
     config: String,
     child_process: Option<Child>,
     path: OsString,
     name: String,
     version: String,
+    //external_core: HashMap<String, Core>,
 }
 
 impl V2RayCore {
     pub fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self> {
-        let output = Self::spawn_version_process(path.as_ref())?;
+        fn spawn_version_process(path: &OsStr) -> Result<Child> {
+            let mut process = Command::new(path)
+                .arg("version")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()?;
+            let mut stdin = process
+                .stdin
+                .take()
+                .ok_or_else(|| anyhow!("No ChildStdin"))?;
+            stdin.write_all(b"}{")?;
+            Ok(process)
+        }
+        fn get_name_and_version(mut child: Child) -> Result<(String, String)> {
+            child.wait()?;
+            let mut stdout = match child.stdout {
+                Some(out) => out,
+                None => return Err(anyhow!("No child stdout")),
+            };
+            let mut output = String::new();
+            stdout.read_to_string(&mut output)?;
 
-        let (name, version) = Self::get_name_and_version(output)?;
+            let core_info = output
+                .lines()
+                .next()
+                .ok_or_else(|| anyhow!("Failed to fetch core name&version"))?;
+            let mut info_split = core_info.split(' ');
+            let name = info_split.next().unwrap_or("").to_string();
+            let version = info_split.next().unwrap_or("").to_string();
+            Ok((name, version))
+        }
+        let output = spawn_version_process(path.as_ref())?;
+
+        let (name, version) = get_name_and_version(output)?;
 
         let path = path.into();
 
@@ -37,68 +69,8 @@ impl V2RayCore {
             path,
             config: String::new(),
             child_process: None,
+            //external_core: HashMap::new(),
         })
-    }
-    fn spawn_version_process(path: &OsStr) -> Result<Child> {
-        let mut process = Command::new(path)
-            .arg("version")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()?;
-        let mut stdin = process
-            .stdin
-            .take()
-            .ok_or_else(|| anyhow!("No ChildStdin"))?;
-        stdin.write_all(b"}{")?;
-        Ok(process)
-    }
-
-    fn get_name_and_version(mut child: Child) -> Result<(String, String)> {
-        child.wait()?;
-        let mut stdout = match child.stdout {
-            Some(out) => out,
-            None => return Err(anyhow!("No child stdout")),
-        };
-        let mut output = String::new();
-        stdout.read_to_string(&mut output)?;
-
-        let core_info = output
-            .lines()
-            .next()
-            .ok_or_else(|| anyhow!("Failed to fetch core name&version"))?;
-        let mut info_split = core_info.split(' ');
-        let name = info_split.next().unwrap_or("").to_string();
-        let version = info_split.next().unwrap_or("").to_string();
-        Ok((name, version))
-    }
-
-    fn generate_config(
-        node_data: &core_data::NodeData,
-        inbounds: &config_manager::Inbounds,
-    ) -> Result<String> {
-        let mut node_config = V2RayConfig::default();
-        let mut json;
-
-        set_inbound_object(&mut node_config, inbounds);
-
-        if !node_data.url.contains("://") {
-            json = config_to_json(&node_config, &node_data.raw)?;
-        } else {
-            let mut outbound = json_to_outbound(&node_data.raw)?;
-
-            if outbound.tag.is_empty() {
-                outbound.tag = "PROXY".to_string();
-            }
-
-            node_config.outbounds.push(outbound);
-
-            json = config_to_json(&node_config, "")?;
-        }
-
-        check_is_default_and_delete(&mut json);
-
-        Ok(json.to_string())
     }
 }
 
@@ -194,52 +166,10 @@ impl CoreTool for V2RayCore {
         node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
     ) -> Result<()> {
-        let config = Self::generate_config(node_data, inbounds)?;
+        let config = generate_config(node_data, inbounds)?;
 
         self.set_config(config)
     }
-}
-
-fn json_to_outbound(json_str: &str) -> Result<OutboundObject, serde_json::Error> {
-    serde_json::from_str(json_str)
-}
-
-fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<serde_json::Value> {
-    let mut root = serde_json::to_value(&origin_config)?;
-
-    if root["inbounds"].is_null() {
-        return Ok(serde_json::Value::Null);
-    };
-
-    let fix_format = |root: &mut serde_json::Value, keys: Vec<&'static str>| {
-        keys.into_iter().for_each(|key| {
-            if let serde_json::Value::Array(xbounds) = &mut root[key] {
-                xbounds.iter_mut().for_each(|xbound| {
-                    let protocol = xbound["protocol"]
-                        .as_str()
-                        .unwrap_or("null")
-                        .replace('-', "_");
-
-                    let setting = &mut xbound["settings"][&protocol];
-                    xbound["settings"] = setting.clone();
-                });
-            }
-        });
-    };
-
-    if outbound_raw.is_empty() {
-        fix_format(&mut root, vec!["inbounds", "outbounds"]);
-    } else {
-        fix_format(&mut root, vec!["inbounds"]);
-
-        let outbound = serde_json::Value::from_str(outbound_raw)?;
-
-        if !outbound.is_null() {
-            root["outbounds"] = serde_json::Value::Array(vec![outbound]);
-        }
-    }
-
-    Ok(root)
 }
 
 #[cfg(test)]

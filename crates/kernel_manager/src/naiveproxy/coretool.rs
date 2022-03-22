@@ -5,9 +5,11 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use spdlog::{error, warn};
+use spdlog::error;
 
 use crate::core::CoreTool;
+
+use super::configtool::generate_config;
 
 #[derive(Debug)]
 pub struct NaiveProxy {
@@ -20,9 +22,42 @@ pub struct NaiveProxy {
 
 impl NaiveProxy {
     pub fn new<S: AsRef<OsStr> + ?Sized>(path: &S) -> Result<Self> {
-        let output = Self::spawn_version_process(path.as_ref())?;
+        fn spawn_version_process(path: &OsStr) -> Result<Child> {
+            let mut process = Command::new(path)
+                .arg("--version")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()?;
+            let mut stdin = process
+                .stdin
+                .take()
+                .ok_or_else(|| anyhow!("No ChildStdin"))?;
+            stdin.write_all(b"}{")?;
+            Ok(process)
+        }
 
-        let (name, version) = Self::get_name_and_version(output)?;
+        fn get_name_and_version(mut child: Child) -> Result<(String, String)> {
+            child.wait()?;
+            let mut stdout = match child.stdout {
+                Some(out) => out,
+                None => return Err(anyhow!("No child stdout")),
+            };
+            let mut output = String::new();
+            stdout.read_to_string(&mut output)?;
+
+            let core_info = output
+                .lines()
+                .next()
+                .ok_or_else(|| anyhow!("Failed to fetch core name&version"))?;
+            let mut info_split = core_info.split(' ');
+            let name = info_split.next().unwrap_or("").to_string();
+            let version = info_split.next().unwrap_or("").to_string();
+            Ok((name, version))
+        }
+        let output = spawn_version_process(path.as_ref())?;
+
+        let (name, version) = get_name_and_version(output)?;
 
         let path = path.into();
 
@@ -33,80 +68,6 @@ impl NaiveProxy {
             config: String::new(),
             child_process: None,
         })
-    }
-    fn spawn_version_process(path: &OsStr) -> Result<Child> {
-        let mut process = Command::new(path)
-            .arg("--version")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()?;
-        let mut stdin = process
-            .stdin
-            .take()
-            .ok_or_else(|| anyhow!("No ChildStdin"))?;
-        stdin.write_all(b"}{")?;
-        Ok(process)
-    }
-
-    fn get_name_and_version(mut child: Child) -> Result<(String, String)> {
-        child.wait()?;
-        let mut stdout = match child.stdout {
-            Some(out) => out,
-            None => return Err(anyhow!("No child stdout")),
-        };
-        let mut output = String::new();
-        stdout.read_to_string(&mut output)?;
-
-        let core_info = output
-            .lines()
-            .next()
-            .ok_or_else(|| anyhow!("Failed to fetch core name&version"))?;
-        let mut info_split = core_info.split(' ');
-        let name = info_split.next().unwrap_or("").to_string();
-        let version = info_split.next().unwrap_or("").to_string();
-        Ok((name, version))
-    }
-
-    fn generate_config(
-        node_data: &core_data::NodeData,
-        inbounds: &config_manager::Inbounds,
-    ) -> Result<String> {
-        let mut config = String::new();
-
-        if inbounds.http.is_some() {
-            warn!("NaiveProxy currently don't have http inbounds.");
-        }
-        Self::set_inbounds(inbounds, &mut config)?;
-
-        let protocol = node_data.url.split("://").next().unwrap_or("");
-        match protocol {
-            "naive+https" | "naive+quic" => {
-                config.push_str(&format!(
-                    " --proxy={}",
-                    &node_data.url[6..node_data.url.len()]
-                ));
-            }
-            _ => {
-                return Err(anyhow!("Protocol Error: {}", protocol));
-            }
-        };
-
-        Ok(config)
-    }
-    fn set_inbounds(
-        inbounds: &config_manager::Inbounds,
-        config: &mut String,
-    ) -> Result<(), anyhow::Error> {
-        let socks = inbounds
-            .socks5
-            .as_ref()
-            .ok_or_else(|| anyhow!("Socks inbound not found"))?;
-        config.push_str(&format!(
-            " --listen=socks://{}:{}",
-            socks.listen, socks.port
-        ));
-        Ok(())
     }
 }
 
@@ -198,7 +159,7 @@ impl CoreTool for NaiveProxy {
         node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
     ) -> Result<()> {
-        let config = Self::generate_config(node_data, inbounds)?;
+        let config = generate_config(node_data, inbounds)?;
 
         self.set_config(config)
     }

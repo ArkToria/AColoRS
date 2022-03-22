@@ -1,8 +1,12 @@
+use std::str::FromStr;
+
+use anyhow::Result;
 use core_protobuf::v2ray_proto::*;
 use core_protobuf::v2ray_proto::{
     inbound_object::{inbound_settings, InboundSettings},
     InboundObject, V2RayConfig,
 };
+use serialize_tool::serialize::serializer::check_is_default_and_delete;
 
 pub fn set_inbound_object(config: &mut V2RayConfig, inbounds: &config_manager::Inbounds) {
     set_inbound_http_object(inbounds, config);
@@ -93,4 +97,74 @@ fn set_inbound_socks5_object(inbounds: &config_manager::Inbounds, config: &mut V
             config.inbounds.push(inbound);
         }
     }
+}
+
+fn json_to_outbound(json_str: &str) -> Result<OutboundObject, serde_json::Error> {
+    serde_json::from_str(json_str)
+}
+
+fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<serde_json::Value> {
+    let mut root = serde_json::to_value(&origin_config)?;
+
+    if root["inbounds"].is_null() {
+        return Ok(serde_json::Value::Null);
+    };
+
+    let fix_format = |root: &mut serde_json::Value, keys: Vec<&'static str>| {
+        keys.into_iter().for_each(|key| {
+            if let serde_json::Value::Array(xbounds) = &mut root[key] {
+                xbounds.iter_mut().for_each(|xbound| {
+                    let protocol = xbound["protocol"]
+                        .as_str()
+                        .unwrap_or("null")
+                        .replace('-', "_");
+
+                    let setting = &mut xbound["settings"][&protocol];
+                    xbound["settings"] = setting.clone();
+                });
+            }
+        });
+    };
+
+    if outbound_raw.is_empty() {
+        fix_format(&mut root, vec!["inbounds", "outbounds"]);
+    } else {
+        fix_format(&mut root, vec!["inbounds"]);
+
+        let outbound = serde_json::Value::from_str(outbound_raw)?;
+
+        if !outbound.is_null() {
+            root["outbounds"] = serde_json::Value::Array(vec![outbound]);
+        }
+    }
+
+    Ok(root)
+}
+
+pub fn generate_config(
+    node_data: &core_data::NodeData,
+    inbounds: &config_manager::Inbounds,
+) -> Result<String> {
+    let mut node_config = V2RayConfig::default();
+    let mut json;
+
+    set_inbound_object(&mut node_config, inbounds);
+
+    if !node_data.url.contains("://") {
+        json = config_to_json(&node_config, &node_data.raw)?;
+    } else {
+        let mut outbound = json_to_outbound(&node_data.raw)?;
+
+        if outbound.tag.is_empty() {
+            outbound.tag = "PROXY".to_string();
+        }
+
+        node_config.outbounds.push(outbound);
+
+        json = config_to_json(&node_config, "")?;
+    }
+
+    check_is_default_and_delete(&mut json);
+
+    Ok(json.to_string())
 }

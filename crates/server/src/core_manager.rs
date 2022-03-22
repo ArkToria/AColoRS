@@ -81,7 +81,6 @@ impl AColoRSCore {
             .await
             .clone()
             .ok_or_else(|| Status::not_found("Node not found"))
-            .map(|node| node.into())
     }
 
     pub async fn restart(&self) -> Result<(), Status> {

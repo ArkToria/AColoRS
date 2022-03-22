@@ -72,7 +72,7 @@ impl AColoRSProfile {
             .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
             .list_all_nodes()
             .await
-            .map(|c| c.into_iter().map(|group| group.to_data().into()).collect())
+            .map(|c| c.into_iter().map(|group| group.to_data()).collect())
             .map_err(|e| Status::not_found(format!("Nodes unavailable: \"{}\"", e)))?;
         Ok(node_list)
     }
@@ -111,7 +111,7 @@ impl AColoRSProfile {
         self.profile
             .group_list
             .default_group()
-            .set(node_id as i64, data.into())
+            .set(node_id as i64, data)
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
@@ -140,7 +140,7 @@ impl AColoRSProfile {
             .query(group_id as i64)
             .await
             .map_err(|e| Status::not_found(format!("Groups unavailable: \"{}\"", e)))?
-            .append(data.into())
+            .append(data)
             .await
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
@@ -313,7 +313,7 @@ impl ProfileManager for AColoRSProfile {
 
         let node = self.get_node_by_id(node_id).await?;
 
-        let reply = node.to_data().into();
+        let reply = node.to_data();
 
         Ok(Response::new(reply))
     }
@@ -368,7 +368,7 @@ impl ProfileManager for AColoRSProfile {
         let node_data = decode_outbound_from_url(url)
             .map_err(|e| Status::invalid_argument(format!("Decode error: \"{}\"", e)))?;
 
-        self.set_node_by_id(node_id, node_data.into()).await?;
+        self.set_node_by_id(node_id, node_data).await?;
 
         let reply = SetNodeByUrlReply {};
 
@@ -431,7 +431,7 @@ impl ProfileManager for AColoRSProfile {
         let node_data = decode_outbound_from_url(url)
             .map_err(|e| Status::invalid_argument(format!("Decode error: \"{}\"", e)))?;
 
-        let node_id = self.append_node(group_id, node_data.into()).await?;
+        let node_id = self.append_node(group_id, node_data).await?;
 
         let reply = AppendNodeByUrlReply { node_id };
 

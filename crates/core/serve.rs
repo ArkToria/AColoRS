@@ -10,8 +10,6 @@ use std::process;
 use crate::args::Args;
 use crate::Result;
 
-const DEFAULT_PORT: u16 = 19198;
-
 pub fn serve(args: &Args) -> Result<bool> {
     debug!("Serve with args: {:?}", args);
 
@@ -76,10 +74,7 @@ fn get_serve_matches(args: &Args) -> &ArgMatches {
 }
 
 fn get_port_from(matches: &ArgMatches) -> u16 {
-    let result = matches
-        .value_of("port")
-        .map(|p| p.parse())
-        .unwrap_or(Ok(DEFAULT_PORT));
+    let result = matches.value_of("port").map(|p| p.parse()).unwrap_or(Ok(0));
     match result {
         Ok(x) => x,
         Err(_) => {
@@ -90,18 +85,15 @@ fn get_port_from(matches: &ArgMatches) -> u16 {
 }
 
 fn test_and_set_port(port: &mut u16) {
-    let port_not_available = !tcp_port_is_available(*port);
-    if *port != DEFAULT_PORT && port_not_available {
-        error!("The port is not available");
-        process::exit(1);
-    }
-
-    if port_not_available {
+    if *port == 0 {
         *port = if let Some(p) = tcp_get_available_port(11451..19198) {
             p
         } else {
             error!("No port avaiable");
             process::exit(1);
         }
+    } else if !tcp_port_is_available(*port) {
+        error!("The port {} is not available", *port);
+        process::exit(1);
     }
 }

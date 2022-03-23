@@ -9,7 +9,7 @@ use spdlog::error;
 
 use crate::core::CoreTool;
 
-use super::configtool::generate_config;
+use super::configtool::generate_config_by_socks;
 
 pub struct V2RayCore {
     config: String,
@@ -157,12 +157,12 @@ impl CoreTool for V2RayCore {
         &self.config
     }
 
-    fn set_config_by_node_and_inbounds(
+    fn set_config_by_node_and_socks_inbound(
         &mut self,
         node_data: &core_data::NodeData,
-        inbounds: &config_manager::Inbounds,
+        inbound: &config_manager::SOCKS5Inbound,
     ) -> Result<()> {
-        let config = generate_config(node_data, inbounds)?;
+        let config = generate_config_by_socks(node_data, inbound)?;
 
         self.set_config(config)
     }

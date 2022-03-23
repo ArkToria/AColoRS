@@ -6,10 +6,10 @@ pub trait CoreTool {
     fn stop(&mut self) -> Result<()>;
     fn is_running(&mut self) -> bool;
     fn set_config(&mut self, config: String) -> Result<()>;
-    fn set_config_by_node_and_inbounds(
+    fn set_config_by_node_and_socks_inbound(
         &mut self,
         node_data: &core_data::NodeData,
-        inbounds: &config_manager::Inbounds,
+        inbound: &config_manager::SOCKS5Inbound,
     ) -> Result<()>;
 
     fn restart(&mut self) -> Result<()> {

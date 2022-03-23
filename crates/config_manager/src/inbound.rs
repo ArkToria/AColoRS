@@ -51,6 +51,13 @@ impl std::str::FromStr for Inbounds {
         serde_json::from_str(s)
     }
 }
+impl std::str::FromStr for SOCKS5Inbound {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,5 @@
 mod core;
+pub mod coremanager;
 pub mod naiveproxy;
 pub mod shadowsocks;
 pub mod trojan_go;

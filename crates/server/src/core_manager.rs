@@ -14,15 +14,18 @@ use core_protobuf::acolors_proto::{
     SetCoreByTagRequest, SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply,
     StopRequest,
 };
-use kernel_manager::{create_core_by_path, CoreTool};
+use kernel_manager::{
+    coremanager::{ExternalCore, RayCore},
+    create_core_by_path,
+    v2ray::raycore::V2RayCore,
+    CoreTool,
+};
 use profile_manager::Profile;
 use spdlog::{debug, error, info};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
-type Core = dyn CoreTool + Sync + Send;
-
-type CurrentCore = Mutex<Option<Box<Core>>>;
+type CurrentCore = Mutex<RayCore>;
 type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 type CurrentNodeLock = Mutex<Option<core_data::NodeData>>;
 type CoreTag = Mutex<String>;
@@ -42,7 +45,7 @@ impl AColoRSCore {
         inbounds: InboundsLock,
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
-        let core = Mutex::new(None);
+        let core = Mutex::new(RayCore::new());
         let core_map = HashMap::new();
         let current_node = Mutex::new(None);
         let current_node_id = profile.runtime_value.get_by_key("CURRENT_NODE_ID").await;
@@ -86,9 +89,6 @@ impl AColoRSCore {
     pub async fn restart(&self) -> Result<(), Status> {
         let mut core_guard = self.current_core.lock().await;
         let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
 
         regenerate_config(&self.current_node, &self.inbounds, core).await?;
 
@@ -100,9 +100,6 @@ impl AColoRSCore {
     pub async fn stop(&self) -> Result<(), Status> {
         let mut core_guard = self.current_core.lock().await;
         let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
 
         core.stop()
             .map_err(|e| Status::aborted(format!("Core stop Error: {}", e)))?;
@@ -112,9 +109,6 @@ impl AColoRSCore {
     pub async fn run(&self) -> Result<(), Status> {
         let mut core_guard = self.current_core.lock().await;
         let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
 
         regenerate_config(&self.current_node, &self.inbounds, core).await?;
 
@@ -181,11 +175,9 @@ impl AColoRSCore {
         self.set_core_tag(core_tag).await;
         let mut core_guard = self.current_core.lock().await;
 
-        let core = &mut *core_guard;
-        if let Some(core) = core {
-            if core.is_running() {
-                core.stop()?
-            }
+        let core_manager = &mut *core_guard;
+        if core_manager.is_running() {
+            core_manager.stop()?
         }
 
         let (core_name, path) = self
@@ -193,18 +185,41 @@ impl AColoRSCore {
             .get(core_tag)
             .ok_or_else(|| anyhow!("Core Not Added"))?;
 
-        let core = create_core_by_path(path, core_name).map_err(|e| {
-            error!("Core not found : {}", e);
-            e
-        })?;
+        match core_name.to_ascii_lowercase().as_str() {
+            "v2ray" => {
+                let core = V2RayCore::new(path).map_err(|e| {
+                    error!("Core not found : {}", e);
+                    e
+                })?;
 
-        info!(
-            "Core <{}> version ({})",
-            core.get_name(),
-            core.get_version()
-        );
+                info!(
+                    "Core <{}> version ({})",
+                    core.get_name(),
+                    core.get_version()
+                );
 
-        *core_guard = Some(core);
+                core_manager.set_ray_core(core);
+            }
+            _ => {
+                let core = create_core_by_path(path, core_name).map_err(|e| {
+                    error!("Core not found : {}", e);
+                    e
+                })?;
+
+                info!(
+                    "Core <{}> version ({})",
+                    core.get_name(),
+                    core.get_version()
+                );
+
+                let core = ExternalCore {
+                    tag: core_tag.to_string(),
+                    core,
+                };
+                core_manager.external_cores_mut().push(core);
+            }
+        }
+
         Ok(())
     }
 
@@ -278,9 +293,6 @@ impl CoreManager for AColoRSCore {
 
         let mut core_guard = self.current_core.lock().await;
         let core = &mut *core_guard;
-        let core = core
-            .as_mut()
-            .ok_or_else(|| Status::not_found("Core Not Found"))?;
 
         let is_running = core.is_running();
 
@@ -370,10 +382,7 @@ impl CoreManager for AColoRSCore {
 
         let (name, version) = {
             let core = &*self.current_core.lock().await;
-            match core {
-                Some(core) => (core.get_name().to_string(), core.get_version().to_string()),
-                None => return Err(Status::not_found("Core Not Found")),
-            }
+            (core.get_name().to_string(), core.get_version().to_string())
         };
 
         let reply = GetCoreInfoReply { name, version };
@@ -395,7 +404,7 @@ impl CoreManager for AColoRSCore {
 async fn regenerate_config(
     current_node: &CurrentNodeLock,
     inbounds: &InboundsLock,
-    core: &mut Box<Core>,
+    core: &mut RayCore,
 ) -> Result<(), Status> {
     let current_node_guard = &*current_node.lock().await;
     let node_data = current_node_guard

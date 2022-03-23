@@ -9,12 +9,15 @@ use core_protobuf::v2ray_proto::{
 use serialize_tool::serialize::serializer::check_is_default_and_delete;
 
 pub fn set_inbound_object(config: &mut V2RayConfig, inbounds: &config_manager::Inbounds) {
-    set_inbound_http_object(inbounds, config);
-    set_inbound_socks5_object(inbounds, config);
+    set_inbound_http_object(&inbounds.http.as_ref(), config);
+    set_inbound_socks5_object(&inbounds.socks5.as_ref(), config);
 }
 
-fn set_inbound_http_object(inbounds: &config_manager::Inbounds, config: &mut V2RayConfig) {
-    let http_settings = &inbounds.http;
+pub fn set_inbound_http_object(
+    inbounds: &Option<&config_manager::HTTPInbound>,
+    config: &mut V2RayConfig,
+) {
+    let http_settings = inbounds;
     if let Some(http_inbound) = http_settings {
         if http_inbound.enable {
             let mut http_inbound_configuration_object = http_object::InboundConfigurationObject {
@@ -54,8 +57,11 @@ fn set_inbound_http_object(inbounds: &config_manager::Inbounds, config: &mut V2R
     }
 }
 
-fn set_inbound_socks5_object(inbounds: &config_manager::Inbounds, config: &mut V2RayConfig) {
-    let socks5_settings = &inbounds.socks5;
+pub fn set_inbound_socks5_object(
+    inbounds: &Option<&config_manager::SOCKS5Inbound>,
+    config: &mut V2RayConfig,
+) {
+    let socks5_settings = inbounds;
     if let Some(socks5_inbound) = socks5_settings {
         if socks5_inbound.enable {
             let mut socks5_inbound_configuration_object =
@@ -149,6 +155,34 @@ pub fn generate_config(
     let mut json;
 
     set_inbound_object(&mut node_config, inbounds);
+
+    if !node_data.url.contains("://") {
+        json = config_to_json(&node_config, &node_data.raw)?;
+    } else {
+        let mut outbound = json_to_outbound(&node_data.raw)?;
+
+        if outbound.tag.is_empty() {
+            outbound.tag = "PROXY".to_string();
+        }
+
+        node_config.outbounds.push(outbound);
+
+        json = config_to_json(&node_config, "")?;
+    }
+
+    check_is_default_and_delete(&mut json);
+
+    Ok(json.to_string())
+}
+
+pub fn generate_config_by_socks(
+    node_data: &core_data::NodeData,
+    inbound: &config_manager::SOCKS5Inbound,
+) -> Result<String> {
+    let mut node_config = V2RayConfig::default();
+    let mut json;
+
+    set_inbound_socks5_object(&Some(inbound), &mut node_config);
 
     if !node_data.url.contains("://") {
         json = config_to_json(&node_config, &node_data.raw)?;

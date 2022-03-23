@@ -5,24 +5,19 @@ use spdlog::warn;
 
 pub fn generate_config(
     node_data: &core_data::NodeData,
-    inbounds: &config_manager::Inbounds,
+    inbounds: &config_manager::SOCKS5Inbound,
 ) -> Result<String> {
     fn set_inbounds(
-        inbounds: &config_manager::Inbounds,
+        inbounds: &config_manager::SOCKS5Inbound,
         config: &mut String,
     ) -> Result<(), anyhow::Error> {
-        let socks = inbounds
-            .socks5
-            .as_ref()
-            .ok_or_else(|| anyhow!("Socks inbound not found"))?;
+        let socks = inbounds;
+
         config.push_str(&format!(" --local-addr {}:{}", socks.listen, socks.port));
         Ok(())
     }
     let mut config = String::new();
 
-    if inbounds.http.is_some() {
-        warn!("Shadowsocks currently don't have http inbounds.");
-    }
     set_inbounds(inbounds, &mut config)?;
 
     let protocol = node_data.url.split("://").next().unwrap_or("");

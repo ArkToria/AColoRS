@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
 
+use crate::regex;
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
 use core_data::NodeData;
@@ -47,7 +48,7 @@ pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
 fn trojan_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // trojan://<password>@<host>:<port>?sni=<server_name>&allowinsecure=<allow_insecure>&alpn=h2%0Ahttp/1.1#<name>
-    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:]*)\?([^#]*)#([^#]*)"#)?;
+    let re = regex!(r#"(\w+)://([^/@:]*)@([^@]*):([^:]*)\?([^#]*)#([^#]*)"#);
     let caps = re
         .captures(url_str)
         .ok_or_else(|| anyhow!("Failed to parse trojan url"))?;

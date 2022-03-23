@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 
+use crate::regex;
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
 use core_data::NodeData;
@@ -48,7 +49,7 @@ fn sip002_decode(url_str: &str) -> Result<URLMetaObject> {
     // url scheme:
     // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
 
-    let re = regex::Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:/]*)((/\?)*[^#]*)#([^#]*)"#)?;
+    let re = regex!(r#"(\w+)://([^/@:]*)@([^@]*):([^:/]*)((/\?)*[^#]*)#([^#]*)"#);
     let caps = re.captures(url_str).ok_or_else(|| {
         dbg!(url_str);
         anyhow!("Failed to parse sip002 url")

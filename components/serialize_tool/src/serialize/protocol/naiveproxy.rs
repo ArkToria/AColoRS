@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 
+use crate::regex;
 use core_data::NodeData;
 use core_protobuf::acolors_proto::EntryType;
 
@@ -7,8 +8,8 @@ pub fn naiveproxy_outbound_from_url(url_str: String) -> Result<NodeData> {
     // url scheme:
     // naive+https://username:password@hostname:port?padding=true#tag
     // naive+quic://username:password@hostname:port?padding=false#tag
-    let re =
-        regex::Regex::new(r#"(\w+)://([^/:]*):([^:@]*)@([^:]*):([^:\?]*)([\?]*)([^#]*)#([^#]*)"#)?;
+    let re = regex!(r#"(\w+)://([^/:]*):([^:@]*)@([^:]*):([^:\?]*)([\?]*)([^#]*)#([^#]*)"#);
+    // regex::Regex::new(r#"(\w+)://([^/:]*):([^:@]*)@([^:]*):([^:\?]*)([\?]*)([^#]*)#([^#]*)"#)?;
     let caps = re.captures(&url_str).ok_or_else(|| {
         dbg!(&url_str);
         anyhow!("Failed to parse naive url")

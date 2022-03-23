@@ -1,9 +1,7 @@
 use std::{
-    collections::HashMap,
     ffi::{OsStr, OsString},
     io::{Read, Write},
     process::{Child, Command, Stdio},
-    sync::Arc,
 };
 
 use anyhow::{anyhow, Result};
@@ -13,14 +11,12 @@ use crate::core::CoreTool;
 
 use super::configtool::generate_config;
 
-type Core = Arc<dyn CoreTool + Send + Sync>;
 pub struct V2RayCore {
     config: String,
     child_process: Option<Child>,
     path: OsString,
     name: String,
     version: String,
-    //external_core: HashMap<String, Core>,
 }
 
 impl V2RayCore {

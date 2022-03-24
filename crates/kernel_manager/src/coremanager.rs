@@ -1,9 +1,15 @@
+use std::borrow::BorrowMut;
+
 use crate::{
     v2ray::{configtool::config_to_string, raycore::V2RayCore},
     CoreTool,
 };
 use anyhow::anyhow;
-use core_protobuf::v2ray_proto::V2RayConfig;
+use core_protobuf::v2ray_proto::*;
+use core_protobuf::v2ray_proto::{
+    inbound_object::InboundSettings, policy_object::SystemPolicyObject, routing_object::RuleObject,
+    ApiObject, InboundObject, PolicyObject, RoutingObject, StatsObject, V2RayConfig,
+};
 
 type Core = dyn CoreTool + Sync + Send;
 pub struct ExternalCore {
@@ -40,22 +46,75 @@ impl RayCore {
         node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
     ) -> anyhow::Result<()> {
-        match self.ray_core.as_mut() {
-            Some(ray_core) => {
-                let config = crate::v2ray::configtool::generate_config(node_data, inbounds)?;
-                ray_core.set_config(config_to_string(config)?)?;
-                Ok(())
-            }
-            None => Err(anyhow!("RayCore Not Found.")),
+        let config = crate::v2ray::configtool::generate_config(node_data, inbounds)?;
+        let self_config = self.config.borrow_mut();
+        self_config.outbounds = config.outbounds;
+        self_config.inbounds = config.inbounds;
+        Ok(())
+    }
+    pub fn set_stat(&mut self, enable: bool) {
+        let config = self.config.borrow_mut();
+        if enable && config.stats.is_none() {
+            config.stats = Some(StatsObject {});
+        } else if (!enable) && config.stats.is_some() {
+            config.stats = None;
         }
     }
-    pub fn config_mut(&mut self) -> &mut V2RayConfig {
-        &mut self.config
+    pub fn api_mut(&mut self) -> &mut Option<ApiObject> {
+        self.config.api.borrow_mut()
+    }
+    pub fn routing_mut(&mut self) -> &mut Option<RoutingObject> {
+        self.config.routing.borrow_mut()
+    }
+    pub fn inbound_mut(&mut self) -> &mut Vec<InboundObject> {
+        self.config.inbounds.borrow_mut()
+    }
+    pub fn policy_mut(&mut self) -> &mut Option<PolicyObject> {
+        self.config.policy.borrow_mut()
+    }
+    pub fn set_api_object(&mut self, listen: &str, port: u32) {
+        let mut inbound = InboundObject::default();
+        inbound.listen = listen.to_string();
+        inbound.port = port;
+        inbound.protocol = "dokodemo-door".to_string();
+        inbound.tag = "ACROSS_API_INBOUND".to_string();
+        let mut doko_setting = dokodemo_door_object::InboundConfigurationObject::default();
+        doko_setting.address = "127.0.0.1".to_string();
+        inbound.settings = Some(InboundSettings {
+            kind: Some(inbound_object::inbound_settings::Kind::DokodemoDoor(
+                doko_setting,
+            )),
+        });
+        self.inbound_mut().push(inbound);
+        self.inbound_mut().rotate_right(1);
+
+        self.set_stat(true);
+        *self.api_mut() = Some(ApiObject {
+            tag: "ACROSS_API".to_string(),
+            services: vec!["LoggerService".to_string(), "StatsService".to_string()],
+        });
+        let mut routing = RoutingObject::default();
+        let mut rule = RuleObject::default();
+        rule.r#type = "field".to_string();
+        rule.outbound_tag = "ACROSS_API".to_string();
+        rule.inbound_tag.push("ACROSS_API_INBOUND".to_string());
+        routing.rules.push(rule);
+        *self.routing_mut() = Some(routing);
+
+        let mut policy = PolicyObject::default();
+        let mut system = SystemPolicyObject::default();
+        system.stats_inbound_downlink = true;
+        system.stats_inbound_uplink = true;
+        system.stats_outbound_downlink = true;
+        system.stats_outbound_uplink = true;
+        policy.system = Some(system);
+        *self.policy_mut() = Some(policy);
     }
 }
 
 impl CoreTool for RayCore {
     fn run(&mut self) -> anyhow::Result<()> {
+        //self.set_api_object("127.0.0.1", 15491);
         let run_result = self
             .external_cores
             .iter_mut()
@@ -74,7 +133,10 @@ impl CoreTool for RayCore {
             return Err(anyhow!(error));
         }
         match self.ray_core.as_mut() {
-            Some(ray_core) => ray_core.run(),
+            Some(ray_core) => {
+                ray_core.set_config(config_to_string(&self.config)?)?;
+                ray_core.run()
+            }
             None => Err(anyhow!("RayCore Not Found.")),
         }
     }

@@ -87,6 +87,10 @@ fn compile_v2ray_protos() -> Result<(), Box<dyn std::error::Error>> {
             "v2ray.config.OutboundObject.OutboundSettings.kind",
             "#[serde(flatten)]",
         )
+        .field_attribute(
+            "v2ray.config.InboundObject.InboundSettings.kind",
+            "#[serde(flatten)]",
+        )
         .type_attribute(".", "#[serde(rename_all = \"camelCase\")]");
     for &object in STRUCT_PATHS {
         builder = builder.type_attribute(object, "#[serde(default)]");

@@ -112,12 +112,14 @@ fn fix_format(root: &mut serde_json::Value, keys: Vec<&'static str>) {
     keys.into_iter().for_each(|key| {
         if let serde_json::Value::Array(xbounds) = &mut root[key] {
             xbounds.iter_mut().for_each(|xbound| {
-                let protocol = xbound["protocol"]
-                    .as_str()
-                    .unwrap_or("null")
-                    .replace('-', "_");
-
-                let setting = &mut xbound["settings"][&protocol];
+                let setting = match &mut xbound["settings"] {
+                    serde_json::Value::Object(obj) => obj
+                        .into_iter()
+                        .next()
+                        .map(|(_, setting)| setting.clone())
+                        .unwrap_or(serde_json::Value::Null),
+                    _ => serde_json::Value::Null,
+                };
                 xbound["settings"] = setting.clone();
             });
         }
@@ -220,8 +222,11 @@ pub fn generate_config(
     Ok(node_config)
 }
 
-pub fn config_to_string(node_config: V2RayConfig) -> Result<String> {
-    Ok(config_to_json(&node_config)?.to_string())
+pub fn config_to_string(node_config: &V2RayConfig) -> Result<String> {
+    let mut config = config_to_json(&node_config)?;
+    check_is_default_and_delete(&mut config);
+    spdlog::info!("{}", serde_json::to_string_pretty(&config).unwrap());
+    Ok(config.to_string())
 }
 
 pub fn generate_config_by_socks(

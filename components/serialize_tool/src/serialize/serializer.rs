@@ -17,7 +17,10 @@ pub fn check_is_default_and_delete(value: &mut Value) -> bool {
         }
         Value::Object(map) => {
             let mut contain_non_default_member = true;
-            map.retain(|_, value| {
+            map.retain(|key, value| {
+                if key == "stats" {
+                    return true;
+                }
                 if check_is_default_and_delete(value) {
                     false
                 } else {

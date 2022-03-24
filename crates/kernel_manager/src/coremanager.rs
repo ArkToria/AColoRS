@@ -16,10 +16,16 @@ pub struct ExternalCore {
     pub tag: String,
     pub core: Box<Core>,
 }
+
+pub struct APIConfig {
+    pub port: u32,
+    pub listen: String,
+}
 pub struct RayCore {
     ray_core: Option<V2RayCore>,
     external_cores: Vec<ExternalCore>,
     config: V2RayConfig,
+    api: Option<APIConfig>,
 }
 
 impl Default for RayCore {
@@ -30,6 +36,7 @@ impl Default for RayCore {
 impl RayCore {
     pub fn new() -> Self {
         Self {
+            api: None,
             ray_core: None,
             external_cores: Vec::new(),
             config: V2RayConfig::default(),
@@ -46,10 +53,8 @@ impl RayCore {
         node_data: &core_data::NodeData,
         inbounds: &config_manager::Inbounds,
     ) -> anyhow::Result<()> {
-        let config = crate::v2ray::configtool::generate_config(node_data, inbounds)?;
-        let self_config = self.config.borrow_mut();
-        self_config.outbounds = config.outbounds;
-        self_config.inbounds = config.inbounds;
+        self.config = crate::v2ray::configtool::generate_config(node_data, inbounds)?;
+        self.set_api_object();
         Ok(())
     }
     pub fn set_stat(&mut self, enable: bool) {
@@ -72,49 +77,71 @@ impl RayCore {
     pub fn policy_mut(&mut self) -> &mut Option<PolicyObject> {
         self.config.policy.borrow_mut()
     }
-    pub fn set_api_object(&mut self, listen: &str, port: u32) {
-        let mut inbound = InboundObject::default();
-        inbound.listen = listen.to_string();
-        inbound.port = port;
-        inbound.protocol = "dokodemo-door".to_string();
-        inbound.tag = "ACROSS_API_INBOUND".to_string();
-        let mut doko_setting = dokodemo_door_object::InboundConfigurationObject::default();
-        doko_setting.address = "127.0.0.1".to_string();
-        inbound.settings = Some(InboundSettings {
-            kind: Some(inbound_object::inbound_settings::Kind::DokodemoDoor(
-                doko_setting,
-            )),
-        });
-        self.inbound_mut().push(inbound);
-        self.inbound_mut().rotate_right(1);
+    pub fn set_api_address(&mut self, listen: &str, port: u32) {
+        self.api = Some(APIConfig {
+            port,
+            listen: listen.to_string(),
+        })
+    }
+    pub fn api_config(&self) -> &Option<APIConfig> {
+        &self.api
+    }
+    fn set_api_object(&mut self) {
+        match &self.api {
+            Some(api) => {
+                let mut inbound = InboundObject {
+                    listen: api.listen.to_string(),
+                    port: api.port,
+                    protocol: "dokodemo-door".to_string(),
+                    tag: "ACROSS_API_INBOUND".to_string(),
+                    ..Default::default()
+                };
+                let doko_setting = dokodemo_door_object::InboundConfigurationObject {
+                    address: "127.0.0.1".to_string(),
+                    ..Default::default()
+                };
+                inbound.settings = Some(InboundSettings {
+                    kind: Some(inbound_object::inbound_settings::Kind::DokodemoDoor(
+                        doko_setting,
+                    )),
+                });
+                self.inbound_mut().push(inbound);
+                self.inbound_mut().rotate_right(1);
 
-        self.set_stat(true);
-        *self.api_mut() = Some(ApiObject {
-            tag: "ACROSS_API".to_string(),
-            services: vec!["LoggerService".to_string(), "StatsService".to_string()],
-        });
-        let mut routing = RoutingObject::default();
-        let mut rule = RuleObject::default();
-        rule.r#type = "field".to_string();
-        rule.outbound_tag = "ACROSS_API".to_string();
-        rule.inbound_tag.push("ACROSS_API_INBOUND".to_string());
-        routing.rules.push(rule);
-        *self.routing_mut() = Some(routing);
+                self.set_stat(true);
+                *self.api_mut() = Some(ApiObject {
+                    tag: "ACROSS_API".to_string(),
+                    services: vec!["LoggerService".to_string(), "StatsService".to_string()],
+                });
+                let routing = RoutingObject {
+                    rules: vec![RuleObject {
+                        r#type: "field".to_string(),
+                        outbound_tag: "ACROSS_API".to_string(),
+                        inbound_tag: vec!["ACROSS_API_INBOUND".to_string()],
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                };
+                *self.routing_mut() = Some(routing);
 
-        let mut policy = PolicyObject::default();
-        let mut system = SystemPolicyObject::default();
-        system.stats_inbound_downlink = true;
-        system.stats_inbound_uplink = true;
-        system.stats_outbound_downlink = true;
-        system.stats_outbound_uplink = true;
-        policy.system = Some(system);
-        *self.policy_mut() = Some(policy);
+                let policy = PolicyObject {
+                    system: Some(SystemPolicyObject {
+                        stats_inbound_downlink: true,
+                        stats_inbound_uplink: true,
+                        stats_outbound_downlink: true,
+                        stats_outbound_uplink: true,
+                    }),
+                    ..Default::default()
+                };
+                *self.policy_mut() = Some(policy);
+            }
+            None => {}
+        }
     }
 }
 
 impl CoreTool for RayCore {
     fn run(&mut self) -> anyhow::Result<()> {
-        //self.set_api_object("127.0.0.1", 15491);
         let run_result = self
             .external_cores
             .iter_mut()

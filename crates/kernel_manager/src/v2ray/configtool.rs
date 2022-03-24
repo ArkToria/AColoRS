@@ -120,7 +120,7 @@ fn fix_format(root: &mut serde_json::Value, keys: Vec<&'static str>) {
                         .unwrap_or(serde_json::Value::Null),
                     _ => serde_json::Value::Null,
                 };
-                xbound["settings"] = setting.clone();
+                xbound["settings"] = setting;
             });
         }
     });
@@ -223,9 +223,9 @@ pub fn generate_config(
 }
 
 pub fn config_to_string(node_config: &V2RayConfig) -> Result<String> {
-    let mut config = config_to_json(&node_config)?;
+    let mut config = config_to_json(node_config)?;
     check_is_default_and_delete(&mut config);
-    spdlog::info!("{}", serde_json::to_string_pretty(&config).unwrap());
+    spdlog::trace!("{}", serde_json::to_string_pretty(&config).unwrap());
     Ok(config.to_string())
 }
 

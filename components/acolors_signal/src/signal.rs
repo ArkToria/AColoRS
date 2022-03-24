@@ -17,6 +17,7 @@ pub enum AColorSignal {
     RuntimeValueChanged(String),
     EmptyGroup(i64),
     Shutdown,
+    SetApiConfig,
 }
 
 impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
@@ -67,6 +68,9 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::Shutdown => Self {
                 signal: Some(Signal::Shutdown(Shutdown {})),
             },
+            AColorSignal::SetApiConfig => Self {
+                signal: Some(Signal::SetApiConfig(SetApiConfig {})),
+            },
         }
     }
 }
@@ -90,6 +94,7 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
                 Signal::CoreChanged(_) => Self::CoreChanged,
                 Signal::RuntimeValueChanged(m) => Self::RuntimeValueChanged(m.key),
                 Signal::Shutdown(_) => Self::Shutdown,
+                Signal::SetApiConfig(_) => Self::SetApiConfig,
             })
             .unwrap_or(Self::Empty)
     }

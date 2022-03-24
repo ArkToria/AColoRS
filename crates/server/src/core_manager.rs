@@ -7,12 +7,12 @@ use std::{
 use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
-    core_manager_server::CoreManager, GetCoreInfoReply, GetCoreInfoRequest, GetCoreTagReply,
-    GetCoreTagRequest, GetCurrentNodeRequest, GetIsRunningReply, GetIsRunningRequest,
-    ListAllTagsReply, ListAllTagsRequest, NodeData, RestartReply, RestartRequest, RunReply,
-    RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply,
-    SetCoreByTagRequest, SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply,
-    StopRequest,
+    core_manager_server::CoreManager, GetApiConfigReply, GetApiConfigRequest, GetCoreInfoReply,
+    GetCoreInfoRequest, GetCoreTagReply, GetCoreTagRequest, GetCurrentNodeRequest,
+    GetIsRunningReply, GetIsRunningRequest, ListAllTagsReply, ListAllTagsRequest, NodeData,
+    RestartReply, RestartRequest, RunReply, RunRequest, SetApiConfigReply, SetApiConfigRequest,
+    SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
+    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
 };
 use kernel_manager::{
     coremanager::{ExternalCore, RayCore},
@@ -397,6 +397,49 @@ impl CoreManager for AColoRSCore {
         let tags = self.core_map.keys().into_iter().cloned().collect();
 
         let reply = ListAllTagsReply { tags };
+        Ok(Response::new(reply))
+    }
+    async fn set_api_config(
+        &self,
+        request: Request<SetApiConfigRequest>,
+    ) -> Result<Response<SetApiConfigReply>, Status> {
+        debug!("Set api config from {:?}", request.remote_addr());
+
+        let inner = request.into_inner();
+        let listen = inner.listen;
+        let port = inner.port;
+
+        {
+            self.current_core
+                .lock()
+                .await
+                .set_api_address(&listen, port);
+        }
+
+        send_or_warn_print(&self.signal_sender, AColorSignal::SetApiConfig);
+
+        let reply = SetApiConfigReply {};
+        Ok(Response::new(reply))
+    }
+    async fn get_api_config(
+        &self,
+        request: Request<GetApiConfigRequest>,
+    ) -> Result<Response<GetApiConfigReply>, Status> {
+        debug!("Get api config from {:?}", request.remote_addr());
+
+        let mut listen = String::new();
+        let mut port = 0;
+
+        {
+            let core = self.current_core.lock().await;
+            let config = core.api_config();
+            if let Some(config) = config {
+                listen = config.listen.clone();
+                port = config.port;
+            }
+        }
+
+        let reply = GetApiConfigReply { listen, port };
         Ok(Response::new(reply))
     }
 }

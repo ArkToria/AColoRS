@@ -1,4 +1,7 @@
-use crate::{v2ray::raycore::V2RayCore, CoreTool};
+use crate::{
+    v2ray::{configtool::config_to_string, raycore::V2RayCore},
+    CoreTool,
+};
 use anyhow::anyhow;
 use core_protobuf::v2ray_proto::V2RayConfig;
 
@@ -40,11 +43,14 @@ impl RayCore {
         match self.ray_core.as_mut() {
             Some(ray_core) => {
                 let config = crate::v2ray::configtool::generate_config(node_data, inbounds)?;
-                ray_core.set_config(config)?;
+                ray_core.set_config(config_to_string(config)?)?;
                 Ok(())
             }
             None => Err(anyhow!("RayCore Not Found.")),
         }
+    }
+    pub fn config_mut(&mut self) -> &mut V2RayConfig {
+        &mut self.config
     }
 }
 

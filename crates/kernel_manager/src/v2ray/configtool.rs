@@ -108,46 +108,68 @@ pub fn set_inbound_socks5_object(
 fn json_to_outbound(json_str: &str) -> Result<OutboundObject, serde_json::Error> {
     serde_json::from_str(json_str)
 }
+fn fix_format(root: &mut serde_json::Value, keys: Vec<&'static str>) {
+    keys.into_iter().for_each(|key| {
+        if let serde_json::Value::Array(xbounds) = &mut root[key] {
+            xbounds.iter_mut().for_each(|xbound| {
+                let protocol = xbound["protocol"]
+                    .as_str()
+                    .unwrap_or("null")
+                    .replace('-', "_");
 
-fn config_to_json(origin_config: &V2RayConfig, outbound_raw: &str) -> Result<serde_json::Value> {
+                let setting = &mut xbound["settings"][&protocol];
+                xbound["settings"] = setting.clone();
+            });
+        }
+    });
+}
+
+fn fix_format_undo(xbound: &mut serde_json::Value) {
+    let protocol = xbound["protocol"]
+        .as_str()
+        .unwrap_or("null")
+        .replace('-', "_");
+
+    let setting = xbound["settings"].clone();
+    let mut settings = serde_json::Map::new();
+    settings[&protocol] = setting;
+    xbound["settings"].as_object_mut().replace(&mut settings);
+}
+
+fn config_to_json(origin_config: &V2RayConfig) -> Result<serde_json::Value> {
     let mut root = serde_json::to_value(&origin_config)?;
 
     if root["inbounds"].is_null() {
         return Ok(serde_json::Value::Null);
     };
 
-    let fix_format = |root: &mut serde_json::Value, keys: Vec<&'static str>| {
-        keys.into_iter().for_each(|key| {
-            if let serde_json::Value::Array(xbounds) = &mut root[key] {
-                xbounds.iter_mut().for_each(|xbound| {
-                    let protocol = xbound["protocol"]
-                        .as_str()
-                        .unwrap_or("null")
-                        .replace('-', "_");
+    fix_format(&mut root, vec!["inbounds", "outbounds"]);
 
-                    let setting = &mut xbound["settings"][&protocol];
-                    xbound["settings"] = setting.clone();
-                });
-            }
-        });
-    };
-
-    if outbound_raw.is_empty() {
-        fix_format(&mut root, vec!["inbounds", "outbounds"]);
-    } else {
-        fix_format(&mut root, vec!["inbounds"]);
-
-        let outbound = serde_json::Value::from_str(outbound_raw)?;
+    Ok(root)
+}
+pub fn set_outbound_value(root: &mut serde_json::Value, outbound: &str) -> Result<()> {
+    if !outbound.is_empty() {
+        let outbound = serde_json::Value::from_str(outbound)?;
 
         if !outbound.is_null() {
             root["outbounds"] = serde_json::Value::Array(vec![outbound]);
         }
     }
-
-    Ok(root)
+    Ok(())
 }
 
-pub fn generate_config(
+pub fn set_outbound_object(root: &mut V2RayConfig, outbound: &str) -> Result<()> {
+    if !outbound.is_empty() {
+        let mut outbound = serde_json::Value::from_str(outbound)?;
+        fix_format_undo(&mut outbound);
+        let outbound = json_to_outbound(&outbound.to_string())?;
+
+        root.outbounds.push(outbound);
+    }
+    Ok(())
+}
+
+pub fn generate_config_string(
     node_data: &core_data::NodeData,
     inbounds: &config_manager::Inbounds,
 ) -> Result<String> {
@@ -156,9 +178,7 @@ pub fn generate_config(
 
     set_inbound_object(&mut node_config, inbounds);
 
-    if !node_data.url.contains("://") {
-        json = config_to_json(&node_config, &node_data.raw)?;
-    } else {
+    if node_data.url.contains("://") {
         let mut outbound = json_to_outbound(&node_data.raw)?;
 
         if outbound.tag.is_empty() {
@@ -167,12 +187,41 @@ pub fn generate_config(
 
         node_config.outbounds.push(outbound);
 
-        json = config_to_json(&node_config, "")?;
+        json = config_to_json(&node_config)?;
+    } else {
+        json = config_to_json(&node_config)?;
+        set_outbound_value(&mut json, &node_data.raw)?;
     }
 
     check_is_default_and_delete(&mut json);
 
     Ok(json.to_string())
+}
+pub fn generate_config(
+    node_data: &core_data::NodeData,
+    inbounds: &config_manager::Inbounds,
+) -> Result<V2RayConfig> {
+    let mut node_config = V2RayConfig::default();
+
+    set_inbound_object(&mut node_config, inbounds);
+
+    if node_data.url.contains("://") {
+        let mut outbound = json_to_outbound(&node_data.raw)?;
+
+        if outbound.tag.is_empty() {
+            outbound.tag = "PROXY".to_string();
+        }
+
+        node_config.outbounds.push(outbound);
+    } else {
+        set_outbound_object(&mut node_config, &node_data.raw)?;
+    }
+
+    Ok(node_config)
+}
+
+pub fn config_to_string(node_config: V2RayConfig) -> Result<String> {
+    Ok(config_to_json(&node_config)?.to_string())
 }
 
 pub fn generate_config_by_socks(
@@ -184,9 +233,7 @@ pub fn generate_config_by_socks(
 
     set_inbound_socks5_object(&Some(inbound), &mut node_config);
 
-    if !node_data.url.contains("://") {
-        json = config_to_json(&node_config, &node_data.raw)?;
-    } else {
+    if node_data.url.contains("://") {
         let mut outbound = json_to_outbound(&node_data.raw)?;
 
         if outbound.tag.is_empty() {
@@ -195,7 +242,10 @@ pub fn generate_config_by_socks(
 
         node_config.outbounds.push(outbound);
 
-        json = config_to_json(&node_config, "")?;
+        json = config_to_json(&node_config)?;
+    } else {
+        json = config_to_json(&node_config)?;
+        set_outbound_value(&mut json, &node_data.raw)?;
     }
 
     check_is_default_and_delete(&mut json);

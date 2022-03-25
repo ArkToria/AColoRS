@@ -73,9 +73,12 @@ const STRUCT_PATHS: &[&str] = &[
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../proto/acolors.proto");
     println!("cargo:rerun-if-changed=../../proto/v2ray_config.proto");
+    println!("cargo:rerun-if-changed=../../proto/v2ray_api.proto");
     tonic_build::compile_protos("../../proto/acolors.proto")?;
 
     compile_v2ray_protos()?;
+
+    compile_v2ray_api_protos()?;
 
     Ok(())
 }
@@ -96,5 +99,9 @@ fn compile_v2ray_protos() -> Result<(), Box<dyn std::error::Error>> {
         builder = builder.type_attribute(object, "#[serde(default)]");
     }
     builder.compile(&["../../proto/v2ray_config.proto"], &["../../proto"])?;
+    Ok(())
+}
+fn compile_v2ray_api_protos() -> Result<(), Box<dyn std::error::Error>> {
+    tonic_build::compile_protos("../../proto/v2ray_api.proto")?;
     Ok(())
 }

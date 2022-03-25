@@ -1,18 +1,19 @@
 use std::{
     collections::HashMap,
     ffi::{OsStr, OsString},
+    pin::Pin,
     sync::Arc,
 };
 
 use acolors_signal::{send_or_warn_print, AColorSignal};
 use anyhow::{anyhow, Result};
 use core_protobuf::acolors_proto::{
-    core_manager_server::CoreManager, GetApiConfigReply, GetApiConfigRequest, GetCoreInfoReply,
-    GetCoreInfoRequest, GetCoreTagReply, GetCoreTagRequest, GetCurrentNodeRequest,
-    GetIsRunningReply, GetIsRunningRequest, ListAllTagsReply, ListAllTagsRequest, NodeData,
-    RestartReply, RestartRequest, RunReply, RunRequest, SetApiConfigReply, SetApiConfigRequest,
-    SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
-    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
+    core_manager_server::CoreManager, GetCoreInfoReply, GetCoreInfoRequest, GetCoreTagReply,
+    GetCoreTagRequest, GetCurrentNodeRequest, GetIsRunningReply, GetIsRunningRequest,
+    GetTrafficInfoRequest, ListAllTagsReply, ListAllTagsRequest, NodeData, RestartReply,
+    RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest,
+    SetCoreByTagReply, SetCoreByTagRequest, SetDefaultConfigByNodeIdReply,
+    SetDefaultConfigByNodeIdRequest, StopReply, StopRequest, TrafficInfo,
 };
 use kernel_manager::{
     coremanager::{ExternalCore, RayCore},
@@ -24,11 +25,16 @@ use profile_manager::Profile;
 use spdlog::{debug, error, info};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
+use utils::net::tcp_get_available_port;
+
+use crate::traffic_speed::{TrafficInfoSender, TrafficStream};
 
 type CurrentCore = Mutex<RayCore>;
 type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 type CurrentNodeLock = Mutex<Option<core_data::NodeData>>;
 type CoreTag = Mutex<String>;
+
+type Stream<T> = Pin<Box<dyn futures::Stream<Item = Result<T, Status>> + Send>>;
 pub struct AColoRSCore {
     core_tag: CoreTag,
     current_core: CurrentCore,
@@ -37,6 +43,7 @@ pub struct AColoRSCore {
     current_node: CurrentNodeLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     core_map: HashMap<String, (String, OsString)>,
+    speed_sender: Mutex<Option<TrafficInfoSender>>,
 }
 
 impl AColoRSCore {
@@ -75,6 +82,7 @@ impl AColoRSCore {
             signal_sender,
             core_map,
             core_tag: Mutex::new(String::new()),
+            speed_sender: Mutex::new(None),
         }
     }
 
@@ -108,6 +116,11 @@ impl AColoRSCore {
 
     pub async fn run(&self) -> Result<(), Status> {
         let mut core_guard = self.current_core.lock().await;
+        core_guard.set_api_address(
+            "127.0.0.1",
+            tcp_get_available_port(11451..19198).unwrap_or(19200) as u32,
+        );
+
         let core = &mut *core_guard;
 
         regenerate_config(&self.current_node, &self.inbounds, core).await?;
@@ -399,48 +412,39 @@ impl CoreManager for AColoRSCore {
         let reply = ListAllTagsReply { tags };
         Ok(Response::new(reply))
     }
-    async fn set_api_config(
+    type GetTrafficInfoStream = Stream<TrafficInfo>;
+    async fn get_traffic_info(
         &self,
-        request: Request<SetApiConfigRequest>,
-    ) -> Result<Response<SetApiConfigReply>, Status> {
-        debug!("Set api config from {:?}", request.remote_addr());
+        request: Request<GetTrafficInfoRequest>,
+    ) -> Result<Response<Self::GetTrafficInfoStream>, Status> {
+        debug!("Get traffic speed from {:?}", request.remote_addr());
 
-        let inner = request.into_inner();
-        let listen = inner.listen;
-        let port = inner.port;
+        let mut sender_guard = self.speed_sender.lock().await;
+        if let Some(sender_guard) = sender_guard.as_ref() {
+            Ok(Response::new(
+                Box::pin(TrafficStream::new(sender_guard.subscribe()))
+                    as Self::GetTrafficInfoStream,
+            ))
+        } else {
+            let core_guard = self.current_core.lock().await;
 
-        {
-            self.current_core
-                .lock()
-                .await
-                .set_api_address(&listen, port);
-        }
-
-        send_or_warn_print(&self.signal_sender, AColorSignal::SetApiConfig);
-
-        let reply = SetApiConfigReply {};
-        Ok(Response::new(reply))
-    }
-    async fn get_api_config(
-        &self,
-        request: Request<GetApiConfigRequest>,
-    ) -> Result<Response<GetApiConfigReply>, Status> {
-        debug!("Get api config from {:?}", request.remote_addr());
-
-        let mut listen = String::new();
-        let mut port = 0;
-
-        {
-            let core = self.current_core.lock().await;
-            let config = core.api_config();
-            if let Some(config) = config {
-                listen = config.listen.clone();
-                port = config.port;
+            let api = core_guard.api_ref();
+            match api {
+                Some(api) => {
+                    info!("http://{}:{}", api.listen, api.port);
+                    let sender = TrafficInfoSender::new();
+                    let result = Response::new(Box::pin(TrafficStream::new(sender.subscribe()))
+                        as Self::GetTrafficInfoStream);
+                    sender
+                        .start(format!("http://{}:{}", api.listen, api.port), "PROXY")
+                        .await
+                        .map_err(|e| Status::unavailable(e.to_string()))?;
+                    *sender_guard = Some(sender);
+                    Ok(result)
+                }
+                None => Err(Status::unavailable("API not found")),
             }
         }
-
-        let reply = GetApiConfigReply { listen, port };
-        Ok(Response::new(reply))
     }
 }
 

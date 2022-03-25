@@ -36,6 +36,7 @@ mod profile;
 mod server_manager;
 mod signal_stream;
 mod tools;
+mod traffic_speed;
 
 pub fn serve<P: AsRef<Path>>(
     address: SocketAddr,
@@ -78,7 +79,7 @@ struct AColoRSServices {
     pub tools: AColoRSTools,
 }
 pub static SHUTDOWN: AtomicBool = AtomicBool::new(false);
-const BUFFER_SIZE: usize = 16;
+pub const BUFFER_SIZE: usize = 16;
 async fn start_server<P: AsRef<Path>>(
     addr: SocketAddr,
     database_path: P,

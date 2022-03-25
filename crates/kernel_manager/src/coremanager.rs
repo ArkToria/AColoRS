@@ -1,4 +1,4 @@
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
 
 use crate::{
     v2ray::{configtool::config_to_string, raycore::V2RayCore},
@@ -65,8 +65,11 @@ impl RayCore {
             config.stats = None;
         }
     }
-    pub fn api_mut(&mut self) -> &mut Option<ApiObject> {
+    pub fn config_api_mut(&mut self) -> &mut Option<ApiObject> {
         self.config.api.borrow_mut()
+    }
+    pub fn api_ref(&self) -> &Option<APIConfig> {
+        self.api.borrow()
     }
     pub fn routing_mut(&mut self) -> &mut Option<RoutingObject> {
         self.config.routing.borrow_mut()
@@ -93,7 +96,7 @@ impl RayCore {
                     listen: api.listen.to_string(),
                     port: api.port,
                     protocol: "dokodemo-door".to_string(),
-                    tag: "ACROSS_API_INBOUND".to_string(),
+                    tag: "ACOLORS_API_INBOUND".to_string(),
                     ..Default::default()
                 };
                 let doko_setting = dokodemo_door_object::InboundConfigurationObject {
@@ -109,15 +112,15 @@ impl RayCore {
                 self.inbound_mut().rotate_right(1);
 
                 self.set_stat(true);
-                *self.api_mut() = Some(ApiObject {
-                    tag: "ACROSS_API".to_string(),
+                *self.config_api_mut() = Some(ApiObject {
+                    tag: "ACOLORS_API".to_string(),
                     services: vec!["LoggerService".to_string(), "StatsService".to_string()],
                 });
                 let routing = RoutingObject {
                     rules: vec![RuleObject {
                         r#type: "field".to_string(),
-                        outbound_tag: "ACROSS_API".to_string(),
-                        inbound_tag: vec!["ACROSS_API_INBOUND".to_string()],
+                        outbound_tag: "ACOLORS_API".to_string(),
+                        inbound_tag: vec!["ACOLORS_API_INBOUND".to_string()],
                         ..Default::default()
                     }],
                     ..Default::default()

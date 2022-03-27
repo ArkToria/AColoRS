@@ -247,9 +247,12 @@ service CoreManager {
   rpc ListAllTags(ListAllTagsRequest) returns (ListAllTagsReply);
   rpc SetDefaultConfigByNodeID(SetDefaultConfigByNodeIDRequest)
       returns (SetDefaultConfigByNodeIDReply);
-  rpc GetTrafficInfo(GetTrafficInfoRequest) returns (stream TrafficInfo);
+  rpc SetApiStatus(SetApiStatusRequest) returns (SetApiStatusReply);
+  rpc GetTrafficInfo(GetTrafficInfoRequest) returns (TrafficInfo);
 }
 
+message SetApiStatusRequest { bool enable = 1; }
+message SetApiStatusReply {}
 message TrafficInfo {
   int64 upload = 1;
   int64 download = 2;

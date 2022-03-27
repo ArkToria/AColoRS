@@ -1,8 +1,7 @@
 use std::{
     collections::HashMap,
     ffi::{OsStr, OsString},
-    pin::Pin,
-    sync::Arc,
+    sync::{atomic::AtomicBool, Arc},
 };
 
 use acolors_signal::{send_or_warn_print, AColorSignal};
@@ -11,9 +10,10 @@ use core_protobuf::acolors_proto::{
     core_manager_server::CoreManager, GetCoreInfoReply, GetCoreInfoRequest, GetCoreTagReply,
     GetCoreTagRequest, GetCurrentNodeRequest, GetIsRunningReply, GetIsRunningRequest,
     GetTrafficInfoRequest, ListAllTagsReply, ListAllTagsRequest, NodeData, RestartReply,
-    RestartRequest, RunReply, RunRequest, SetConfigByNodeIdReply, SetConfigByNodeIdRequest,
-    SetCoreByTagReply, SetCoreByTagRequest, SetDefaultConfigByNodeIdReply,
-    SetDefaultConfigByNodeIdRequest, StopReply, StopRequest, TrafficInfo,
+    RestartRequest, RunReply, RunRequest, SetApiStatusReply, SetApiStatusRequest,
+    SetConfigByNodeIdReply, SetConfigByNodeIdRequest, SetCoreByTagReply, SetCoreByTagRequest,
+    SetDefaultConfigByNodeIdReply, SetDefaultConfigByNodeIdRequest, StopReply, StopRequest,
+    TrafficInfo,
 };
 use kernel_manager::{
     coremanager::{ExternalCore, RayCore},
@@ -22,19 +22,18 @@ use kernel_manager::{
     CoreTool,
 };
 use profile_manager::Profile;
-use spdlog::{debug, error, info};
+use spdlog::{debug, error, info, warn};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use tonic::{Request, Response, Status};
 use utils::net::tcp_get_available_port;
 
-use crate::traffic_speed::{TrafficInfoSender, TrafficStream};
+use crate::traffic_speed::TrafficInfoUpdater;
 
 type CurrentCore = Mutex<RayCore>;
 type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 type CurrentNodeLock = Mutex<Option<core_data::NodeData>>;
 type CoreTag = Mutex<String>;
 
-type Stream<T> = Pin<Box<dyn futures::Stream<Item = Result<T, Status>> + Send>>;
 pub struct AColoRSCore {
     core_tag: CoreTag,
     current_core: CurrentCore,
@@ -43,7 +42,9 @@ pub struct AColoRSCore {
     current_node: CurrentNodeLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     core_map: HashMap<String, (String, OsString)>,
-    speed_sender: Mutex<Option<TrafficInfoSender>>,
+    traffic_info: Arc<Mutex<TrafficInfo>>,
+    speed_updater: Mutex<TrafficInfoUpdater>,
+    enable_api: AtomicBool,
 }
 
 impl AColoRSCore {
@@ -57,6 +58,7 @@ impl AColoRSCore {
         let current_node = Mutex::new(None);
         let current_node_id = profile.runtime_value.get_by_key("CURRENT_NODE_ID").await;
         let default_node_id = profile.runtime_value.get_by_key("DEFAULT_NODE_ID").await;
+        let traffic_info = Arc::new(Mutex::new(TrafficInfo::default()));
 
         let mut receiver = signal_sender.subscribe();
         let node_selected =
@@ -82,7 +84,9 @@ impl AColoRSCore {
             signal_sender,
             core_map,
             core_tag: Mutex::new(String::new()),
-            speed_sender: Mutex::new(None),
+            speed_updater: Mutex::new(TrafficInfoUpdater::new(traffic_info.clone())),
+            enable_api: AtomicBool::from(false),
+            traffic_info,
         }
     }
 
@@ -111,15 +115,18 @@ impl AColoRSCore {
 
         core.stop()
             .map_err(|e| Status::aborted(format!("Core stop Error: {}", e)))?;
+
+        {
+            let mut updater_guard = self.speed_updater.lock().await;
+            if let Err(e) = updater_guard.stop().await {
+                warn!("Stop Traffic Updater Error: {}", e);
+            }
+        }
         Ok(())
     }
 
     pub async fn run(&self) -> Result<(), Status> {
         let mut core_guard = self.current_core.lock().await;
-        core_guard.set_api_address(
-            "127.0.0.1",
-            tcp_get_available_port(11451..19198).unwrap_or(19200) as u32,
-        );
 
         let core = &mut *core_guard;
 
@@ -127,6 +134,16 @@ impl AColoRSCore {
 
         core.run()
             .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
+        if self.enable_api.load(std::sync::atomic::Ordering::SeqCst) {
+            let mut updater_guard = self.speed_updater.lock().await;
+            let api_ref = core_guard.api_ref();
+            if let Some(api) = api_ref {
+                updater_guard
+                    .start(format!("http://{}:{}", api.listen, api.port), "PROXY")
+                    .await
+                    .map_err(|e| Status::aborted(format!("Traffic Updater Start Error: {}", e)))?
+            }
+        }
 
         Ok(())
     }
@@ -412,39 +429,37 @@ impl CoreManager for AColoRSCore {
         let reply = ListAllTagsReply { tags };
         Ok(Response::new(reply))
     }
-    type GetTrafficInfoStream = Stream<TrafficInfo>;
+    async fn set_api_status(
+        &self,
+        request: Request<SetApiStatusRequest>,
+    ) -> Result<Response<SetApiStatusReply>, Status> {
+        debug!("Set api status from {:?}", request.remote_addr());
+
+        let enable_api = request.into_inner().enable;
+
+        self.enable_api
+            .store(enable_api, std::sync::atomic::Ordering::SeqCst);
+        if enable_api {
+            let mut core_guard = self.current_core.lock().await;
+            let port = tcp_get_available_port(11451..19198).unwrap_or(19200);
+            info!("api port: {}", port);
+            core_guard.set_api_address("127.0.0.1", port as u32);
+        } else {
+            let mut core_guard = self.current_core.lock().await;
+            core_guard.set_api_address("", 0);
+        }
+
+        let reply = SetApiStatusReply {};
+        Ok(Response::new(reply))
+    }
     async fn get_traffic_info(
         &self,
         request: Request<GetTrafficInfoRequest>,
-    ) -> Result<Response<Self::GetTrafficInfoStream>, Status> {
+    ) -> Result<Response<TrafficInfo>, Status> {
         debug!("Get traffic speed from {:?}", request.remote_addr());
 
-        let mut sender_guard = self.speed_sender.lock().await;
-        if let Some(sender_guard) = sender_guard.as_ref() {
-            Ok(Response::new(
-                Box::pin(TrafficStream::new(sender_guard.subscribe()))
-                    as Self::GetTrafficInfoStream,
-            ))
-        } else {
-            let core_guard = self.current_core.lock().await;
-
-            let api = core_guard.api_ref();
-            match api {
-                Some(api) => {
-                    info!("http://{}:{}", api.listen, api.port);
-                    let sender = TrafficInfoSender::new();
-                    let result = Response::new(Box::pin(TrafficStream::new(sender.subscribe()))
-                        as Self::GetTrafficInfoStream);
-                    sender
-                        .start(format!("http://{}:{}", api.listen, api.port), "PROXY")
-                        .await
-                        .map_err(|e| Status::unavailable(e.to_string()))?;
-                    *sender_guard = Some(sender);
-                    Ok(result)
-                }
-                None => Err(Status::unavailable("API not found")),
-            }
-        }
+        let reply = self.traffic_info.lock().await.clone();
+        Ok(Response::new(reply))
     }
 }
 

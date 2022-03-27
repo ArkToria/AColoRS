@@ -1,19 +1,19 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use core_protobuf::{
     acolors_proto::TrafficInfo,
     v2ray_api_proto::{stats_service_client::StatsServiceClient, GetStatsRequest},
 };
-use spdlog::info;
-use tokio::sync::broadcast::{self, Receiver, Sender};
-use tokio_stream::wrappers::BroadcastStream;
-use tonic::{codegen::StdError, transport::Channel, Status};
+use tokio::sync::Mutex;
+
+use tonic::{transport::Channel, Status};
 
 use crate::BUFFER_SIZE;
 
 #[derive(Debug)]
-pub struct TrafficInfoSender {
-    sender: broadcast::Sender<TrafficInfo>,
+pub struct TrafficInfoUpdater {
+    info: Arc<Mutex<TrafficInfo>>,
+    stop_sender: Option<tokio::sync::mpsc::Sender<()>>,
 }
 async fn call_api(
     client: &mut StatsServiceClient<Channel>,
@@ -31,73 +31,62 @@ async fn call_api(
         .map(|stat| stat.value)
         .unwrap_or(0))
 }
-async fn producer(
+async fn updater(
     mut client: StatsServiceClient<Channel>,
-    sender: Sender<TrafficInfo>,
+    info: Arc<Mutex<TrafficInfo>>,
+    mut stop_receiver: tokio::sync::mpsc::Receiver<()>,
     tag: &str,
 ) -> Result<(), Status> {
-    loop {
+    while stop_receiver.try_recv().is_err() {
         let (upload, download) = (
             call_api(&mut client, tag, "uplink").await?,
             call_api(&mut client, tag, "downlink").await?,
         );
 
-        if sender.send(TrafficInfo { upload, download }).is_err() {
-            info!("Producer Exited");
-            return Ok(());
+        {
+            let mut info_guard = info.lock().await;
+            info_guard.upload = upload;
+            info_guard.download = download;
         }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
+    Ok(())
 }
 
-impl TrafficInfoSender {
-    pub fn new() -> Self {
-        let (sender, _) = broadcast::channel(BUFFER_SIZE);
+impl TrafficInfoUpdater {
+    pub fn new(info: Arc<Mutex<TrafficInfo>>) -> Self {
+        Self {
+            info,
+            stop_sender: None,
+        }
+    }
+    pub async fn start(
+        &mut self,
+        dst: String,
+        tag: &'static str,
+    ) -> Result<(), tonic::transport::Error> {
+        let mut client = StatsServiceClient::connect(dst.clone()).await;
+        for _ in 1..10 {
+            client = StatsServiceClient::connect(dst.clone()).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            if client.is_ok() {
+                break;
+            }
+        }
+        let client = client?;
+        let (sender, receiver) = tokio::sync::mpsc::channel(BUFFER_SIZE);
+        self.stop_sender = Some(sender);
+        tokio::spawn(updater(client, self.info.clone(), receiver, tag));
 
-        Self { sender }
-    }
-    pub fn subscribe(&self) -> Receiver<TrafficInfo> {
-        self.sender.subscribe()
-    }
-    pub async fn start<D>(&self, dst: D, tag: &'static str) -> Result<(), tonic::transport::Error>
-    where
-        D: TryInto<tonic::transport::Endpoint>,
-        D::Error: Into<StdError>,
-    {
-        let client = StatsServiceClient::connect(dst).await?;
-        tokio::spawn(producer(client, self.sender.clone(), tag));
         Ok(())
     }
-}
-
-use std::{
-    pin::Pin,
-    task::{Context, Poll},
-};
-
-use futures::StreamExt;
-
-pub struct TrafficStream {
-    stream: BroadcastStream<TrafficInfo>,
-}
-impl TrafficStream {
-    pub fn new(receiver: broadcast::Receiver<TrafficInfo>) -> Self {
-        let stream = BroadcastStream::new(receiver);
-        Self { stream }
-    }
-}
-
-impl futures::Stream for TrafficStream {
-    type Item = Result<TrafficInfo, Status>;
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut_self = self.get_mut();
-        let poll = mut_self.stream.poll_next_unpin(cx);
-        if poll.is_pending() && crate::SHUTDOWN.load(std::sync::atomic::Ordering::Relaxed) {
-            return Poll::Ready(None);
+    pub async fn stop(&mut self) -> anyhow::Result<()> {
+        if let Some(sender) = self.stop_sender.as_mut() {
+            sender.send(()).await?;
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Not Started"))
         }
-        let mapped_poll: Poll<Option<Result<TrafficInfo, Status>>> =
-            poll.map_err(|error| Status::data_loss(error.to_string()));
-        mapped_poll
     }
 }
 

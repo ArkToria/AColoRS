@@ -81,10 +81,14 @@ impl RayCore {
         self.config.policy.borrow_mut()
     }
     pub fn set_api_address(&mut self, listen: &str, port: u32) {
-        self.api = Some(APIConfig {
-            port,
-            listen: listen.to_string(),
-        })
+        if listen.is_empty() {
+            self.api = None
+        } else {
+            self.api = Some(APIConfig {
+                port,
+                listen: listen.to_string(),
+            })
+        }
     }
     pub fn api_config(&self) -> &Option<APIConfig> {
         &self.api

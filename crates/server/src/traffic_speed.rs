@@ -37,13 +37,15 @@ async fn updater(
     mut stop_receiver: tokio::sync::mpsc::Receiver<()>,
     tag: &str,
 ) -> Result<(), Status> {
+    let (mut upload_t, mut download_t) = (0, 0);
     while stop_receiver.try_recv().is_err() {
         let (upload, download) = (
             call_api(&mut client, tag, "uplink").await?,
             call_api(&mut client, tag, "downlink").await?,
         );
 
-        {
+        if (upload_t, download_t) != (upload, download) {
+            (upload_t, download_t) = (upload, download);
             let mut info_guard = info.lock().await;
             info_guard.upload = upload;
             info_guard.download = download;
@@ -96,8 +98,13 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn test_call_api() -> anyhow::Result<()> {
-        let mut client = StatsServiceClient::connect("http://127.0.0.1:15490").await?;
-        dbg!(call_api(&mut client, "QV2RAY_API_INBOUND", "downlink").await?);
+        let client = StatsServiceClient::connect("http://127.0.0.1:15490").await;
+        if let Ok(mut client) = client {
+            println!(
+                "{:?}",
+                call_api(&mut client, "outBound_PROXY", "downlink").await
+            );
+        }
         Ok(())
     }
 }

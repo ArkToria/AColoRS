@@ -449,6 +449,8 @@ impl CoreManager for AColoRSCore {
             core_guard.set_api_address("", 0);
         }
 
+        send_or_warn_print(&self.signal_sender, AColorSignal::SetApiStatus);
+
         let reply = SetApiStatusReply {};
         Ok(Response::new(reply))
     }

@@ -35,7 +35,7 @@ message AColorSignal {
   message RuntimeValueChanged { string key = 1; }
   message EmptyGroup { int64 group_id = 1; }
   message Shutdown {}
-  message SetApiConfig {}
+  message SetApiStatus {}
   oneof signal {
     Empty empty = 1;
     AppendGroup append_group = 2;
@@ -52,7 +52,7 @@ message AColorSignal {
     RuntimeValueChanged runtime_value_changed = 13;
     EmptyGroup empty_group = 14;
     Shutdown shutdown = 15;
-    SetApiConfig set_api_config = 16;
+    SetApiStatus set_api_status = 16;
   }
 }
 

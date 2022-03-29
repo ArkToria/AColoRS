@@ -17,6 +17,7 @@ pub struct ExternalCore {
     pub core: Box<Core>,
 }
 
+#[derive(Clone)]
 pub struct APIConfig {
     pub port: u32,
     pub listen: String,

@@ -62,11 +62,10 @@ impl TrafficInfoUpdater {
             stop_sender: None,
         }
     }
-    pub async fn start(
-        &mut self,
-        dst: String,
-        tag: &'static str,
-    ) -> Result<(), tonic::transport::Error> {
+    pub async fn start(&mut self, dst: String, tag: &'static str) -> anyhow::Result<()> {
+        if self.stop_sender.is_some() {
+            return Err(anyhow::anyhow!("Updater is Running"));
+        }
         let mut client = StatsServiceClient::connect(dst.clone()).await;
         for _ in 1..10 {
             client = StatsServiceClient::connect(dst.clone()).await;

@@ -16,7 +16,7 @@ use core_protobuf::acolors_proto::{
     TrafficInfo,
 };
 use kernel_manager::{
-    coremanager::{ExternalCore, RayCore},
+    coremanager::{APIConfig, ExternalCore, RayCore},
     create_core_by_path,
     v2ray::raycore::V2RayCore,
     CoreTool,
@@ -36,15 +36,15 @@ type CoreTag = Mutex<String>;
 
 pub struct AColoRSCore {
     core_tag: CoreTag,
-    current_core: CurrentCore,
+    current_core: Arc<CurrentCore>,
     profile: Arc<Profile>,
     inbounds: InboundsLock,
     current_node: CurrentNodeLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     core_map: HashMap<String, (String, OsString)>,
     traffic_info: Arc<Mutex<TrafficInfo>>,
-    speed_updater: Mutex<TrafficInfoUpdater>,
-    enable_api: AtomicBool,
+    speed_updater: Arc<Mutex<TrafficInfoUpdater>>,
+    enable_api: Arc<AtomicBool>,
 }
 
 impl AColoRSCore {
@@ -77,15 +77,15 @@ impl AColoRSCore {
         }
 
         Self {
-            current_core: core,
+            current_core: Arc::new(core),
             profile,
             inbounds,
             current_node,
             signal_sender,
             core_map,
             core_tag: Mutex::new(String::new()),
-            speed_updater: Mutex::new(TrafficInfoUpdater::new(traffic_info.clone())),
-            enable_api: AtomicBool::from(false),
+            speed_updater: Arc::new(Mutex::new(TrafficInfoUpdater::new(traffic_info.clone()))),
+            enable_api: Arc::new(AtomicBool::from(false)),
             traffic_info,
         }
     }
@@ -108,6 +108,32 @@ impl AColoRSCore {
             .map_err(|e| Status::aborted(format!("Core restart Error: {}", e)))?;
         Ok(())
     }
+    pub async fn update_updater(
+        current_core: Arc<CurrentCore>,
+        enable_api: Arc<AtomicBool>,
+        speed_updater: Arc<Mutex<TrafficInfoUpdater>>,
+        api: Option<APIConfig>,
+    ) {
+        let is_running = current_core.lock().await.is_running();
+        if is_running {
+            if enable_api.load(std::sync::atomic::Ordering::SeqCst) {
+                let mut updater_guard = speed_updater.lock().await;
+                if let Some(api) = api {
+                    if let Err(e) = updater_guard
+                        .start(format!("http://{}:{}", api.listen, api.port), "PROXY")
+                        .await
+                    {
+                        error!("Traffic Updater Start Error: {}", e);
+                    }
+                }
+            }
+        } else {
+            let mut updater_guard = speed_updater.lock().await;
+            if let Err(e) = updater_guard.stop().await {
+                warn!("Stop Traffic Updater Error: {}", e);
+            }
+        }
+    }
 
     pub async fn stop(&self) -> Result<(), Status> {
         let mut core_guard = self.current_core.lock().await;
@@ -116,12 +142,13 @@ impl AColoRSCore {
         core.stop()
             .map_err(|e| Status::aborted(format!("Core stop Error: {}", e)))?;
 
-        {
-            let mut updater_guard = self.speed_updater.lock().await;
-            if let Err(e) = updater_guard.stop().await {
-                warn!("Stop Traffic Updater Error: {}", e);
-            }
-        }
+        tokio::spawn(Self::update_updater(
+            self.current_core.clone(),
+            self.enable_api.clone(),
+            self.speed_updater.clone(),
+            core_guard.api_ref().clone(),
+        ));
+
         Ok(())
     }
 
@@ -134,16 +161,13 @@ impl AColoRSCore {
 
         core.run()
             .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
-        if self.enable_api.load(std::sync::atomic::Ordering::SeqCst) {
-            let mut updater_guard = self.speed_updater.lock().await;
-            let api_ref = core_guard.api_ref();
-            if let Some(api) = api_ref {
-                updater_guard
-                    .start(format!("http://{}:{}", api.listen, api.port), "PROXY")
-                    .await
-                    .map_err(|e| Status::aborted(format!("Traffic Updater Start Error: {}", e)))?
-            }
-        }
+
+        tokio::spawn(Self::update_updater(
+            self.current_core.clone(),
+            self.enable_api.clone(),
+            self.speed_updater.clone(),
+            core_guard.api_ref().clone(),
+        ));
 
         Ok(())
     }

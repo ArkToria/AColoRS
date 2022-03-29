@@ -16,20 +16,22 @@ pub struct URLMetaObject {
 }
 
 pub fn get_nodes_from_base64(base64: &str) -> anyhow::Result<Vec<NodeData>> {
-    let mut nodes = Vec::new();
     let url_str = String::from_utf8(base64::decode(base64)?)?;
     let url_lines = url_str.lines();
 
-    url_lines.into_iter().for_each(|node_url| {
-        let node = decode_outbound_from_url(node_url);
+    let nodes = url_lines
+        .into_iter()
+        .fold(Vec::new(), |mut nodes, node_url| {
+            let node = decode_outbound_from_url(node_url);
 
-        match node {
-            Ok(n) => nodes.push(n),
-            Err(e) => {
-                error!("Node url parse error : {}", e);
+            match node {
+                Ok(n) => nodes.push(n),
+                Err(e) => {
+                    error!("Node url parse error : {}", e);
+                }
             }
-        }
-    });
+            nodes
+        });
 
     Ok(nodes)
 }

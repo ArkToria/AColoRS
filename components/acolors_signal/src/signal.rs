@@ -3,19 +3,19 @@ use core_protobuf::acolors_proto::a_color_signal::*;
 #[derive(Debug, Clone)]
 pub enum AColorSignal {
     Empty,
-    AppendGroup(i64),
+    AppendGroup { group_id: i64 },
     UpdateCoreStatus,
     UpdateInbounds,
     CoreConfigChanged,
     CoreChanged,
-    RemoveGroupById(i64),
-    RemoveNodeById(i64),
-    SetGroupById(i64),
-    SetNodeById(i64),
-    AppendNode(i64, i64),
-    UpdateGroup(i64),
-    RuntimeValueChanged(String),
-    EmptyGroup(i64),
+    RemoveGroupById { group_id: i64 },
+    RemoveNodeById { node_id: i64 },
+    SetGroupById { group_id: i64 },
+    SetNodeById { node_id: i64 },
+    AppendNode { group_id: i64, node_id: i64 },
+    UpdateGroup { group_id: i64 },
+    RuntimeValueChanged { key: String },
+    EmptyGroup { group_id: i64 },
     Shutdown,
     SetApiStatus,
 }
@@ -26,7 +26,7 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::Empty => Self {
                 signal: Some(Signal::Empty(Empty {})),
             },
-            AColorSignal::AppendGroup(group_id) => Self {
+            AColorSignal::AppendGroup { group_id } => Self {
                 signal: Some(Signal::AppendGroup(AppendGroup { group_id })),
             },
             AColorSignal::UpdateCoreStatus => Self {
@@ -38,31 +38,31 @@ impl From<crate::AColorSignal> for acolors_proto::AColorSignal {
             AColorSignal::CoreConfigChanged => Self {
                 signal: Some(Signal::CoreConfigChanged(CoreConfigChanged {})),
             },
-            AColorSignal::RemoveGroupById(group_id) => Self {
+            AColorSignal::RemoveGroupById { group_id } => Self {
                 signal: Some(Signal::RemoveGroupById(RemoveGroupById { group_id })),
             },
-            AColorSignal::RemoveNodeById(node_id) => Self {
+            AColorSignal::RemoveNodeById { node_id } => Self {
                 signal: Some(Signal::RemoveNodeById(RemoveNodeById { node_id })),
             },
-            AColorSignal::SetGroupById(group_id) => Self {
+            AColorSignal::SetGroupById { group_id } => Self {
                 signal: Some(Signal::SetGroupById(SetGroupById { group_id })),
             },
-            AColorSignal::SetNodeById(node_id) => Self {
+            AColorSignal::SetNodeById { node_id } => Self {
                 signal: Some(Signal::SetNodeById(SetNodeById { node_id })),
             },
-            AColorSignal::AppendNode(group_id, node_id) => Self {
+            AColorSignal::AppendNode { group_id, node_id } => Self {
                 signal: Some(Signal::AppendNode(AppendNode { group_id, node_id })),
             },
-            AColorSignal::UpdateGroup(group_id) => Self {
+            AColorSignal::UpdateGroup { group_id } => Self {
                 signal: Some(Signal::UpdateGroup(UpdateGroup { group_id })),
             },
-            AColorSignal::EmptyGroup(group_id) => Self {
+            AColorSignal::EmptyGroup { group_id } => Self {
                 signal: Some(Signal::EmptyGroup(EmptyGroup { group_id })),
             },
             AColorSignal::CoreChanged => Self {
                 signal: Some(Signal::CoreChanged(CoreChanged {})),
             },
-            AColorSignal::RuntimeValueChanged(key) => Self {
+            AColorSignal::RuntimeValueChanged { key } => Self {
                 signal: Some(Signal::RuntimeValueChanged(RuntimeValueChanged { key })),
             },
             AColorSignal::Shutdown => Self {
@@ -80,19 +80,32 @@ impl From<core_protobuf::acolors_proto::AColorSignal> for crate::AColorSignal {
             .signal
             .map(|s| match s {
                 Signal::Empty(_) => Self::Empty,
-                Signal::AppendGroup(m) => Self::AppendGroup(m.group_id),
+                Signal::AppendGroup(m) => Self::AppendGroup {
+                    group_id: m.group_id,
+                },
                 Signal::UpdateCoreStatus(_) => Self::UpdateCoreStatus,
                 Signal::UpdateInbounds(_) => Self::UpdateInbounds,
                 Signal::CoreConfigChanged(_) => Self::CoreConfigChanged,
-                Signal::RemoveGroupById(m) => Self::RemoveGroupById(m.group_id),
-                Signal::RemoveNodeById(m) => Self::RemoveNodeById(m.node_id),
-                Signal::SetGroupById(m) => Self::SetGroupById(m.group_id),
-                Signal::SetNodeById(m) => Self::SetNodeById(m.node_id),
-                Signal::AppendNode(m) => Self::AppendNode(m.group_id, m.node_id),
-                Signal::UpdateGroup(m) => Self::UpdateGroup(m.group_id),
-                Signal::EmptyGroup(m) => Self::EmptyGroup(m.group_id),
+                Signal::RemoveGroupById(m) => Self::RemoveGroupById {
+                    group_id: m.group_id,
+                },
+                Signal::RemoveNodeById(m) => Self::RemoveNodeById { node_id: m.node_id },
+                Signal::SetGroupById(m) => Self::SetGroupById {
+                    group_id: m.group_id,
+                },
+                Signal::SetNodeById(m) => Self::SetNodeById { node_id: m.node_id },
+                Signal::AppendNode(m) => Self::AppendNode {
+                    group_id: m.group_id,
+                    node_id: m.node_id,
+                },
+                Signal::UpdateGroup(m) => Self::UpdateGroup {
+                    group_id: m.group_id,
+                },
+                Signal::EmptyGroup(m) => Self::EmptyGroup {
+                    group_id: m.group_id,
+                },
                 Signal::CoreChanged(_) => Self::CoreChanged,
-                Signal::RuntimeValueChanged(m) => Self::RuntimeValueChanged(m.key),
+                Signal::RuntimeValueChanged(m) => Self::RuntimeValueChanged { key: m.key },
                 Signal::Shutdown(_) => Self::Shutdown,
                 Signal::SetApiStatus(_) => Self::SetApiStatus,
             })

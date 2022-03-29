@@ -103,7 +103,7 @@ impl AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::SetGroupById(group_id),
+            acolors_signal::AColorSignal::SetGroupById { group_id },
         );
         Ok(())
     }
@@ -116,7 +116,7 @@ impl AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::SetNodeById(node_id),
+            acolors_signal::AColorSignal::SetNodeById { node_id },
         );
         Ok(())
     }
@@ -129,7 +129,7 @@ impl AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Group unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::AppendGroup(group_id),
+            acolors_signal::AColorSignal::AppendGroup { group_id },
         );
         Ok(group_id)
     }
@@ -145,7 +145,7 @@ impl AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::AppendNode(group_id, node_id),
+            acolors_signal::AColorSignal::AppendNode { group_id, node_id },
         );
         Ok(node_id)
     }
@@ -158,7 +158,7 @@ impl AColoRSProfile {
 
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::RemoveGroupById(group_id),
+            acolors_signal::AColorSignal::RemoveGroupById { group_id },
         );
         Ok(())
     }
@@ -171,7 +171,7 @@ impl AColoRSProfile {
             .map_err(|e| Status::aborted(format!("Node unavailable: \"{}\"", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::RemoveNodeById(node_id),
+            acolors_signal::AColorSignal::RemoveNodeById { node_id },
         );
         Ok(())
     }
@@ -182,7 +182,9 @@ impl AColoRSProfile {
             .map_err(|e| Status::aborted(&format!("Empty Group Error: {}", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::EmptyGroup(group.data().id),
+            acolors_signal::AColorSignal::EmptyGroup {
+                group_id: group.data().id,
+            },
         );
         Ok(())
     }
@@ -217,7 +219,9 @@ impl AColoRSProfile {
         }
         send_or_warn_print(
             &self.signal_sender,
-            acolors_signal::AColorSignal::UpdateGroup(group.data().id),
+            acolors_signal::AColorSignal::UpdateGroup {
+                group_id: group.data().id,
+            },
         );
         Ok(())
     }

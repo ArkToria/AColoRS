@@ -174,7 +174,9 @@ impl AColoRSCore {
             .unwrap_or_else(|e| error!("Set Config Error: {}", e));
         send_or_warn_print(
             signal_sender,
-            AColorSignal::RuntimeValueChanged("CURRENT_NODE_ID".to_string()),
+            AColorSignal::RuntimeValueChanged {
+                key: "CURRENT_NODE_ID".to_string(),
+            },
         );
 
         Ok(())
@@ -370,7 +372,9 @@ impl CoreManager for AColoRSCore {
             .map_err(|e| Status::cancelled(format!("Set Config Error: {}", e)))?;
         send_or_warn_print(
             &self.signal_sender,
-            AColorSignal::RuntimeValueChanged("DEFAULT_NODE_ID".to_string()),
+            AColorSignal::RuntimeValueChanged {
+                key: "DEFAULT_NODE_ID".to_string(),
+            },
         );
 
         let reply = SetDefaultConfigByNodeIdReply {};

@@ -106,6 +106,14 @@ impl AColoRSCore {
 
         core.restart()
             .map_err(|e| Status::aborted(format!("Core restart Error: {}", e)))?;
+
+        tokio::spawn(Self::update_updater(
+            self.current_core.clone(),
+            self.enable_api.clone(),
+            self.speed_updater.clone(),
+            core_guard.api_ref().clone(),
+        ));
+
         Ok(())
     }
     pub async fn update_updater(

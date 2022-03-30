@@ -82,7 +82,8 @@ impl TrafficInfoUpdater {
         Ok(())
     }
     pub async fn stop(&mut self) -> anyhow::Result<()> {
-        if let Some(sender) = self.stop_sender.as_mut() {
+        let sender = self.stop_sender.take();
+        if let Some(sender) = sender {
             sender.send(()).await?;
             Ok(())
         } else {

@@ -1,7 +1,7 @@
 # Maintainer: DuckSoft <realducksoft@gmail.com>
 pkgname=acolors-dev-git
 _pkgname=acolors
-pkgver=193.r71cef14.
+pkgver=0.1.0.r216.576f106
 pkgrel=1
 pkgdesc="The next GUI client for v2ray core (Development Branch)"
 arch=('x86_64')
@@ -13,7 +13,7 @@ optdepends=('v2ray: use system v2ray core.')
 provides=("${_pkgname}")
 conflicts=("${_pkgname}")
 
-source=('acolors-dev-git::git+https://github.com/ArkToria/AColoRS.git')
+source=('$pkgname::git+$url')
 
 sha512sums=('SKIP')
 
@@ -21,15 +21,28 @@ pkgver() {
     cd "${srcdir}/${pkgname}/"
     printf "%s.r%s.%s" $(cat ./misc/VERSION) $(git rev-list --count HEAD) $(git rev-parse --short HEAD)
 }
+prepare() {
+    cd "${srcdir}/${pkgname}/"
+
+    # download dependencies
+    cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
+}
 
 build() {
     cd "${srcdir}/${pkgname}/"
 
-    cargo build --release
+    cargo build --frozen --release
+}
+
+check() {
+    cd "${srcdir}/${pkgname}/"
+    cargo test \
+	    --frozen --
 }
 
 package() {
     cd "${srcdir}/${pkgname}"
-    mkdir -p "$pkgdir/usr/bin/"
-    cp target/release/acolors "$pkgdir/usr/bin/"
+
+    # binary
+    install -vDm755 -t "$pkgdir/usr/bin/" "target/release/$_pkgname"
 }

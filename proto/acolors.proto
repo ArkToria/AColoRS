@@ -148,16 +148,6 @@ message NodeList {
   repeated NodeData entries = 2;
 }
 
-enum EntryType {
-  VMESS = 0;
-  SHADOWSOCKS = 1;
-  TROJAN = 2;
-  RAW = 3;
-  SCHEME = 4;
-  UNKNOWN = 5;
-  NAIVEPROXY = 6;
-}
-
 message NodeData {
   int64 id = 1;
   string name = 2;
@@ -165,7 +155,7 @@ message NodeData {
   string group_name = 4;
   int32 routing_id = 5;
   string routing_name = 6;
-  EntryType protocol = 7;
+  string protocol = 7;
   string address = 8;
   int32 port = 9;
   string password = 10;

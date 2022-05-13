@@ -4,7 +4,6 @@ use serde_json::Value;
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
 use core_data::NodeData;
-use core_protobuf::acolors_proto::EntryType;
 use core_protobuf::v2ray_proto::*;
 
 pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
@@ -33,7 +32,7 @@ pub fn vmess_outbound_from_base64(url_str: String) -> Result<NodeData> {
 
     let name = urlencoding::decode(&meta.name)?.to_string();
 
-    node.protocol = EntryType::Vmess.into();
+    node.protocol = "vmess".into();
     node.name = name;
     node.address = server.address.clone();
     node.port = server.port as i32;

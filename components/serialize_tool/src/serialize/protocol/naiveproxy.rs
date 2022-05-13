@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 
 use crate::regex;
 use core_data::NodeData;
-use core_protobuf::acolors_proto::EntryType;
 
 pub fn naiveproxy_outbound_from_url(url_str: String) -> Result<NodeData> {
     // url scheme:
@@ -32,7 +31,7 @@ pub fn naiveproxy_outbound_from_url(url_str: String) -> Result<NodeData> {
 
     let name = urlencoding::decode(&caps[8])?.to_string();
 
-    node.protocol = EntryType::Naiveproxy.into();
+    node.protocol = "naiveproxy".into();
     node.name = name;
     node.address = caps[4].to_string();
     node.port = caps[5].parse()?;

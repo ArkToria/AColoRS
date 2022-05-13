@@ -4,7 +4,7 @@ use anyhow::Result;
 pub trait CoreTool {
     fn run(&mut self) -> Result<()>;
     fn stop(&mut self) -> Result<()>;
-    fn is_running(&mut self) -> bool;
+    fn get_is_running(&mut self) -> bool;
     fn set_config(&mut self, config: String) -> Result<()>;
     fn set_config_by_node_and_socks_inbound(
         &mut self,
@@ -13,14 +13,14 @@ pub trait CoreTool {
     ) -> Result<()>;
 
     fn restart(&mut self) -> Result<()> {
-        if self.is_running() {
+        if self.get_is_running() {
             self.stop()?;
         }
         self.run()
     }
     fn update_config(&mut self, config: String) -> Result<()> {
         self.set_config(config)?;
-        if self.is_running() {
+        if self.get_is_running() {
             self.restart()?;
         }
         Ok(())

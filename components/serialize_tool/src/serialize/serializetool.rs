@@ -114,12 +114,27 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_regex() -> Result<()> {
+    fn test_ss_regex() -> Result<()> {
+        // url scheme:
+        // ss://<websafe-base64-encode-utf8(method:password)>@hostname:port/?plugin"#"tag
         let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:/]*)((/\?)*[^#]*)#([^#]*)"#)?;
-        let ss = "ss://YWVzLTI1Ni1nY206dGVzdDM=@test2:123#test1";
+        let ss = "ss://YWVzLTI1Ni1nY206dGVzdDM=@test2.com:123#test1";
         let list = re.captures(ss).unwrap();
         println!("{:?}", list);
 
+        let ss2022 =
+            "ss://MjAyMi1ibGFrZTMtYWVzLTEyOC1nY206cGFzc3dvcmxk@127.0.0.1:1080#te%23%23%23st";
+        let list = re.captures(ss2022).unwrap();
+
+        let decode_vec = base64::decode(&list[2].to_string())?;
+        println!("base64decode: {}", String::from_utf8_lossy(&decode_vec));
+
+        println!("{:?}", list);
+
+        Ok(())
+    }
+    #[test]
+    fn test_trojan_regex() -> Result<()> {
         let re = Regex::new(r#"(\w+)://([^/@:]*)@([^@]*):([^:]*)\?([^%]*)%0A([^#]*)#([^#]*)"#)?;
         let trojan =
             "trojan://password@host:756?sni=servername&allowinsecure=false&alpn=h2%0Ahttp/1.1#name";

@@ -53,21 +53,21 @@ pub mod tests {
         ac == bc
     }
     pub fn generate_test_node(number: i32) -> NodeData {
-        let test_string = format!("test{}", number);
-        let test_address = format!("localhost:{}", number);
+        let test_string = format!("test{number}");
+        let test_address = format!("localhost:{number}");
         let mut result = NodeData {
             id: number as i64,
-            name: format!("{} node", test_string),
+            name: format!("{test_string} node"),
             group_id: number as i64,
-            group_name: format!("{} group", test_string),
+            group_name: format!("{test_string} group"),
             routing_id: number,
-            routing_name: format!("{} routing", test_string),
-            protocol: number,
+            routing_name: format!("{test_string} routing"),
+            protocol: format!("Protocol {number}"),
             address: test_address.clone(),
             port: number,
             password: test_string.clone(),
             raw: test_string.clone(),
-            url: format!("https://{}", test_address),
+            url: format!("https://{test_address}"),
             latency: 100 * number,
             upload: 200 * (number as i64),
             download: 300 * (number as i64),

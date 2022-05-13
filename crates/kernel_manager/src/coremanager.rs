@@ -196,10 +196,10 @@ impl CoreTool for RayCore {
         }
     }
 
-    fn is_running(&mut self) -> bool {
+    fn get_is_running(&mut self) -> bool {
         self.ray_core
             .as_mut()
-            .map(|core| core.is_running())
+            .map(|core| core.get_is_running())
             .unwrap_or(false)
     }
 

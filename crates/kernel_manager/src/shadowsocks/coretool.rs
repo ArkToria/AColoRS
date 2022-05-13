@@ -72,7 +72,7 @@ impl Shadowsocks {
 }
 impl Drop for Shadowsocks {
     fn drop(&mut self) {
-        if !self.is_running() {
+        if !self.get_is_running() {
             return;
         }
         if let Err(e) = self.stop() {
@@ -83,7 +83,7 @@ impl Drop for Shadowsocks {
 
 impl CoreTool for Shadowsocks {
     fn run(&mut self) -> Result<()> {
-        if self.is_running() {
+        if self.get_is_running() {
             return Err(anyhow!("Core is running"));
         }
 
@@ -101,7 +101,7 @@ impl CoreTool for Shadowsocks {
     }
 
     fn stop(&mut self) -> Result<()> {
-        if !self.is_running() {
+        if !self.get_is_running() {
             return Err(anyhow!("Core not runnning"));
         }
 
@@ -113,7 +113,7 @@ impl CoreTool for Shadowsocks {
         Ok(())
     }
 
-    fn is_running(&mut self) -> bool {
+    fn get_is_running(&mut self) -> bool {
         if self.child_process.is_none() {
             false
         } else {
@@ -129,7 +129,7 @@ impl CoreTool for Shadowsocks {
 
     fn update_config(&mut self, config: String) -> Result<()> {
         self.set_config(config)?;
-        if self.is_running() {
+        if self.get_is_running() {
             self.restart()?;
         }
         Ok(())
@@ -193,19 +193,19 @@ mod tests {
             }
         };
 
-        assert_eq!(false, core.is_running());
+        assert_eq!(false, core.get_is_running());
         core.set_config("--help".to_string())?;
         core.run()?;
         sleep(Duration::from_millis(500));
-        assert_eq!(false, core.is_running());
+        assert_eq!(false, core.get_is_running());
 
         core.set_config("--local-addr 127.0.0.1:55342 --server-url ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@127.0.0.1:8388/%3Bserver%3Btls%3Bhost%3Dgithub.com".to_string())?;
 
         core.run()?;
-        assert_eq!(true, core.is_running());
+        assert_eq!(true, core.get_is_running());
 
         core.restart()?;
-        assert_eq!(true, core.is_running());
+        assert_eq!(true, core.get_is_running());
         sleep(Duration::from_millis(500));
 
         Ok(())

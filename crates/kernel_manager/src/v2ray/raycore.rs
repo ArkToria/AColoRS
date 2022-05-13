@@ -72,7 +72,7 @@ impl V2RayCore {
 
 impl Drop for V2RayCore {
     fn drop(&mut self) {
-        if !self.is_running() {
+        if !self.get_is_running() {
             return;
         }
         if let Err(e) = self.stop() {
@@ -83,7 +83,7 @@ impl Drop for V2RayCore {
 
 impl CoreTool for V2RayCore {
     fn run(&mut self) -> Result<()> {
-        if self.is_running() {
+        if self.get_is_running() {
             return Err(anyhow!("Core is running"));
         }
 
@@ -105,7 +105,7 @@ impl CoreTool for V2RayCore {
     }
 
     fn stop(&mut self) -> Result<()> {
-        if !self.is_running() {
+        if !self.get_is_running() {
             return Err(anyhow!("Core not runnning"));
         }
 
@@ -117,7 +117,7 @@ impl CoreTool for V2RayCore {
         Ok(())
     }
 
-    fn is_running(&mut self) -> bool {
+    fn get_is_running(&mut self) -> bool {
         if self.child_process.is_none() {
             false
         } else {
@@ -133,7 +133,7 @@ impl CoreTool for V2RayCore {
 
     fn update_config(&mut self, config: String) -> Result<()> {
         self.set_config(config)?;
-        if self.is_running() {
+        if self.get_is_running() {
             self.restart()?;
         }
         Ok(())
@@ -197,19 +197,19 @@ mod tests {
             }
         };
 
-        assert_eq!(false, core.is_running());
+        assert_eq!(false, core.get_is_running());
         core.set_config("}{".to_string())?;
         core.run()?;
         sleep(Duration::from_millis(500));
-        assert_eq!(false, core.is_running());
+        assert_eq!(false, core.get_is_running());
 
         core.set_config("{}".to_string())?;
 
         core.run()?;
-        assert_eq!(true, core.is_running());
+        assert_eq!(true, core.get_is_running());
 
         core.restart()?;
-        assert_eq!(true, core.is_running());
+        assert_eq!(true, core.get_is_running());
         sleep(Duration::from_millis(500));
 
         Ok(())

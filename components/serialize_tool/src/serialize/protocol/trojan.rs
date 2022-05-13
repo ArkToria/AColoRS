@@ -6,7 +6,6 @@ use crate::regex;
 use crate::serialize::serializer::check_is_default_and_delete;
 use crate::serialize::serializetool::URLMetaObject;
 use core_data::NodeData;
-use core_protobuf::acolors_proto::EntryType;
 use core_protobuf::v2ray_proto::*;
 
 pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
@@ -34,7 +33,7 @@ pub fn trojan_outbound_from_url(url_str: String) -> Result<NodeData> {
 
     let name = urlencoding::decode(&meta.name)?.to_string();
 
-    node.protocol = EntryType::Trojan.into();
+    node.protocol = "trojan".into();
     node.name = name;
     node.address = server.address.clone();
     node.port = server.port as i32;

@@ -5,7 +5,7 @@ pub const NODE_SCHEMA: &str = "CREATE TABLE IF NOT EXISTS nodes(
                     GroupName TEXT NOT NULL,
                     RoutingID INTEGER NOT NULL,
                     RoutingName TEXT NOT NULL,
-                    Protocol INTEGER NOT NULL,
+                    Protocol TEXT NOT NULL,
                     Address TEXT NOT NULL,
                     Port INTEGER NOT NULL,
                     Password TEXT,

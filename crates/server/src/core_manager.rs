@@ -122,7 +122,7 @@ impl AColoRSCore {
         speed_updater: Arc<Mutex<TrafficInfoUpdater>>,
         api: Option<APIConfig>,
     ) {
-        let is_running = current_core.lock().await.is_running();
+        let is_running = current_core.lock().await.get_is_running();
         if is_running {
             if enable_api.load(std::sync::atomic::Ordering::SeqCst) {
                 let mut updater_guard = speed_updater.lock().await;
@@ -240,7 +240,7 @@ impl AColoRSCore {
         let mut core_guard = self.current_core.lock().await;
 
         let core_manager = &mut *core_guard;
-        if core_manager.is_running() {
+        if core_manager.get_is_running() {
             core_manager.stop()?
         }
 
@@ -358,7 +358,7 @@ impl CoreManager for AColoRSCore {
         let mut core_guard = self.current_core.lock().await;
         let core = &mut *core_guard;
 
-        let is_running = core.is_running();
+        let is_running = core.get_is_running();
 
         let reply = GetIsRunningReply { is_running };
         Ok(Response::new(reply))

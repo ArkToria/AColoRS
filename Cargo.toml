@@ -11,7 +11,7 @@ edition = "2021"
 
 [[bin]]
 name = "acolors"
-path = "crates/core/main.rs"
+path = "crates/cli/main.rs"
 
 [workspace]
 members = [
@@ -27,7 +27,7 @@ members = [
 ]
 
 [dependencies]
-clap = { version = "3.1.6", features = ["cargo"] }
+clap = { version = "3.1.12", features = ["derive","cargo"] }
 spdlog-rs = { version = "0.2.4", features = [
     "level-debug",
     "release-level-info",

@@ -13,7 +13,7 @@ spdlog-rs = { version = "0.2.4", features = [
     "release-level-info",
     "source-location",
 ] }
-tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros", "sync","fs","signal"] }
+tokio = { version = "1.18", features = ["rt-multi-thread", "macros", "sync","fs","signal"] }
 tokio-stream = { version = "0.1.8" , features = ["sync"] }
 tonic = "0.6.2"
 anyhow = "1.0.56"

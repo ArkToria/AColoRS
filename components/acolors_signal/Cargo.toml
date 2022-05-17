@@ -12,7 +12,7 @@ spdlog-rs = { version = "0.2.4", features = [
     "release-level-info",
     "source-location",
 ] }
-tokio = { version = "1.17.0", features = ["sync"] }
+tokio = { version = "1.18", features = ["sync"] }
 
 
 core_protobuf = {path = "../core_protobuf"}

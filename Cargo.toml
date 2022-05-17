@@ -40,7 +40,7 @@ server = { path = "crates/server" }
 utils = { path = "components/utils" }
 
 [dev-dependencies]
-tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.18", features = ["rt-multi-thread", "macros", "sync"] }
 core_protobuf = {path = "components/core_protobuf"}
 core_data = {path = "components/core_data"}
 serialize_tool = {path = "components/serialize_tool"}

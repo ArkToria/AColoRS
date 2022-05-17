@@ -23,7 +23,10 @@ use kernel_manager::{
 };
 use profile_manager::Profile;
 use spdlog::{debug, error, info, warn};
-use tokio::sync::{broadcast, Mutex, RwLock};
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    sync::{broadcast, Mutex, RwLock},
+};
 use tonic::{Request, Response, Status};
 use utils::net::tcp_get_available_port;
 
@@ -161,6 +164,27 @@ impl AColoRSCore {
     }
 
     pub async fn run(&self) -> Result<(), Status> {
+        async fn print_stdout(stdout: std::process::ChildStdout) {
+            let stdout = tokio::process::ChildStdout::from_std(stdout);
+            match stdout {
+                Ok(stdout) => {
+                    tokio::spawn(async move {
+                        let mut buf = String::new();
+                        let mut buf_reader = BufReader::new(stdout);
+                        while let Ok(count) = buf_reader.read_line(&mut buf).await {
+                            if count == 0 {
+                                break;
+                            }
+
+                            info!("{}", buf.trim_end());
+                            buf.clear();
+                        }
+                    });
+                }
+                Err(e) => error!("Process output error: {}", e),
+            }
+        }
+
         let mut core_guard = self.current_core.lock().await;
 
         let core = &mut *core_guard;
@@ -169,6 +193,10 @@ impl AColoRSCore {
 
         core.run()
             .map_err(|e| Status::aborted(format!("Core run Error: {}", e)))?;
+
+        if let Some(stdout) = core.get_stdout() {
+            print_stdout(stdout).await;
+        }
 
         tokio::spawn(Self::update_updater(
             self.current_core.clone(),

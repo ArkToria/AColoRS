@@ -7,14 +7,14 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-spdlog-rs = { version = "0.2.4", features = [
+spdlog-rs = { version = "0.2", features = [
     "level-debug",
     "release-level-info",
     "source-location",
 ] }
 tokio = { version = "1.18", features = ["net"] }
-reqwest = { version = "0.11.9", features = ["json"]}
-anyhow = "1.0.56"
+reqwest = { version = "0.11", features = ["json"]}
+anyhow = "1.0"
 
 [dev-dependencies]
 tokio = { version = "1.18", features = ["rt-multi-thread", "macros", "sync"] }

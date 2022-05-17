@@ -9,19 +9,19 @@ edition = "2018"
 
 [dependencies]
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls","sqlite","macros","migrate" ] }
-anyhow = "1.0.56"
-spdlog-rs = { version = "0.2.4", features = [
+anyhow = "1.0"
+spdlog-rs = { version = "0.2", features = [
     "level-debug",
     "release-level-info",
     "source-location",
 ] }
 tokio = { version = "1.18", features = ["rt-multi-thread", "macros", "sync"] }
-reqwest = "0.11.9"
-futures = {version = "0.3.21", default-features = false, features = ["alloc"]}
+reqwest = "0.11"
+futures = {version = "0.3", default-features = false, features = ["alloc"]}
 
 core_protobuf = {path = "../../components/core_protobuf"}
 core_data = {path = "../../components/core_data"}
 acolors_signal = {path = "../../components/acolors_signal"}
 
 [build-dependencies]
-tonic-build = "0.6.2"
+tonic-build = "0.7"

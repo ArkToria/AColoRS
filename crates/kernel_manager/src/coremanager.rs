@@ -1,4 +1,7 @@
-use std::borrow::{Borrow, BorrowMut};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    collections::{HashMap, HashSet},
+};
 
 use crate::{
     v2ray::{configtool::config_to_string, raycore::V2RayCore},
@@ -11,20 +14,17 @@ use core_protobuf::v2ray_proto::{
     ApiObject, InboundObject, PolicyObject, RoutingObject, StatsObject, V2RayConfig,
 };
 
-type Core = dyn CoreTool + Sync + Send;
-pub struct ExternalCore {
-    pub tag: String,
-    pub core: Box<Core>,
-}
-
 #[derive(Clone)]
 pub struct APIConfig {
     pub port: u32,
     pub listen: String,
 }
+
+type Core = dyn CoreTool + Sync + Send;
 pub struct RayCore {
     ray_core: Option<V2RayCore>,
-    external_cores: Vec<ExternalCore>,
+    enable_tag: HashSet<String>,
+    external_cores: HashMap<String, Box<Core>>,
     config: V2RayConfig,
     api: Option<APIConfig>,
 }
@@ -39,14 +39,15 @@ impl RayCore {
         Self {
             api: None,
             ray_core: None,
-            external_cores: Vec::new(),
+            external_cores: HashMap::new(),
             config: V2RayConfig::default(),
+            enable_tag: HashSet::new(),
         }
     }
     pub fn set_ray_core(&mut self, core: V2RayCore) {
         self.ray_core = Some(core);
     }
-    pub fn external_cores_mut(&mut self) -> &mut Vec<ExternalCore> {
+    pub fn external_cores_mut(&mut self) -> &mut HashMap<String, Box<Core>> {
         &mut self.external_cores
     }
     pub fn set_config_by_node_and_inbounds(
@@ -150,14 +151,15 @@ impl RayCore {
 
 impl CoreTool for RayCore {
     fn run(&mut self) -> anyhow::Result<()> {
-        let run_result = self
-            .external_cores
+        let enable_tag = &self.enable_tag;
+        let external_cores = &mut self.external_cores;
+        let run_result = external_cores
             .iter_mut()
-            .map(|external_core| external_core.core.run().ok().map(|_| external_core));
+            .filter(|(tag, _)| enable_tag.contains(*tag))
+            .map(|(_, core)| core.run().ok().map(|_| core));
         let abort_result: Vec<_> = run_result
             .flatten()
-            .map(|external_core| external_core.core.stop())
-            .filter_map(|result| result.err())
+            .filter_map(|external_core| external_core.stop().err())
             .collect();
         if !abort_result.is_empty() {
             let error = abort_result
@@ -177,11 +179,13 @@ impl CoreTool for RayCore {
     }
 
     fn stop(&mut self) -> anyhow::Result<()> {
-        let stop_result: Vec<_> = self
-            .external_cores
+        let enable_tag = &self.enable_tag;
+        let external_cores = &mut self.external_cores;
+        let stop_result = external_cores
             .iter_mut()
-            .filter_map(|external_core| external_core.core.stop().err())
-            .collect();
+            .filter(|(tag, _)| enable_tag.contains(*tag))
+            .filter_map(|(_, external_core)| external_core.stop().err())
+            .collect::<Vec<_>>();
         if !stop_result.is_empty() {
             let error = stop_result
                 .into_iter()

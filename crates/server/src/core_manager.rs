@@ -1,6 +1,5 @@
 use std::{
-    collections::HashMap,
-    ffi::{OsStr, OsString},
+    ffi::OsStr,
     sync::{atomic::AtomicBool, Arc},
 };
 
@@ -16,7 +15,7 @@ use core_protobuf::acolors_proto::{
     TrafficInfo,
 };
 use kernel_manager::{
-    coremanager::{APIConfig, ExternalCore, RayCore},
+    coremanager::{APIConfig, RayCore},
     create_core_by_path,
     v2ray::raycore::V2RayCore,
     CoreTool,
@@ -44,7 +43,6 @@ pub struct AColoRSCore {
     inbounds: InboundsLock,
     current_node: CurrentNodeLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
-    core_map: HashMap<String, (String, OsString)>,
     traffic_info: Arc<Mutex<TrafficInfo>>,
     speed_updater: Arc<Mutex<TrafficInfoUpdater>>,
     enable_api: Arc<AtomicBool>,
@@ -57,7 +55,6 @@ impl AColoRSCore {
         signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
     ) -> Self {
         let core = Mutex::new(RayCore::new());
-        let core_map = HashMap::new();
         let current_node = Mutex::new(None);
         let current_node_id = profile.runtime_value.get_by_key("CURRENT_NODE_ID").await;
         let default_node_id = profile.runtime_value.get_by_key("DEFAULT_NODE_ID").await;
@@ -85,7 +82,6 @@ impl AColoRSCore {
             inbounds,
             current_node,
             signal_sender,
-            core_map,
             core_tag: Mutex::new(String::new()),
             speed_updater: Arc::new(Mutex::new(TrafficInfoUpdater::new(traffic_info.clone()))),
             enable_api: Arc::new(AtomicBool::from(false)),
@@ -164,27 +160,6 @@ impl AColoRSCore {
     }
 
     pub async fn run(&self) -> Result<(), Status> {
-        async fn print_stdout(stdout: std::process::ChildStdout) {
-            let stdout = tokio::process::ChildStdout::from_std(stdout);
-            match stdout {
-                Ok(stdout) => {
-                    tokio::spawn(async move {
-                        let mut buf = String::new();
-                        let mut buf_reader = BufReader::new(stdout);
-                        while let Ok(count) = buf_reader.read_line(&mut buf).await {
-                            if count == 0 {
-                                break;
-                            }
-
-                            info!("{}", buf.trim_end());
-                            buf.clear();
-                        }
-                    });
-                }
-                Err(e) => error!("Process output error: {}", e),
-            }
-        }
-
         let mut core_guard = self.current_core.lock().await;
 
         let core = &mut *core_guard;
@@ -272,45 +247,12 @@ impl AColoRSCore {
             core_manager.stop()?
         }
 
-        let (core_name, path) = self
-            .core_map
+        let core = core_manager
+            .external_cores_mut()
             .get(core_tag)
             .ok_or_else(|| anyhow!("Core Not Added"))?;
 
-        match core_name.to_ascii_lowercase().as_str() {
-            "v2ray" => {
-                let core = V2RayCore::new(path).map_err(|e| {
-                    error!("Core not found : {}", e);
-                    e
-                })?;
-
-                info!(
-                    "Core <{}> version ({})",
-                    core.get_name(),
-                    core.get_version()
-                );
-
-                core_manager.set_ray_core(core);
-            }
-            _ => {
-                let core = create_core_by_path(path, core_name).map_err(|e| {
-                    error!("Core not found : {}", e);
-                    e
-                })?;
-
-                info!(
-                    "Core <{}> version ({})",
-                    core.get_name(),
-                    core.get_version()
-                );
-
-                let core = ExternalCore {
-                    tag: core_tag.to_string(),
-                    core,
-                };
-                core_manager.external_cores_mut().push(core);
-            }
-        }
+        print_core_name_version(core.as_ref());
 
         Ok(())
     }
@@ -328,7 +270,47 @@ impl AColoRSCore {
         let tag = tag.to_string();
         let core_path = core_path.as_ref().to_os_string();
         let core_name = core_name.to_string();
-        self.core_map.insert(tag, (core_name, core_path));
+
+        match core_name.to_ascii_lowercase().as_str() {
+            "v2ray" => {
+                let core = match V2RayCore::new(&core_path) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        error!(
+                            "{} Core (Path:{:?}) not found : {}",
+                            &core_name, &core_path, e
+                        );
+                        return Ok(());
+                    }
+                };
+
+                print_core_name_version(&core);
+
+                let mut core_guard = self.current_core.lock().await;
+
+                let core_manager = &mut *core_guard;
+                core_manager.set_ray_core(core);
+            }
+            _ => {
+                let core = match create_core_by_path(&core_path, &core_name) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        error!(
+                            "{} Core (Path:{:?}) not found : {}",
+                            &core_name, &core_path, e
+                        );
+                        return Ok(());
+                    }
+                };
+
+                print_core_name_version(core.as_ref());
+
+                let mut core_guard = self.current_core.lock().await;
+
+                let core_manager = &mut *core_guard;
+                core_manager.external_cores_mut().insert(tag, core);
+            }
+        }
         Ok(())
     }
 }
@@ -488,7 +470,18 @@ impl CoreManager for AColoRSCore {
     ) -> Result<Response<ListAllTagsReply>, Status> {
         debug!("List all tags from {:?}", request.remote_addr());
 
-        let tags = self.core_map.keys().into_iter().cloned().collect();
+        let tags;
+        {
+            tags = self
+                .current_core
+                .lock()
+                .await
+                .external_cores_mut()
+                .keys()
+                .into_iter()
+                .cloned()
+                .collect();
+        }
 
         let reply = ListAllTagsReply { tags };
         Ok(Response::new(reply))
@@ -543,4 +536,33 @@ async fn regenerate_config(
 
     core.set_config_by_node_and_inbounds(node_data, inbounds)
         .map_err(|e| Status::cancelled(format!("Core set config Error: {}", e)))
+}
+
+async fn print_stdout(stdout: std::process::ChildStdout) {
+    let stdout = tokio::process::ChildStdout::from_std(stdout);
+    match stdout {
+        Ok(stdout) => {
+            tokio::spawn(async move {
+                let mut buf = String::new();
+                let mut buf_reader = BufReader::new(stdout);
+                while let Ok(count) = buf_reader.read_line(&mut buf).await {
+                    if count == 0 {
+                        break;
+                    }
+
+                    info!("{}", buf.trim_end());
+                    buf.clear();
+                }
+            });
+        }
+        Err(e) => error!("Process output error: {}", e),
+    }
+}
+
+fn print_core_name_version(core: &dyn CoreTool) {
+    info!(
+        "Core <{}> version ({})",
+        core.get_name(),
+        core.get_version()
+    );
 }

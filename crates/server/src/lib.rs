@@ -172,7 +172,6 @@ async fn create_services<P: AsRef<Path>>(
     let cores_value = config.get_mut("cores");
     add_cores(cores_value, &mut acolors_core, core_name, core_path).await?;
 
-    acolors_core.set_core("default_core").await?;
     Ok(AColoRSServices {
         notifications: acolors_notifications,
         profile: acolors_profile,
@@ -189,10 +188,6 @@ async fn add_cores<P: AsRef<Path>>(
     core_name: &str,
     core_path: P,
 ) -> Result<()> {
-    acolors_core
-        .add_core(core_name, "default_core", core_path.as_ref().as_os_str())
-        .await?;
-
     if let Some(cores) = cores_value {
         let mut cores_object = serde_json::Value::Object(serde_json::Map::new());
         cores_object
@@ -208,6 +203,10 @@ async fn add_cores<P: AsRef<Path>>(
                 .await?;
         }
     }
+
+    acolors_core
+        .add_core(core_name, core_name, core_path.as_ref().as_os_str())
+        .await?;
     Ok(())
 }
 

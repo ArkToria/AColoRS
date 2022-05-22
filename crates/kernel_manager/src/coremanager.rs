@@ -147,10 +147,7 @@ impl RayCore {
             None => {}
         }
     }
-}
-
-impl CoreTool for RayCore {
-    fn run(&mut self) -> anyhow::Result<()> {
+    fn run_external_cores(&mut self) -> Result<(), anyhow::Error> {
         let enable_tag = &self.enable_tag;
         let external_cores = &mut self.external_cores;
         let run_result = external_cores
@@ -161,14 +158,41 @@ impl CoreTool for RayCore {
             .flatten()
             .filter_map(|external_core| external_core.stop().err())
             .collect();
-        if !abort_result.is_empty() {
+        if abort_result.is_empty() {
+            Ok(())
+        } else {
             let error = abort_result
                 .into_iter()
                 .map(|error| error.to_string())
                 .collect::<Vec<String>>()
                 .join("\n");
-            return Err(anyhow!(error));
+            Err(anyhow!(error))
         }
+    }
+    fn stop_external_cores(&mut self) -> Result<(), anyhow::Error> {
+        let enable_tag = &self.enable_tag;
+        let external_cores = &mut self.external_cores;
+        let stop_result = external_cores
+            .iter_mut()
+            .filter(|(tag, _)| enable_tag.contains(*tag))
+            .filter_map(|(_, external_core)| external_core.stop().err())
+            .collect::<Vec<_>>();
+        if stop_result.is_empty() {
+            Ok(())
+        } else {
+            let error = stop_result
+                .into_iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<String>>()
+                .join("\n");
+            Err(anyhow!(error))
+        }
+    }
+}
+
+impl CoreTool for RayCore {
+    fn run(&mut self) -> anyhow::Result<()> {
+        self.run_external_cores()?;
         match self.ray_core.as_mut() {
             Some(ray_core) => {
                 ray_core.set_config(config_to_string(&self.config)?)?;
@@ -179,21 +203,7 @@ impl CoreTool for RayCore {
     }
 
     fn stop(&mut self) -> anyhow::Result<()> {
-        let enable_tag = &self.enable_tag;
-        let external_cores = &mut self.external_cores;
-        let stop_result = external_cores
-            .iter_mut()
-            .filter(|(tag, _)| enable_tag.contains(*tag))
-            .filter_map(|(_, external_core)| external_core.stop().err())
-            .collect::<Vec<_>>();
-        if !stop_result.is_empty() {
-            let error = stop_result
-                .into_iter()
-                .map(|error| error.to_string())
-                .collect::<Vec<String>>()
-                .join("\n");
-            return Err(anyhow!(error));
-        }
+        self.stop_external_cores()?;
         match self.ray_core.as_mut() {
             Some(ray_core) => ray_core.stop(),
             None => Err(anyhow!("RayCore Not Found.")),

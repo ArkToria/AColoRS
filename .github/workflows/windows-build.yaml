@@ -16,6 +16,10 @@ jobs:
       - name: Prepare toolchain
         run: rustup show
       - uses: Swatinem/rust-cache@v1
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
         run: cargo test --workspace

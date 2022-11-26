@@ -27,8 +27,8 @@ members = [
 ]
 
 [dependencies]
-clap = { version = "3.1", features = ["derive","cargo"] }
-spdlog-rs = { version = "0.2", features = [
+clap = { version = "4.0", features = ["derive","cargo"] }
+spdlog-rs = { version = "0.3", features = [
     "level-debug",
     "release-level-info",
     "source-location",

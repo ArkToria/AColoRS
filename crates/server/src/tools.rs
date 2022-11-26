@@ -26,10 +26,16 @@ impl core_protobuf::acolors_proto::tools_server::Tools for AColoRSTools {
 
         let duration = tcping(target, Duration::from_secs(3))
             .await
-            .map(|du| Some(du.into()))
+            .map(|du| du)
             .map_err(|e| Status::unavailable(e.to_string()))?;
 
-        let reply = TcpingReply { duration };
+        let duration = duration
+            .try_into()
+            .map_err(|e| Status::internal(format!("{}", e)))?;
+
+        let reply = TcpingReply {
+            duration: Some(duration),
+        };
         Ok(Response::new(reply))
     }
 }

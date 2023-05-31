@@ -36,7 +36,7 @@ type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 type CurrentNodeLock = Mutex<Option<core_data::NodeData>>;
 type CoreTag = Mutex<String>;
 
-pub struct AColoRSCore {
+pub struct AcolorsCore {
     core_tag: CoreTag,
     current_core: Arc<CurrentCore>,
     profile: Arc<Profile>,
@@ -48,7 +48,7 @@ pub struct AColoRSCore {
     enable_api: Arc<AtomicBool>,
 }
 
-impl AColoRSCore {
+impl AcolorsCore {
     pub async fn create(
         profile: Arc<Profile>,
         inbounds: InboundsLock,
@@ -316,7 +316,7 @@ impl AColoRSCore {
 }
 
 #[tonic::async_trait]
-impl CoreManager for AColoRSCore {
+impl CoreManager for AcolorsCore {
     async fn get_current_node(
         &self,
         request: Request<GetCurrentNodeRequest>,

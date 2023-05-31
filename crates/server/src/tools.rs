@@ -6,16 +6,16 @@ use tonic::{Request, Response, Status};
 use utils::net::tcping;
 
 #[derive(Debug)]
-pub struct AColoRSTools;
+pub struct AcolorsTools;
 
-impl AColoRSTools {
+impl AcolorsTools {
     pub fn new() -> Self {
         Self {}
     }
 }
 
 #[tonic::async_trait]
-impl core_protobuf::acolors_proto::tools_server::Tools for AColoRSTools {
+impl core_protobuf::acolors_proto::tools_server::Tools for AcolorsTools {
     async fn tcping(
         &self,
         request: Request<TcpingRequest>,

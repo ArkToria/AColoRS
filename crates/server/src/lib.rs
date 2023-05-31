@@ -14,19 +14,19 @@ use core_protobuf::acolors_proto::manager_server::ManagerServer;
 use core_protobuf::acolors_proto::notifications_server::NotificationsServer;
 use core_protobuf::acolors_proto::tools_server::ToolsServer;
 use futures::{FutureExt, TryFutureExt};
-use server_manager::AColoRSManager;
+use server_manager::AcolorsManager;
 use spdlog::{error, info};
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::ConnectOptions;
 use tokio::join;
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tonic::transport::Server;
-use tools::AColoRSTools;
+use tools::AcolorsTools;
 
-use crate::config_manager::{config_read_to_json, AColoRSConfig};
-use crate::core_manager::AColoRSCore;
-use crate::notifications::AColoRSNotifications;
-use crate::profile::AColoRSProfile;
+use crate::config_manager::{config_read_to_json, AcolorsConfig};
+use crate::core_manager::AcolorsCore;
+use crate::notifications::AcolorsNotifications;
+use crate::profile::AcolorsProfile;
 use core_protobuf::acolors_proto::profile_manager_server::ProfileManagerServer;
 
 mod config_manager;
@@ -70,13 +70,13 @@ pub fn serve<P: AsRef<Path>>(
 
     Ok(())
 }
-struct AColoRSServices {
-    pub notifications: AColoRSNotifications,
-    pub profile: AColoRSProfile,
-    pub config: AColoRSConfig,
-    pub core: AColoRSCore,
-    pub manager: AColoRSManager,
-    pub tools: AColoRSTools,
+struct AcolorsServices {
+    pub notifications: AcolorsNotifications,
+    pub profile: AcolorsProfile,
+    pub config: AcolorsConfig,
+    pub core: AcolorsCore,
+    pub manager: AcolorsManager,
+    pub tools: AcolorsTools,
 }
 pub static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 pub const BUFFER_SIZE: usize = 16;
@@ -144,9 +144,9 @@ async fn create_services<P: AsRef<Path>>(
     core_path: P,
     shutdown_sender: broadcast::Sender<()>,
     signal_sender: broadcast::Sender<acolors_signal::AColorSignal>,
-) -> Result<AColoRSServices> {
+) -> Result<AcolorsServices> {
     let mut config = config_read_to_json(&config_path).await?;
-    let acolors_notifications = AColoRSNotifications::new(signal_sender.clone());
+    let acolors_notifications = AcolorsNotifications::new(signal_sender.clone());
     let profile = Arc::new(
         profile_manager::Profile::create(
             SqliteConnectOptions::from_str(&database_path.as_ref().as_os_str().to_string_lossy())?
@@ -161,30 +161,30 @@ async fn create_services<P: AsRef<Path>>(
         .map(|v| serde_json::from_value(v.take()))
         .transpose()?;
     let inbounds = Arc::new(RwLock::new(config_inbounds.unwrap_or_default()));
-    let acolors_config = AColoRSConfig::new(config_path, inbounds.clone(), signal_sender.clone());
+    let acolors_config = AcolorsConfig::new(config_path, inbounds.clone(), signal_sender.clone());
     let mut acolors_core =
-        AColoRSCore::create(profile.clone(), inbounds.clone(), signal_sender.clone()).await;
+        AcolorsCore::create(profile.clone(), inbounds.clone(), signal_sender.clone()).await;
 
-    let acolors_profile = AColoRSProfile::new(profile, inbounds, signal_sender);
+    let acolors_profile = AcolorsProfile::new(profile, inbounds, signal_sender);
 
-    let acolors_manager = AColoRSManager::new(shutdown_sender);
+    let acolors_manager = AcolorsManager::new(shutdown_sender);
 
     let cores_value = config.get_mut("cores");
     add_cores(cores_value, &mut acolors_core, core_name, core_path).await?;
 
-    Ok(AColoRSServices {
+    Ok(AcolorsServices {
         notifications: acolors_notifications,
         profile: acolors_profile,
         config: acolors_config,
         core: acolors_core,
         manager: acolors_manager,
-        tools: AColoRSTools::new(),
+        tools: AcolorsTools::new(),
     })
 }
 
 async fn add_cores<P: AsRef<Path>>(
     cores_value: Option<&mut serde_json::Value>,
-    acolors_core: &mut AColoRSCore,
+    acolors_core: &mut AcolorsCore,
     core_name: &str,
     core_path: P,
 ) -> Result<()> {

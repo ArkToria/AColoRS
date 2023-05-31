@@ -14,12 +14,12 @@ use utils::net::get_http_content;
 type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 
 #[derive(Debug)]
-pub struct AColoRSProfile {
+pub struct AcolorsProfile {
     profile: Arc<Profile>,
     inbounds: InboundsLock,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
-impl AColoRSProfile {
+impl AcolorsProfile {
     pub fn new(
         profile: Arc<Profile>,
         inbounds: InboundsLock,
@@ -228,7 +228,7 @@ impl AColoRSProfile {
 }
 
 #[tonic::async_trait]
-impl ProfileManager for AColoRSProfile {
+impl ProfileManager for AcolorsProfile {
     async fn count_groups(
         &self,
         request: Request<CountGroupsRequest>,

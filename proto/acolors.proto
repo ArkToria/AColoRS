@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "org.arktoria.acolors";
-option java_outer_classname = "AColoRSProto";
+option java_outer_classname = "AcolorsProto";
 
 import "google/protobuf/duration.proto";
 

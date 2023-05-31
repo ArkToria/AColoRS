@@ -8,7 +8,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version = "0.6", features = [ "runtime-tokio-rustls","sqlite","macros","migrate" ] }
+sqlx = { version = "0.6", features = [
+    "runtime-tokio-rustls",
+    "sqlite",
+    "macros",
+    "migrate",
+] }
 anyhow = "1.0"
 spdlog-rs = { version = "0.3", features = [
     "level-debug",
@@ -17,11 +22,11 @@ spdlog-rs = { version = "0.3", features = [
 ] }
 tokio = { version = "1.18", features = ["rt-multi-thread", "macros", "sync"] }
 reqwest = "0.11"
-futures = {version = "0.3", default-features = false, features = ["alloc"]}
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
 
-core_protobuf = {path = "../../components/core_protobuf"}
-core_data = {path = "../../components/core_data"}
-acolors_signal = {path = "../../components/acolors_signal"}
+core_protobuf = { path = "../../components/core_protobuf" }
+core_data = { path = "../../components/core_data" }
+acolors_signal = { path = "../../components/acolors_signal" }
 
 [build-dependencies]
-tonic-build = "0.8"
+tonic-build = "0.9"

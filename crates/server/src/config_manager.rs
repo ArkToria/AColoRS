@@ -15,13 +15,13 @@ use tonic::{Request, Response, Status};
 
 type InboundsLock = Arc<RwLock<config_manager::Inbounds>>;
 #[derive(Debug)]
-pub struct AColoRSConfig {
+pub struct AcolorsConfig {
     inbounds: InboundsLock,
     path: PathBuf,
     signal_sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
 
-impl AColoRSConfig {
+impl AcolorsConfig {
     pub fn new<P: AsRef<Path>>(
         path: P,
         inbounds: InboundsLock,
@@ -37,7 +37,7 @@ impl AColoRSConfig {
 }
 
 #[tonic::async_trait]
-impl ConfigManager for AColoRSConfig {
+impl ConfigManager for AcolorsConfig {
     async fn set_inbounds(
         &self,
         request: Request<Inbounds>,

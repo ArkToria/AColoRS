@@ -8,17 +8,17 @@ use tonic::{Request, Response, Status};
 
 type Stream<T> = Pin<Box<dyn futures::Stream<Item = Result<T, Status>> + Send>>;
 
-pub struct AColoRSNotifications {
+pub struct AcolorsNotifications {
     sender: broadcast::Sender<profile_manager::AColorSignal>,
 }
-impl AColoRSNotifications {
+impl AcolorsNotifications {
     pub fn new(sender: broadcast::Sender<profile_manager::AColorSignal>) -> Self {
         Self { sender }
     }
 }
 
 #[tonic::async_trait]
-impl Notifications for AColoRSNotifications {
+impl Notifications for AcolorsNotifications {
     type GetNotificationsStream = Stream<AColorSignal>;
     async fn get_notifications(
         &self,

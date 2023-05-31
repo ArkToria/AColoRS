@@ -2,17 +2,17 @@ use core_protobuf::acolors_proto::{manager_server::Manager, ShutdownReply, Shutd
 use spdlog::info;
 use tonic::{Request, Response, Status};
 
-pub struct AColoRSManager {
+pub struct AcolorsManager {
     shutdown_sender: tokio::sync::broadcast::Sender<()>,
 }
-impl AColoRSManager {
+impl AcolorsManager {
     pub fn new(shutdown_sender: tokio::sync::broadcast::Sender<()>) -> Self {
         Self { shutdown_sender }
     }
 }
 
 #[tonic::async_trait]
-impl Manager for AColoRSManager {
+impl Manager for AcolorsManager {
     async fn shutdown(
         &self,
         request: Request<ShutdownRequest>,

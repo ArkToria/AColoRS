@@ -1,10 +1,10 @@
-# AColoRS [Experimental] [Read-only Mirror]
+# Acolors [Experimental] [Read-only Mirror]
 Proxy Profile Manager Server with gRPC API
 
 ## Build
 ```
-git clone https://github.com/ArkToria/AColoRS
-cd AColoRS
+git clone https://github.com/ArkToria/Acolors
+cd Acolors
 cargo build --release
 ```
 ## Usage
@@ -24,13 +24,13 @@ OPTIONS:
 
 ### Linux
 
-[![ArchLinux Package Build Test](https://github.com/ArkToria/AColoRS/actions/workflows/arch-build.yaml/badge.svg?branch=master)](https://github.com/ArkToria/AColoRS/actions/workflows/arch-build.yaml)
+[![ArchLinux Package Build Test](https://github.com/ArkToria/Acolors/actions/workflows/arch-build.yaml/badge.svg?branch=master)](https://github.com/ArkToria/Acolors/actions/workflows/arch-build.yaml)
 
-[![Linux Run Build and Tests](https://github.com/ArkToria/AColoRS/actions/workflows/linux-build.yaml/badge.svg)](https://github.com/ArkToria/AColoRS/actions/workflows/linux-build.yaml)
+[![Linux Run Build and Tests](https://github.com/ArkToria/Acolors/actions/workflows/linux-build.yaml/badge.svg)](https://github.com/ArkToria/Acolors/actions/workflows/linux-build.yaml)
 
 ### Windows
 
-[![Windows Run Build and Tests](https://github.com/ArkToria/AColoRS/actions/workflows/windows-build.yaml/badge.svg)](https://github.com/ArkToria/AColoRS/actions/workflows/windows-build.yaml)
+[![Windows Run Build and Tests](https://github.com/ArkToria/Acolors/actions/workflows/windows-build.yaml/badge.svg)](https://github.com/ArkToria/Acolors/actions/workflows/windows-build.yaml)
 
 ## Config Example
 ```json
@@ -83,4 +83,4 @@ OPTIONS:
 }
 ```
 ## API
-[AColoRS/proto/acolors.proto](https://github.com/ArkToria/AColoRS/blob/master/proto/acolors.proto)
+[Acolors/proto/acolors.proto](https://github.com/ArkToria/Acolors/blob/master/proto/acolors.proto)

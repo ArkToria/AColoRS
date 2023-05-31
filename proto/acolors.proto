@@ -164,7 +164,7 @@ message NodeData {
   int32 latency = 13;
   int64 upload = 14;
   int64 download = 15;
-  int64 create_at = 16;
+  int64 created_at = 16;
   int64 modified_at = 17;
 }
 
@@ -180,7 +180,7 @@ message GroupData {
   SubscriptionType group_type = 4;
   string url = 5;
   int32 cycle_time = 6;
-  int64 create_at = 7;
+  int64 created_at = 7;
   int64 modified_at = 8;
 }
 

@@ -71,10 +71,10 @@ pub mod tests {
             latency: 100 * number,
             upload: 200 * (number as i64),
             download: 300 * (number as i64),
-            create_at: 0,
+            created_at: 0,
             modified_at: 0,
         };
-        result.update_create_at();
+        result.update_created_at();
         result.update_modified_at();
         result
     }

@@ -8,7 +8,7 @@ pub struct GroupData {
     pub group_type: i32,
     pub url: String,
     pub cycle_time: i32,
-    pub create_at: i64,
+    pub created_at: i64,
     pub modified_at: i64,
 }
 pub const GROUP_TABLE_NAME: &str = "groups";
@@ -31,7 +31,7 @@ impl GroupData {
         self.modified_at = get_current_time() as i64;
     }
 
-    pub fn update_create_at(&mut self) {
-        self.create_at = get_current_time() as i64;
+    pub fn update_created_at(&mut self) {
+        self.created_at = get_current_time() as i64;
     }
 }

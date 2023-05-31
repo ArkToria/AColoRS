@@ -42,7 +42,7 @@ impl GroupList {
                     group_type: row.get(3),
                     url: row.get(4),
                     cycle_time: row.get(5),
-                    create_at: row.get(6),
+                    created_at: row.get(6),
                     modified_at: row.get(7),
                 };
                 Group::new(data, self.connection.clone())
@@ -58,7 +58,7 @@ impl GroupList {
     }
 
     pub async fn append(&self, mut item: GroupData) -> sqlx::Result<i64> {
-        item.update_create_at();
+        item.update_created_at();
         item.update_modified_at();
 
         let query = sqlx::query(GROUP_INSERT_SQL)
@@ -67,7 +67,7 @@ impl GroupList {
             .bind(item.group_type)
             .bind(item.url)
             .bind(item.cycle_time)
-            .bind(item.create_at)
+            .bind(item.created_at)
             .bind(item.modified_at);
         let conn_mut = &mut *self.connection.lock().await;
 
@@ -84,7 +84,7 @@ impl GroupList {
             .bind(item.group_type)
             .bind(item.url)
             .bind(item.cycle_time)
-            .bind(item.create_at)
+            .bind(item.created_at)
             .bind(item.modified_at)
             .bind(id);
         let conn_mut = &mut *self.connection.lock().await;
@@ -128,7 +128,7 @@ impl GroupList {
                 group_type: row.try_get(3)?,
                 url: row.try_get(4)?,
                 cycle_time: row.try_get(5)?,
-                create_at: row.try_get(6)?,
+                created_at: row.try_get(6)?,
                 modified_at: row.try_get(7)?,
             },
             None => return Err(sqlx::Error::RowNotFound),

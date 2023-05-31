@@ -7,7 +7,7 @@ impl From<crate::GroupData> for core_protobuf::acolors_proto::GroupData {
             group_type: group_data.group_type,
             url: group_data.url,
             cycle_time: group_data.cycle_time,
-            create_at: group_data.create_at,
+            created_at: group_data.created_at,
             modified_at: group_data.modified_at,
         }
     }
@@ -21,7 +21,7 @@ impl From<core_protobuf::acolors_proto::GroupData> for crate::GroupData {
             group_type: group_data.group_type,
             url: group_data.url,
             cycle_time: group_data.cycle_time,
-            create_at: group_data.create_at,
+            created_at: group_data.created_at,
             modified_at: group_data.modified_at,
         }
     }

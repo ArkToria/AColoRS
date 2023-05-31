@@ -8,8 +8,8 @@ impl acolors_proto::GroupData {
         self.modified_at = get_current_time() as i64;
     }
 
-    pub fn update_create_at(&mut self) {
-        self.create_at = get_current_time() as i64;
+    pub fn update_created_at(&mut self) {
+        self.created_at = get_current_time() as i64;
     }
 }
 
@@ -18,11 +18,11 @@ impl acolors_proto::NodeData {
         self.modified_at = get_current_time() as i64;
     }
 
-    pub fn update_create_at(&mut self) {
-        self.create_at = get_current_time() as i64;
+    pub fn update_created_at(&mut self) {
+        self.created_at = get_current_time() as i64;
     }
     pub fn initialize(&mut self) {
-        self.update_create_at();
+        self.update_created_at();
         self.update_modified_at();
         self.latency = -1;
     }

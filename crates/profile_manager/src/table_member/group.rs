@@ -65,7 +65,7 @@ impl Group {
                     latency: row.get(12),
                     upload: row.get(13),
                     download: row.get(14),
-                    create_at: row.get(15),
+                    created_at: row.get(15),
                     modified_at: row.get(16),
                 };
                 Node::new(data, self.connection.clone())
@@ -98,7 +98,7 @@ impl Group {
             .bind(item.latency)
             .bind(item.upload)
             .bind(item.download)
-            .bind(item.create_at)
+            .bind(item.created_at)
             .bind(item.modified_at);
         let conn_mut = &mut *self.connection.lock().await;
 
@@ -127,7 +127,7 @@ impl Group {
             .bind(item.latency)
             .bind(item.upload)
             .bind(item.download)
-            .bind(item.create_at)
+            .bind(item.created_at)
             .bind(item.modified_at)
             .bind(id);
         let conn_mut = &mut *self.connection.lock().await;
@@ -175,7 +175,7 @@ impl Group {
                 latency: row.try_get(12)?,
                 upload: row.try_get(13)?,
                 download: row.try_get(14)?,
-                create_at: row.try_get(15)?,
+                created_at: row.try_get(15)?,
                 modified_at: row.try_get(16)?,
             },
             None => return Err(sqlx::Error::RowNotFound),
@@ -324,10 +324,10 @@ pub mod tests {
             group_type: 0,
             url: format!("https://localhost:{}", number),
             cycle_time: number as i32,
-            create_at: 0,
+            created_at: 0,
             modified_at: 0,
         };
-        result.update_create_at();
+        result.update_created_at();
         result.update_modified_at();
         result
     }
